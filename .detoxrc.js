@@ -1,0 +1,50 @@
+module.exports = {
+  testRunner: {
+    args: {
+      config: "__tests__/e2e/jest.config.js",
+      _: ["__tests__/e2e"],
+    },
+    jest: {
+      setupTimeout: 120000,
+    },
+  },
+  apps: {
+    "ios.debug": {
+      type: "ios.app",
+      binaryPath:
+        "ios/build/Build/Products/Debug-iphonesimulator/RemezaApp.app",
+      build:
+        "xcodebuild -workspace ios/RemezaApp.xcworkspace -scheme RemezaApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build",
+    },
+    "android.debug": {
+      type: "android.apk",
+      binaryPath: "android/app/build/outputs/apk/debug/app-debug.apk",
+      build:
+        "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..",
+    },
+  },
+  devices: {
+    simulator: {
+      type: "ios.simulator",
+      device: {
+        type: "iPhone 15",
+      },
+    },
+    emulator: {
+      type: "android.emulator",
+      device: {
+        avdName: "Pixel_6_API_34",
+      },
+    },
+  },
+  configurations: {
+    "ios.sim.debug": {
+      device: "simulator",
+      app: "ios.debug",
+    },
+    "android.emu.debug": {
+      device: "emulator",
+      app: "android.debug",
+    },
+  },
+};
