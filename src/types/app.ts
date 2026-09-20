@@ -1,4 +1,5 @@
 export type ViewName =
+  | "welcome"
   | "login"
   | "forgotAccessCode"
   | "register"

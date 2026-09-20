@@ -65,9 +65,27 @@ const clickWithRetry = async (id) => {
   });
 };
 
+const WELCOME_CTA = "welcome-getStartedButton";
+
+/**
+ * La app arranca en WelcomeView; este helper cruza esa pantalla y deja
+ * el Login visible. Es idempotente: si ya estamos en Login no hace nada.
+ */
+const openLogin = async (timeout = 30000) => {
+  const cta = byId(WELCOME_CTA);
+
+  if (await cta.isExisting()) {
+    await cta.waitForDisplayed({ timeout: 15000 });
+    await cta.click();
+  }
+
+  await byId("login-phoneInput").waitForDisplayed({ timeout });
+};
+
 const restartApp = async () => {
   await driver.execute("mobile: terminateApp", { appId: APP_ID });
   await driver.execute("mobile: activateApp", { appId: APP_ID });
+  await openLogin();
 };
 
 const selectFromSearchable = async (selectId, optionValue, searchText) => {
@@ -89,6 +107,7 @@ const selectFromSearchable = async (selectId, optionValue, searchText) => {
 
 module.exports = {
   byId,
+  openLogin,
   scrollToId,
   clickWithRetry,
   restartApp,
