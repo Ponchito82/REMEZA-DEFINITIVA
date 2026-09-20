@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Animated, StatusBar } from "react-native";
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
 import { translations } from "./src/i18n/translations";
 import { Language, TransactionsFilter, ViewName } from "./src/types/app";
 import { styles } from "./src/theme/styles";
 
+import WelcomeView from "./src/screens/WelcomeView";
 import LoginView from "./src/screens/LoginView";
 import ForgotAccessCodeView from "./src/screens/ForgotAccessCodeView";
 import RegisterSteps from "./src/screens/RegisterSteps";
@@ -32,11 +34,11 @@ import {
 import { verifySession } from "./src/api/sessionProbe";
 import { toE164 } from "./src/utils/phone";
 
-export default function App() {
+function AppContent() {
     const [language, setLanguage] = useState<Language>("en");
     const t = translations[language];
 
-    const [view, setView] = useState<ViewName>("login");
+    const [view, setView] = useState<ViewName>("welcome");
     const [regStep, setRegStep] = useState(1);
     const [authToken, setAuthToken] = useState<string | null>(null);
     const [customerId, setCustomerId] = useState<string | null>(null);
@@ -67,14 +69,20 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        if (view !== "login") return;
+        if (view !== "welcome" && view !== "login") return;
         clearSession();
         setAuthToken(null);
         setCustomerId(null);
     }, [view]);
 
     useEffect(() => {
-        if (view === "login" || view === "register" || view === "forgotAccessCode") return;
+        if (
+            view === "welcome" ||
+            view === "login" ||
+            view === "register" ||
+            view === "forgotAccessCode"
+        )
+            return;
         verifySession();
     }, [view]);
 
@@ -352,6 +360,10 @@ export default function App() {
         <View style={styles.root}>
             <StatusBar barStyle="dark-content" />
 
+            {view === "welcome" && (
+                <WelcomeView t={t} language={language} setLanguage={setLanguage} setView={setView} />
+            )}
+
             {view === "login" && (
                 <LoginView
                     t={t}
@@ -615,5 +627,13 @@ export default function App() {
                 setView={setView}
             />
         </View>
+    );
+}
+
+export default function App() {
+    return (
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <AppContent />
+        </SafeAreaProvider>
     );
 }

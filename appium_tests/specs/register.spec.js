@@ -1,11 +1,11 @@
-const { clickWithRetry, hideKeyboard, scrollToId, selectFromSearchable } = require("../helpers");
+const { clickWithRetry, hideKeyboard, openLogin, scrollToId, selectFromSearchable } = require("../helpers");
 
 const APP_ID = "com.remezaapp";
 
 async function restartAppToRegister() {
   await driver.executeScript("mobile: terminateApp", [{ appId: APP_ID }]);
   await driver.executeScript("mobile: activateApp", [{ appId: APP_ID }]);
-  await $('android=new UiSelector().resourceId("login-phoneInput")').waitForDisplayed({ timeout: 30000 });
+  await openLogin();
   await $('android=new UiSelector().resourceId("login-registerLink")').click();
   await $('android=new UiSelector().resourceId("register-phoneInput")').waitForDisplayed({ timeout: 10000 });
 }

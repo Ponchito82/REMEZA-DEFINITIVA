@@ -1,5 +1,7 @@
 export const translations = {
   en: {
+    getStarted: "Get Started",
+    tagline: "Your money, closer",
     welcome: "Welcome",
     signInSubtitle: "Sign in to your U.S. Latino account",
     phoneNumber: "Phone number",
@@ -257,6 +259,8 @@ export const translations = {
     verificationNotApproved: "We couldn't confirm your information. Please review your documents and try again."
   },
   es: {
+    getStarted: "Comenzar",
+    tagline: "Tu dinero, más cerca",
     welcome: "Bienvenido",
     signInSubtitle: "Ingresa a tu cuenta latina en EE.UU.",
     phoneNumber: "Número de teléfono",

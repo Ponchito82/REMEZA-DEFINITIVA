@@ -2,18 +2,23 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  Pressable,
+  ScrollView,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from "react-native";
-import { UserPlus } from "lucide-react-native";
-import MainButton from "../components/MainButton";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import { Phone, Lock, User } from "lucide-react-native";
+import {
+  ScreenBackground,
+  BrandMark,
+  GlassField,
+  GlassBanner,
+  PrimaryButton,
+  LanguageToggle,
+  LinkButton,
+} from "../components/ui";
 import { Language, ViewName } from "../types/app";
-import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import { fontFamily, fontSize, palette, spacing } from "../theme/designSystem";
 import { login } from "../api/auth";
 import { ApiError } from "../api/client";
 import { UnauthorizedReason } from "../api/session";
@@ -81,88 +86,139 @@ export default function LoginView({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.centerScreen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={styles.authCard}>
-        <LanguageSwitcher t={t} language={language} setLanguage={setLanguage} />
-
-        <View style={styles.logoBox}>
-          <Image
-            source={require("../assets/remeza_logo.png")}
-            style={{ width: 32, height: 32, tintColor: "#fff" }}
-            resizeMode="contain"
+    <ScreenBackground watermarkTop={0.31} watermarkScale={0.9}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <LanguageToggle
+            t={t}
+            language={language}
+            setLanguage={setLanguage}
+            style={styles.language}
           />
-        </View>
 
-        <Text style={styles.authTitle}>{t.welcome}</Text>
-        <Text style={styles.authSubtitle}>{t.signInSubtitle}</Text>
-
-        {sessionNotice ? (
-          <View style={styles.formBanner} testID="login-sessionExpiredBanner">
-            <Text style={styles.formBannerText}>{sessionNotice}</Text>
+          <View style={styles.brand}>
+            <BrandMark size={126} />
+            <Text style={styles.title}>{t.welcome}</Text>
+            <Text style={styles.subtitle}>{t.signInSubtitle}</Text>
           </View>
-        ) : null}
 
-        <View style={styles.stack16}>
-          <TextInput
-            testID="login-phoneInput"
-            value={phone}
-            onChangeText={setPhone}
-            onBlur={() => setPhoneTouched(true)}
-            placeholder={t.phoneNumber}
-            placeholderTextColor="#9CA3AF"
-            keyboardType="phone-pad"
-            style={styles.authInput}
-          />
-          {phoneTouched && !isPhoneValid ? (
-            <Text style={styles.fieldErrorText}>{t.invalidPhoneNumber}</Text>
+          {sessionNotice ? (
+            <GlassBanner
+              testID="login-sessionExpiredBanner"
+              message={sessionNotice}
+              style={styles.banner}
+            />
           ) : null}
 
-          <TextInput
-            testID="login-accessCodeInput"
-            value={loginAccessCode}
-            onChangeText={(text) => setLoginAccessCode(text.replace(/\D/g, "").slice(0, 6))}
-            onBlur={() => setCodeTouched(true)}
-            placeholder={t.accessCode6}
-            placeholderTextColor="#9CA3AF"
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
-            style={styles.authInput}
-          />
-          {codeTouched && !isCodeValid ? (
-            <Text style={styles.fieldErrorText}>{t.invalidAccessCode}</Text>
-          ) : null}
+          <View style={styles.form}>
+            <GlassField
+              testID="login-phoneInput"
+              icon={Phone}
+              value={phone}
+              onChangeText={setPhone}
+              onBlur={() => setPhoneTouched(true)}
+              placeholder={t.phoneNumber}
+              keyboardType="phone-pad"
+              error={phoneTouched && !isPhoneValid ? t.invalidPhoneNumber : undefined}
+            />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <GlassField
+              testID="login-accessCodeInput"
+              icon={Lock}
+              value={loginAccessCode}
+              onChangeText={(text) => setLoginAccessCode(text.replace(/\D/g, "").slice(0, 6))}
+              onBlur={() => setCodeTouched(true)}
+              placeholder={t.accessCode6}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+              error={codeTouched && !isCodeValid ? t.invalidAccessCode : undefined}
+            />
 
-          <MainButton testID="login-signInButton" onPress={handleSignIn} disabled={isSubmitting || !canSubmit}>
-            {isSubmitting ? t.signingIn : t.signIn}
-          </MainButton>
+            {error ? <GlassBanner message={error} /> : null}
 
-          <Pressable
-            testID="login-forgotAccessCodeLink"
-            onPress={() => setView("forgotAccessCode")}
-            style={({ pressed }) => [styles.forgotLink, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={styles.forgotLinkText}>{t.forgotAccessCode}</Text>
-          </Pressable>
+            <PrimaryButton
+              testID="login-signInButton"
+              label={isSubmitting ? t.signingIn : t.signIn}
+              onPress={handleSignIn}
+              disabled={isSubmitting || !canSubmit}
+              style={styles.cta}
+            />
 
-          <Pressable
-            testID="login-registerLink"
-            onPress={() => {
-              setView("register");
-              setRegStep(1);
-            }}
-            style={({ pressed }) => [styles.secondaryLinkButton, pressed && { opacity: 0.8 }]}
-          >
-            <UserPlus size={18} color={PURPLE} />
-            <Text style={styles.secondaryLinkText}>{t.noAccount}</Text>
-          </Pressable>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+            <LinkButton
+              testID="login-forgotAccessCodeLink"
+              label={t.forgotAccessCode}
+              onPress={() => setView("forgotAccessCode")}
+            />
+
+            <LinkButton
+              testID="login-registerLink"
+              label={t.noAccount}
+              icon={User}
+              tone="light"
+              onPress={() => {
+                setView("register");
+                setRegStep(1);
+              }}
+              style={styles.registerLink}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 26,
+    paddingBottom: spacing.xl,
+  },
+  language: {
+    marginTop: spacing.lg,
+  },
+  brand: {
+    alignItems: "center",
+    marginTop: spacing.xxl,
+  },
+  title: {
+    fontFamily,
+    fontSize: fontSize.display,
+    fontWeight: "700",
+    color: palette.textPrimary,
+    marginTop: spacing.lg,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontFamily,
+    fontSize: fontSize.subtitle,
+    fontWeight: "400",
+    color: palette.textSecondary,
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
+  banner: {
+    marginTop: spacing.lg,
+  },
+  form: {
+    marginTop: spacing.xl,
+    gap: spacing.md,
+  },
+  cta: {
+    marginTop: spacing.sm,
+  },
+  registerLink: {
+    marginTop: spacing.xs,
+  },
+});

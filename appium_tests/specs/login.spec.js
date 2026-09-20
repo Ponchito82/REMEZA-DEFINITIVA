@@ -1,4 +1,4 @@
-const { hideKeyboard } = require("../helpers");
+const { hideKeyboard, openLogin } = require("../helpers");
 
 const APP_ID = "com.remezaapp";
 
@@ -8,7 +8,7 @@ const TEST_CODE = "123456";
 async function restartApp() {
   await driver.executeScript("mobile: terminateApp", [{ appId: APP_ID }]);
   await driver.executeScript("mobile: activateApp", [{ appId: APP_ID }]);
-  await $('android=new UiSelector().resourceId("login-phoneInput")').waitForDisplayed({ timeout: 30000 });
+  await openLogin();
 }
 
 describe("Login — validación de campos", () => {
