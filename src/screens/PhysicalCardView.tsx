@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { SafeAreaView, ScrollView, View, Text, Pressable } from "react-native";
+import { ScrollView, View, Text, Pressable } from "react-native";
 import { X, Truck, AlertCircle } from "lucide-react-native";
 
 import { styles } from "../theme/styles";
@@ -122,7 +122,7 @@ export default function PhysicalCardView({
   };
 
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
       <ScrollView
         ref={form.scrollRef}
         contentContainerStyle={styles.pageContent}
@@ -198,6 +198,6 @@ export default function PhysicalCardView({
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

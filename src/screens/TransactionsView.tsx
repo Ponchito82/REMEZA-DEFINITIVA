@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -10,7 +9,7 @@ import {
 import { BanknoteX, X } from "lucide-react-native";
 
 import { styles } from "../theme/styles";
-import { PURPLE, PURPLE_DARK } from "../theme/colors";
+import { PURPLE, PURPLE_DARK, SUCCESS_SURFACE, VIOLET_SURFACE, WARNING_SURFACE } from "../theme/colors";
 import { TransactionsFilter, ViewName } from "../types/app";
 
 type TransactionItem = {
@@ -40,7 +39,7 @@ export default function TransactionsView({
   filteredTransactions,
 }: Props) {
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
       <ScrollView
         contentContainerStyle={styles.pageContent}
         showsVerticalScrollIndicator={false}
@@ -115,16 +114,16 @@ export default function TransactionsView({
                     style={[
                       styles.operationBadge,
                       item.type === "virtual" && {
-                        backgroundColor: "#EEF2FF",
+                        backgroundColor: VIOLET_SURFACE,
                       },
                       item.type === "physical" && {
-                        backgroundColor: "#FFF7ED",
+                        backgroundColor: WARNING_SURFACE,
                       },
                       item.type === "remittance" && {
                         backgroundColor: PURPLE,
                       },
                       item.type === "trading" && {
-                        backgroundColor: "#ECFDF5",
+                        backgroundColor: SUCCESS_SURFACE,
                       },
                     ]}
                   >
@@ -170,6 +169,6 @@ export default function TransactionsView({
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

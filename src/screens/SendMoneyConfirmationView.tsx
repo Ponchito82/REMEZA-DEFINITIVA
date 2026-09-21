@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -9,7 +8,7 @@ import {
 import { X, CheckCircle2, AlertCircle, User } from "lucide-react-native";
 
 import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import { DANGER, PURPLE } from "../theme/colors";
 import FormInput from "../components/FormInput";
 import MainButton from "../components/MainButton";
 import { ViewName } from "../types/app";
@@ -64,7 +63,7 @@ export default function SendMoneyConfirmationView({
   );
 
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
       <ScrollView
         contentContainerStyle={styles.pageContent}
         showsVerticalScrollIndicator={false}
@@ -164,7 +163,7 @@ export default function SendMoneyConfirmationView({
 
           {!!sendMoneyError && (
             <View testID="sendMoneyConfirmation-errorMessage" style={styles.errorBox}>
-              <AlertCircle size={18} color="#DC2626" />
+              <AlertCircle size={18} color={DANGER} />
               <Text style={styles.errorText}>
                 {sendMoneyError}
               </Text>
@@ -172,6 +171,6 @@ export default function SendMoneyConfirmationView({
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

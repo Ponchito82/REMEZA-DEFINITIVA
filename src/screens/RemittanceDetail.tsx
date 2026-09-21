@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Pressable
 } from "react-native";
@@ -42,7 +41,7 @@ export default function RemittanceDetail({
   };
 
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
         <ScrollView
                 contentContainerStyle={styles.pageContent}
                 showsVerticalScrollIndicator={false}
@@ -92,7 +91,7 @@ export default function RemittanceDetail({
         </TouchableOpacity>
       </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

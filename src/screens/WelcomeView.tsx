@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import {
-  ScreenBackground,
   BrandMark,
   PrimaryButton,
   LanguageToggle,
@@ -19,7 +18,6 @@ type Props = {
 /** Pantalla de entrada: marca, claim y seleccion de idioma. */
 export default function WelcomeView({ t, language, setLanguage, setView }: Props) {
   return (
-    <ScreenBackground watermarkTop={0.33} watermarkScale={0.88}>
       <View style={styles.content}>
         <View style={styles.brand}>
           <BrandMark size={128} />
@@ -43,7 +41,6 @@ export default function WelcomeView({ t, language, setLanguage, setView }: Props
           />
         </View>
       </View>
-    </ScreenBackground>
   );
 }
 
@@ -59,17 +56,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   appName: {
-    fontFamily,
-    fontSize: 36,
-    fontWeight: "700",
+    fontFamily: fontFamily.bold,
+    fontSize: 32,
     color: palette.textPrimary,
     marginTop: spacing.lg,
     letterSpacing: -0.5,
   },
   tagline: {
-    fontFamily,
+    fontFamily: fontFamily.regular,
     fontSize: fontSize.subtitle,
-    fontWeight: "400",
     color: palette.textSecondary,
     marginTop: spacing.sm,
   },
