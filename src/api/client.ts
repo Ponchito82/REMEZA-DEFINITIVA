@@ -1,7 +1,8 @@
-import { Platform } from "react-native";
 import { getToken, isSessionExpired, remainingSessionMs, reportUnauthorized } from "./session";
 
-const DEV_HOST = Platform.select({ android: "10.0.2.2", default: "localhost" });
+// "localhost" + "adb reverse" funciona igual en el emulador que en un
+// telefono fisico por USB; "10.0.2.2" solo existe dentro del emulador.
+const DEV_HOST = "localhost";
 
 export const API_BASE_URL = `http://${DEV_HOST}:8700`;
 
