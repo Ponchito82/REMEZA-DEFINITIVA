@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeAreaView, View, Text } from "react-native";
+import { View, Text } from "react-native";
 import MainButton from "../components/MainButton";
 import { ViewName } from "../types/app";
 import { styles } from "../theme/styles";
@@ -11,7 +11,7 @@ type Props = {
 
 export default function KycView({ t, setView }: Props) {
   return (
-    <SafeAreaView style={styles.kycScreen}>
+    <View style={styles.kycScreen}>
       <View style={styles.kycLogo}>
         <Text style={styles.kycLogoText}>P</Text>
       </View>
@@ -27,6 +27,6 @@ export default function KycView({ t, setView }: Props) {
       >
         {t.enterDashboard}
       </MainButton>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { Phone, Lock, User } from "lucide-react-native";
 import {
-  ScreenBackground,
   BrandMark,
   GlassField,
   GlassBanner,
@@ -86,8 +85,7 @@ export default function LoginView({
   };
 
   return (
-    <ScreenBackground watermarkTop={0.31} watermarkScale={0.9}>
-      <KeyboardAvoidingView
+    <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
@@ -171,8 +169,7 @@ export default function LoginView({
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
-    </ScreenBackground>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -193,17 +190,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
   },
   title: {
-    fontFamily,
+    fontFamily: fontFamily.bold,
     fontSize: fontSize.display,
-    fontWeight: "700",
     color: palette.textPrimary,
     marginTop: spacing.lg,
     letterSpacing: -0.4,
   },
   subtitle: {
-    fontFamily,
+    fontFamily: fontFamily.regular,
     fontSize: fontSize.subtitle,
-    fontWeight: "400",
     color: palette.textSecondary,
     marginTop: spacing.sm,
     textAlign: "center",

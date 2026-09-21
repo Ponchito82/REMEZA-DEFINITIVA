@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Pressable,
-  SafeAreaView,
   ScrollView,
   Modal,
   TextInput,
@@ -19,7 +18,7 @@ import {
 import Clipboard from "@react-native-clipboard/clipboard";
 import { Clipboard as ClipboardIcon } from "lucide-react-native";
 import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import { GLASS_BORDER, GLASS_SURFACE_STRONG, PURPLE } from "../theme/colors";
 
 type Props = {
   t: any;
@@ -110,7 +109,7 @@ export default function DashboardView({
 
   return (
     <View style={styles.dashboardScreen}>
-      <SafeAreaView style={styles.dashboardSafeTop}>
+      <View style={styles.dashboardSafeTop}>
         <View style={styles.dashboardHeader}>
           <View>
             <Text style={styles.kicker}>{t.myBalance}</Text>
@@ -128,7 +127,7 @@ export default function DashboardView({
             <Menu size={24} color="#374151" />
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
 
       <Modal
         visible={showSecureCodeModal}
@@ -146,7 +145,7 @@ export default function DashboardView({
                 marginTop: 16,
                 padding: 16,
                 borderRadius: 12,
-                backgroundColor: "#F3F4F6",
+                backgroundColor: GLASS_SURFACE_STRONG,
               }}
             >
               <Text style={styles.modalSubtitle}>{t.cardNumber}</Text>
@@ -648,7 +647,7 @@ export default function DashboardView({
               styles.switchTrack,
               {
                 backgroundColor:
-                  isCardActive && !isFactoryInactive ? PURPLE : "#E5E7EB",
+                  isCardActive && !isFactoryInactive ? PURPLE : GLASS_BORDER,
                 opacity: isFactoryInactive ? 0.5 : 1,
               },
             ]}

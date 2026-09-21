@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { SafeAreaView, ScrollView, View, Text, Pressable } from "react-native";
+import { ScrollView, View, Text, Pressable } from "react-native";
 import { X, CheckCircle2 } from "lucide-react-native";
 import { styles } from "../theme/styles";
 import FormInput from "../components/FormInput";
@@ -48,7 +48,7 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
       <ScrollView contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
         <Pressable onPress={() => setView("login")} style={styles.backButton}>
           <X size={24} color="#111827" />
@@ -116,6 +116,6 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

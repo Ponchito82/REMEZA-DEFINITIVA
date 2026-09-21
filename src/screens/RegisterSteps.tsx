@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  SafeAreaView,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
@@ -569,7 +568,7 @@ export default function RegisterSteps(props: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.registerScreen}>
+    <View style={styles.registerScreen}>
       <ScrollView
         ref={form.scrollRef}
         contentContainerStyle={styles.registerContent}
@@ -1121,6 +1120,6 @@ export default function RegisterSteps(props: Props) {
         )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

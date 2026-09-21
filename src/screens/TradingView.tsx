@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -62,7 +61,7 @@ export default function TradingView({
   handleTradingTransfer,
 }: Props) {
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
       <ScrollView
         contentContainerStyle={styles.pageContent}
         showsVerticalScrollIndicator={false}
@@ -173,6 +172,6 @@ export default function TradingView({
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

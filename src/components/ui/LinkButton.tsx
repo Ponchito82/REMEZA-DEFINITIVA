@@ -48,9 +48,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   label: {
-    fontFamily,
+    fontFamily: fontFamily.semibold,
     fontSize: fontSize.caption + 1,
-    fontWeight: "700",
     textAlign: "center",
   },
   pressed: {

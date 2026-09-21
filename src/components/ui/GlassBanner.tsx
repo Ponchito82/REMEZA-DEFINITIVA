@@ -42,10 +42,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   text: {
-    fontFamily,
+    fontFamily: fontFamily.medium,
     fontSize: fontSize.caption,
     lineHeight: 19,
-    fontWeight: "500",
     textAlign: "center",
   },
 });

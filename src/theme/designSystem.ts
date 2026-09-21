@@ -37,21 +37,23 @@ export const palette = {
 } as const;
 
 /**
- * Familia tipografica: Inter (recomendada) con SF Pro / Roboto del sistema
- * como respaldo. Para activar Inter basta con empaquetar los .ttf
- * (assets/fonts + react-native.config.js) y cambiar USE_INTER a true.
+ * Tipografia Inter. En Android el peso se pide por **nombre de familia**, nunca
+ * con `fontWeight`: `ReactFontManager` solo resuelve normal y negrita, asi que
+ * "Inter" + `fontWeight: "600"` acaba cayendo en la Regular. Los .ttf estan en
+ * `src/assets/fonts`, declarados en `react-native.config.js` y enlazados con
+ * `npx react-native-asset`; si se tocan, hay que recompilar.
+ *
+ * En iOS las mismas claves resuelven los cortes de SF Pro si Inter no esta.
  */
-const USE_INTER = false;
-
-export const fontFamily = USE_INTER
-  ? Platform.select({ ios: "Inter", android: "Inter", default: "Inter" })
-  : undefined;
-
-export const fontWeight = {
-  regular: "400",
-  medium: "500",
-  semibold: "600",
-  bold: "700",
+export const fontFamily = {
+  /** Contenido */
+  regular: Platform.select({ ios: "Inter-Regular", default: "Inter-Regular" }),
+  /** Textos auxiliares */
+  medium: Platform.select({ ios: "Inter-Medium", default: "Inter-Medium" }),
+  /** Subtitulos, botones y campos */
+  semibold: Platform.select({ ios: "Inter-SemiBold", default: "Inter-SemiBold" }),
+  /** Titulos principales */
+  bold: Platform.select({ ios: "Inter-Bold", default: "Inter-Bold" }),
 } as const;
 
 /** Jerarquia tipografica */

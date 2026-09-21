@@ -141,9 +141,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     paddingVertical: 0,
-    fontFamily,
+    fontFamily: fontFamily.regular,
     fontSize: fontSize.control,
-    fontWeight: "400",
     color: palette.textPrimary,
   },
   inputNoIcon: {
@@ -156,9 +155,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   errorText: {
-    fontFamily,
+    fontFamily: fontFamily.medium,
     fontSize: fontSize.micro,
-    fontWeight: "500",
     color: palette.danger,
     marginTop: 8,
     marginLeft: 24,

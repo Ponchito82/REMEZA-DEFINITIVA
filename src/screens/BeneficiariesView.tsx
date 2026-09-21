@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeAreaView, ScrollView, View, Text, Pressable } from "react-native";
+import { ScrollView, View, Text, Pressable } from "react-native";
 import { X, CheckCircle2, AlertCircle } from "lucide-react-native";
 
 import { styles } from "../theme/styles";
@@ -111,7 +111,7 @@ export default function BeneficiariesView({
   const highlighted = (key: string) => form.pendingField === key;
 
   return (
-    <SafeAreaView style={styles.pageScreen}>
+    <View style={styles.pageScreen}>
       <ScrollView
         ref={form.scrollRef}
         contentContainerStyle={styles.pageContent}
@@ -240,6 +240,6 @@ export default function BeneficiariesView({
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

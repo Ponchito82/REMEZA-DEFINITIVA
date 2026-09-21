@@ -1,49 +1,82 @@
-import React from "react";
-import { View, Image, StyleSheet, useWindowDimensions, StatusBar } from "react-native";
-import Svg, { Defs, Ellipse, LinearGradient, RadialGradient, Rect, Stop } from "react-native-svg";
+import React, { useMemo, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  useWindowDimensions,
+  StatusBar,
+  PixelRatio,
+  LayoutChangeEvent,
+} from "react-native";
+import Svg, { Defs, Ellipse, G, LinearGradient, Path, Pattern, RadialGradient, Rect, Stop } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "../../theme/designSystem";
+import { remezaGlyph } from "./remezaGlyph";
 
-type Glow = {
+type Light = {
   /** Centro relativo al ancho (0 = borde izquierdo, 1 = borde derecho) */
   x: number;
   /** Centro relativo al alto */
   y: number;
-  /** Radio relativo al ancho de pantalla (mismo radio en x e y: circulo real) */
-  r: number;
+  /** Semieje horizontal, relativo al ancho */
+  rx: number;
+  /** Semieje vertical, relativo al alto */
+  ry: number;
   color: string;
-  opacity: number;
+  alpha: number;
 };
 
 /**
- * Iluminacion violeta en los extremos: tres focos por costado, con el
- * centro justo sobre el borde para que solo se vea la mitad interior del
- * halo. Radios en proporcion al ancho (iguales en x e y) para que cada
- * foco sea un circulo real y no una elipse distorsionada por el viewBox.
+ * Iluminacion ambiental de los costados. Son **elipses verticales** con el
+ * centro fuera de pantalla, no circulos: un circulo de radio suficiente para
+ * recorrer el costado se mete hasta el centro y lava el negro, que es lo que
+ * sostiene todo el tema. Las esquinas de abajo son las mas cargadas.
  */
-const GLOWS: Glow[] = [
-  // Costado izquierdo
-  { x: -0.02, y: 0.08, r: 0.33, color: palette.violet, opacity: 0.78 },
-  { x: -0.04, y: 0.45, r: 0.35, color: palette.violet, opacity: 0.85 },
-  { x: -0.02, y: 0.8, r: 0.31, color: palette.purple, opacity: 0.72 },
-  // Costado derecho
-  { x: 1.02, y: 0.12, r: 0.33, color: palette.violetBright, opacity: 0.72 },
-  { x: 1.04, y: 0.51, r: 0.35, color: palette.violet, opacity: 0.85 },
-  { x: 1.02, y: 0.86, r: 0.31, color: palette.violet, opacity: 0.7 },
+const LIGHTS: Light[] = [
+  { x: -0.08, y: 0.22, rx: 0.67, ry: 0.33, color: palette.violet, alpha: 0.62 },
+  { x: -0.1, y: 0.72, rx: 0.54, ry: 0.21, color: palette.purple, alpha: 0.35 },
+  { x: -0.06, y: 0.99, rx: 0.71, ry: 0.31, color: palette.violetBright, alpha: 0.66 },
+  { x: 1.08, y: 0.08, rx: 0.67, ry: 0.31, color: palette.violetBright, alpha: 0.5 },
+  { x: 1.1, y: 0.42, rx: 0.58, ry: 0.28, color: palette.violet, alpha: 0.36 },
+  { x: 1.06, y: 0.98, rx: 0.67, ry: 0.28, color: palette.violet, alpha: 0.58 },
 ];
 
 /**
- * Caida del halo. Varios tramos en vez de dos: suaviza el degradado y
- * evita el "banding" (las franjas que se ven como pixelado en Android).
+ * Sigma de la gaussiana, en fracciones del radio. A 0.28 el halo vale
+ * `exp(-6.4)` al llegar al borde de la elipse: menos de un nivel de 255, o
+ * sea por debajo de lo representable. Eso importa mas de lo que parece — si
+ * el halo llega al borde con valor o pendiente apreciables, el contorno de la
+ * elipse se dibuja como un anillo, y seis focos dejaban el fondo lleno de
+ * circunferencias.
  */
-const FALLOFF: { offset: string; alpha: number }[] = [
-  { offset: "0", alpha: 1 },
-  { offset: "0.22", alpha: 0.74 },
-  { offset: "0.42", alpha: 0.44 },
-  { offset: "0.62", alpha: 0.22 },
-  { offset: "0.82", alpha: 0.07 },
-  { offset: "1", alpha: 0 },
+const SIGMA = 0.28;
+
+/** Lado de la celda del tramado: un pixel fisico exacto, no un dp. */
+const DITHER_CELL = 1 / PixelRatio.get();
+
+/**
+ * Matriz de Bayer 4x4: reparte el error de cuantizacion en 16 escalones de
+ * sub-nivel. Un damero de dos celdas solo desplaza el contorno medio nivel y
+ * lo deja visible; esta lo difumina a lo ancho de cuatro pixeles.
+ */
+const BAYER_4X4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
 ];
+
+/** Amplitud del tramado: un nivel de 255 repartido entre los 16 escalones. */
+const DITHER_AMPLITUDE = 0.0045;
+
+/** Caida gaussiana pura: sin recortar ni renormalizar, para no crear canto. */
+function gaussianFalloff(steps: number) {
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const r = index / steps;
+    return { offset: r.toFixed(4), alpha: Math.exp(-(r * r) / (2 * SIGMA * SIGMA)) };
+  });
+}
+
+const FALLOFF = gaussianFalloff(24);
 
 type Props = {
   children?: React.ReactNode;
@@ -57,16 +90,44 @@ type Props = {
 
 export default function ScreenBackground({
   children,
-  watermarkTop = 0.3,
-  watermarkScale = 0.78,
+  watermarkTop = 0.34,
+  watermarkScale = 0.8,
   showWatermark = true,
 }: Props) {
-  const { width, height } = useWindowDimensions();
+  const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const markSize = width * watermarkScale;
+
+  /**
+   * El lienzo se mide por layout, no con `useWindowDimensions`: esa devuelve
+   * la ventana sin la barra de navegacion, mientras que la vista si pinta por
+   * debajo, y el resplandor de abajo se cortaba en seco en esa frontera. Asi
+   * el fondo cubre exactamente lo que ocupa el componente, lo envuelva quien
+   * lo envuelva y a cualquier resolucion.
+   */
+  const [canvas, setCanvas] = useState({ width: window.width, height: window.height });
+  const { width, height } = canvas;
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width: nextWidth, height: nextHeight } = event.nativeEvent.layout;
+    setCanvas((prev) =>
+      prev.width === nextWidth && prev.height === nextHeight
+        ? prev
+        : { width: nextWidth, height: nextHeight },
+    );
+  };
+
+  const watermark = useMemo(() => {
+    const markWidth = width * watermarkScale;
+    const markHeight = markWidth * (remezaGlyph.height / remezaGlyph.width);
+    return {
+      scale: markWidth / remezaGlyph.width,
+      left: (width - markWidth) / 2,
+      top: height * watermarkTop - markHeight / 2,
+    };
+  }, [width, height, watermarkScale, watermarkTop]);
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={handleLayout}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       <Svg
@@ -75,81 +136,110 @@ export default function ScreenBackground({
         height={height}
         viewBox={`0 0 ${width} ${height}`}
       >
-        {/*
-          El viewBox usa las mismas unidades que width/height (en vez de un
-          lienzo fijo de 100x100 estirado de forma no uniforme). Eso evita
-          que Android rasterice los degradados radiales a baja resolucion y
-          los reescale, que es lo que los volvia borrosos/pixelados.
-        */}
         <Defs>
-          <LinearGradient id="remezaBase" x1="0" y1="0" x2="1" y2="1">
+          <LinearGradient id="remezaBase" x1="0" y1="0" x2="0.3" y2="1">
             <Stop offset="0" stopColor={palette.navy} />
-            <Stop offset="0.38" stopColor={palette.background} />
-            <Stop offset="0.72" stopColor="#060927" />
+            <Stop offset="0.3" stopColor={palette.background} />
+            <Stop offset="0.7" stopColor={palette.background} />
             <Stop offset="1" stopColor={palette.navy} />
           </LinearGradient>
 
-          {GLOWS.map((item, index) => (
-            <RadialGradient key={index} id={"remezaGlow" + index} cx="50%" cy="50%" r="50%">
+          {LIGHTS.map((light, index) => (
+            <RadialGradient key={index} id={`remezaLight${index}`} cx="50%" cy="50%" r="50%">
               {FALLOFF.map((stop) => (
                 <Stop
                   key={stop.offset}
                   offset={stop.offset}
-                  stopColor={item.color}
-                  stopOpacity={item.opacity * stop.alpha}
+                  stopColor={light.color}
+                  stopOpacity={light.alpha * stop.alpha}
                 />
               ))}
             </RadialGradient>
           ))}
 
-          {/* Vineta central: conserva el nucleo casi negro del diseno */}
+          {/*
+            Marca de agua: la letra **entera**, rellena de indigo plano. Al ser
+            un color fijo y no una transparencia, se lee clara sobre el negro
+            del centro y oscura donde le da la luz de los costados, que es como
+            se comporta en la referencia. Va por encima de la iluminacion y por
+            debajo de los componentes: nunca sobre botones, campos ni textos.
+          */}
+          <LinearGradient id="remezaWatermark" x1="0.2" y1="0" x2="0.4" y2="1">
+            <Stop offset="0" stopColor="#141152" stopOpacity="0.8" />
+            <Stop offset="1" stopColor={palette.indigo} stopOpacity="0.55" />
+          </LinearGradient>
+
+          {/*
+            Tramado ordenado: una rejilla de un pixel fisico que suma un nivel
+            de 255 en la mitad de los pixeles. El degradado avanza tan despacio
+            que cada nivel ocupa una franja ancha y el escalon se ve; con el
+            tramado el borde de cada franja se deshace y desaparece el bandeado.
+          */}
+          <Pattern
+            id="remezaDither"
+            x="0"
+            y="0"
+            width={DITHER_CELL * 4}
+            height={DITHER_CELL * 4}
+            patternUnits="userSpaceOnUse"
+          >
+            {BAYER_4X4.flatMap((row, y) =>
+              row.map((level, x) => (
+                <Rect
+                  key={`${x}-${y}`}
+                  x={x * DITHER_CELL}
+                  y={y * DITHER_CELL}
+                  width={DITHER_CELL}
+                  height={DITHER_CELL}
+                  fill="#FFFFFF"
+                  fillOpacity={((level + 0.5) / 16) * DITHER_AMPLITUDE}
+                />
+              )),
+            )}
+          </Pattern>
+
+          {/* Nucleo oscuro: hunde el centro y empuja la luz hacia los costados */}
           <RadialGradient id="remezaCore" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={palette.background} stopOpacity="0.92" />
-            <Stop offset="0.45" stopColor={palette.background} stopOpacity="0.78" />
-            <Stop offset="0.72" stopColor={palette.background} stopOpacity="0.4" />
-            <Stop offset="0.9" stopColor={palette.background} stopOpacity="0.12" />
-            <Stop offset="1" stopColor={palette.background} stopOpacity="0" />
+            {FALLOFF.map((stop) => (
+              <Stop
+                key={stop.offset}
+                offset={stop.offset}
+                stopColor={palette.background}
+                stopOpacity={0.9 * stop.alpha}
+              />
+            ))}
           </RadialGradient>
         </Defs>
 
         <Rect x="0" y="0" width={width} height={height} fill="url(#remezaBase)" />
 
-        {GLOWS.map((item, index) => (
+        {LIGHTS.map((light, index) => (
           <Ellipse
             key={index}
-            cx={item.x * width}
-            cy={item.y * height}
-            rx={item.r * width}
-            ry={item.r * width}
-            fill={"url(#remezaGlow" + index + ")"}
+            cx={light.x * width}
+            cy={light.y * height}
+            rx={light.rx * width}
+            ry={light.ry * height}
+            fill={`url(#remezaLight${index})`}
           />
         ))}
 
-        {/* Nucleo oscuro: mantiene el centro profundo y empuja la luz a los extremos */}
         <Ellipse
           cx={width * 0.5}
           cy={height * 0.5}
-          rx={width * 0.56}
+          rx={width * 0.58}
           ry={height * 0.46}
           fill="url(#remezaCore)"
         />
-      </Svg>
 
-      {showWatermark ? (
-        <Image
-          source={require("../../assets/remeza_logo.png")}
-          resizeMode="contain"
-          style={[
-            styles.watermark,
-            {
-              width: markSize,
-              height: markSize,
-              left: (width - markSize) / 2,
-              top: height * watermarkTop - markSize / 2,
-            },
-          ]}
-        />
-      ) : null}
+        {showWatermark ? (
+          <G translateX={watermark.left} translateY={watermark.top} scale={watermark.scale}>
+            <Path d={remezaGlyph.path} fill="url(#remezaWatermark)" />
+          </G>
+        ) : null}
+
+        <Rect x="0" y="0" width={width} height={height} fill="url(#remezaDither)" />
+      </Svg>
 
       <View
         style={[
@@ -167,12 +257,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: palette.background,
-  },
-  watermark: {
-    position: "absolute",
-    pointerEvents: "none",
-    tintColor: "#4A3AA8",
-    opacity: 0.22,
   },
   content: {
     flex: 1,

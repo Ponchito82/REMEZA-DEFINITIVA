@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Animated, StatusBar } from "react-native";
+import { View, Animated } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
+
+import { ScreenBackground } from "./src/components/ui";
+import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/colors";
 
 import { translations } from "./src/i18n/translations";
 import { Language, TransactionsFilter, ViewName } from "./src/types/app";
@@ -341,25 +344,23 @@ function AppContent() {
             {
                 label: t.zelleDeposit,
                 amount: "+$500.00",
-                color: "#16A34A",
-                bg: "#ECFDF5",
-                icon: <ArrowDownLeft size={18} color="#16A34A" />,
+                color: SUCCESS,
+                bg: SUCCESS_SURFACE,
+                icon: <ArrowDownLeft size={18} color={SUCCESS} />,
             },
             {
                 label: t.servicePayment,
                 amount: "-$80.00",
-                color: "#EF4444",
-                bg: "#FEF2F2",
-                icon: <ArrowUpRight size={18} color="#EF4444" />,
+                color: DANGER,
+                bg: DANGER_SURFACE,
+                icon: <ArrowUpRight size={18} color={DANGER} />,
             },
         ],
         [t]
     );
 
     return (
-        <View style={styles.root}>
-            <StatusBar barStyle="dark-content" />
-
+        <ScreenBackground>
             {view === "welcome" && (
                 <WelcomeView t={t} language={language} setLanguage={setLanguage} setView={setView} />
             )}
@@ -626,7 +627,7 @@ function AppContent() {
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
             />
-        </View>
+        </ScreenBackground>
     );
 }
 
