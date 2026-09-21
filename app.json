@@ -1,4 +1,9 @@
 {
   "name": "RemezaApp",
-  "displayName": "RemezaApp"
+  "displayName": "RemezaApp",
+  "extra": {
+    "eas": {
+      "projectId": "8a6609cc-b769-4ac8-8a85-01f007d84814"
+    }
+  }
 }
