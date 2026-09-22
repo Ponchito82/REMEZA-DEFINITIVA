@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     maxHeight: "75%",
-    backgroundColor: colors.glassSurfaceStrong,
+    backgroundColor: colors.sheetSurface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,

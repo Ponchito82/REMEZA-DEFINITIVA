@@ -28,6 +28,8 @@ export const colors = {
   glassSurface: palette.glassSurface,
   /** Superficies grandes (hojas inferiores) que necesitan mas opacidad para leerse */
   glassSurfaceStrong: palette.glassSurfaceStrong,
+  /** Superficie opaca de hojas inferiores y menus desplegables */
+  sheetSurface: palette.sheetSurface,
 } as const;
 
 /**
@@ -55,6 +57,7 @@ export const TEXT_DISABLED = palette.textDisabled;
 
 export const GLASS_SURFACE = palette.glassSurface;
 export const GLASS_SURFACE_STRONG = palette.glassSurfaceStrong;
+export const SHEET_SURFACE = palette.sheetSurface;
 export const GLASS_BORDER = palette.glassBorder;
 export const VIOLET_SURFACE = "rgba(84,32,255,0.18)";
 export const VIOLET_BORDER = "rgba(130,110,255,0.38)";
