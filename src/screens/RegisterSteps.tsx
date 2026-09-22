@@ -6,8 +6,11 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { X, CheckCircle2, Lock } from "lucide-react-native";
+import { X, CheckCircle2, Lock, Calendar, Globe, CreditCard, User, Images } from "lucide-react-native";
+import { launchImageLibrary } from "react-native-image-picker";
 import Clipboard from "@react-native-clipboard/clipboard";
 import MainButton from "../components/MainButton";
 import FormInput from "../components/FormInput";
@@ -15,6 +18,7 @@ import DocumentCamera from "../components/DocumentCamera";
 import DocumentPreviewCard, { DocumentStatus } from "../components/DocumentPreviewCard";
 import SelectField from "../components/SelectField";
 import PhoneField from "../components/PhoneField";
+import OptionSheet from "../components/ui/OptionSheet";
 import AddressFields, { ADDRESS_FIELD_KEYS, AddressDetail } from "../components/AddressFields";
 import { Language, ViewName } from "../types/app";
 import { styles } from "../theme/styles";
@@ -43,6 +47,7 @@ import {
   isValidSsnLast4,
   DAY_OPTIONS,
   MONTH_OPTIONS,
+  MONTH_OPTIONS_ES,
   buildYearOptions,
   GENDER_OPTIONS,
   GENDER_OPTIONS_ES,
@@ -210,6 +215,7 @@ export default function RegisterSteps(props: Props) {
   const genderOptions = language === "es" ? GENDER_OPTIONS_ES : GENDER_OPTIONS;
   const foreignIdTypeOptions = language === "es" ? FOREIGN_ID_TYPE_OPTIONS_ES : FOREIGN_ID_TYPE_OPTIONS;
   const nationalityOptions = language === "es" ? NATIONALITY_OPTIONS_ES : NATIONALITY_OPTIONS;
+  const monthOptions = language === "es" ? MONTH_OPTIONS_ES : MONTH_OPTIONS;
 
   const otpRefs = useRef<Array<TextInput | null>>([]);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(RESEND_SECONDS);
@@ -228,6 +234,7 @@ export default function RegisterSteps(props: Props) {
 
   const [cameraVisible, setCameraVisible] = useState(false);
   const [documentSide, setDocumentSide] = useState<"front" | "back">("front");
+  const [imageSourceSide, setImageSourceSide] = useState<"front" | "back" | null>(null);
 
   const [frontDocStatus, setFrontDocStatus] = useState<DocumentStatus>("empty");
   const [backDocStatus, setBackDocStatus] = useState<DocumentStatus>("empty");
@@ -237,14 +244,30 @@ export default function RegisterSteps(props: Props) {
   const [submitError, setSubmitError] = useState("");
   const [isAccessCodeRevealed, setIsAccessCodeRevealed] = useState(false);
 
-  const pickIdentificationFront = () => {
-    setDocumentSide("front");
+  const pickIdentificationFront = () => setImageSourceSide("front");
+  const pickIdentificationBack = () => setImageSourceSide("back");
+
+  const openCameraForSide = (side: "front" | "back") => {
+    setImageSourceSide(null);
+    setDocumentSide(side);
     setCameraVisible(true);
   };
 
-  const pickIdentificationBack = () => {
-    setDocumentSide("back");
-    setCameraVisible(true);
+  const openGalleryForSide = async (side: "front" | "back") => {
+    setImageSourceSide(null);
+
+    const result = await launchImageLibrary({ mediaType: "photo", quality: 0.8, selectionLimit: 1 });
+    const uri = result.assets?.[0]?.uri;
+    if (!uri) return;
+
+    if (side === "front") {
+      setIdentificationFrontFile(uri);
+      setFrontDocStatus("loaded");
+    } else {
+      setIdentificationBackFile(uri);
+      setBackDocStatus("loaded");
+    }
+    setDocumentsError("");
   };
 
   const removeIdentificationFront = () => {
@@ -470,8 +493,11 @@ export default function RegisterSteps(props: Props) {
 
   const handleCompleteRegistration = () => {
     const isValid = form.validate([
+      { key: "dob", valid: dobValid, message: t.requiredDob },
       { key: "nationality", valid: nationalityValid, message: t.requiredCountry },
+      { key: "foreignIdType", valid: foreignIdTypeValid, message: t.requiredForeignIdType },
       { key: "foreignId", valid: foreignIdValid, message: t.invalidForeignId },
+      { key: "gender", valid: genderValid, message: t.requiredGender },
       { key: "email", valid: emailValid, message: t.requiredEmail },
       { key: "firstName", valid: firstNameValid, message: t.requiredFirstName },
       { key: "paternalLastName", valid: paternalLastNameValid, message: t.requiredLastName },
@@ -568,10 +594,14 @@ export default function RegisterSteps(props: Props) {
   }
 
   return (
-    <View style={styles.registerScreen}>
+    <KeyboardAvoidingView
+      style={styles.registerScreen}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         ref={form.scrollRef}
         contentContainerStyle={styles.registerContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View ref={form.contentRef} collapsable={false}>
@@ -768,16 +798,19 @@ export default function RegisterSteps(props: Props) {
                 </Text>
               </View>
 
-              <View>
+              <View ref={form.anchor("dob")} collapsable={false}>
                 <Text style={styles.formLabel}>{t.dob}</Text>
                 <View style={styles.row3}>
                   <View style={styles.flex1}>
                     <SelectField
                       label=""
                       placeholder={t.day}
+                      title={t.selectDayTitle}
+                      icon={Calendar}
                       value={registerDobDay}
                       options={DAY_OPTIONS}
                       onSelect={setRegisterDobDay}
+                      highlighted={form.pendingField === "dob"}
                       testID="register-dobDayInput"
                     />
                   </View>
@@ -785,9 +818,12 @@ export default function RegisterSteps(props: Props) {
                     <SelectField
                       label=""
                       placeholder={t.month}
+                      title={t.selectMonthTitle}
+                      icon={Calendar}
                       value={registerDobMonth}
-                      options={MONTH_OPTIONS}
+                      options={monthOptions}
                       onSelect={setRegisterDobMonth}
+                      highlighted={form.pendingField === "dob"}
                       testID="register-dobMonthInput"
                     />
                   </View>
@@ -795,9 +831,12 @@ export default function RegisterSteps(props: Props) {
                     <SelectField
                       label=""
                       placeholder={t.year}
+                      title={t.selectYearTitle}
+                      icon={Calendar}
                       value={registerDobYear}
                       options={YEAR_OPTIONS}
                       onSelect={setRegisterDobYear}
+                      highlighted={form.pendingField === "dob"}
                       testID="register-dobYearInput"
                     />
                   </View>
@@ -808,22 +847,26 @@ export default function RegisterSteps(props: Props) {
                 <SelectField
                   label={t.nationality}
                   placeholder={t.selectOption}
+                  icon={Globe}
                   value={registerNationality}
                   options={nationalityOptions}
                   onSelect={setRegisterNationality}
+                  highlighted={form.pendingField === "nationality"}
                   testID="register-nationalityInput"
                 />
               </View>
 
               <View style={styles.groupBoxGray}>
                 <View style={styles.row2}>
-                  <View style={styles.flex1}>
+                  <View style={styles.flex1} ref={form.anchor("foreignIdType")} collapsable={false}>
                     <SelectField
                       label={t.foreignIdType}
                       placeholder={t.selectOption}
+                      icon={CreditCard}
                       value={registerForeignIdType}
                       options={foreignIdTypeOptions}
                       onSelect={setRegisterForeignIdType}
+                      highlighted={form.pendingField === "foreignIdType"}
                       testID="register-foreignIdTypeInput"
                     />
                   </View>
@@ -844,13 +887,15 @@ export default function RegisterSteps(props: Props) {
               </View>
 
               <View style={styles.row2}>
-                <View style={styles.flex1}>
+                <View style={styles.flex1} ref={form.anchor("gender")} collapsable={false}>
                   <SelectField
                     label={t.gender}
                     placeholder={t.selectOption}
+                    icon={User}
                     value={registerGender}
                     options={genderOptions}
                     onSelect={setRegisterGender}
+                    highlighted={form.pendingField === "gender"}
                     testID="register-genderInput"
                   />
                 </View>
@@ -1120,6 +1165,23 @@ export default function RegisterSteps(props: Props) {
         )}
         </View>
       </ScrollView>
-    </View>
+
+      <OptionSheet
+        visible={imageSourceSide !== null}
+        onClose={() => setImageSourceSide(null)}
+        title={t.chooseImageSource}
+        icon={Images}
+        options={[
+          { label: t.takePhoto, value: "camera" },
+          { label: t.chooseFromGallery, value: "gallery" },
+        ]}
+        onSelect={(source) => {
+          if (!imageSourceSide) return;
+          if (source === "camera") openCameraForSide(imageSourceSide);
+          else openGalleryForSide(imageSourceSide);
+        }}
+        testID="register-imageSourceSheet"
+      />
+    </KeyboardAvoidingView>
   );
 }

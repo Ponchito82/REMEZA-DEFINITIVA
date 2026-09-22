@@ -26,6 +26,10 @@ async function setValueScrolled(testId, value) {
 async function captureDocument(fieldTestId) {
   await clickWithRetry(fieldTestId);
 
+  const takePhotoOption = $('//*[@text="Take photo"]');
+  await takePhotoOption.waitForDisplayed({ timeout: 5000 });
+  await takePhotoOption.click();
+
   const captureButton = $('android=new UiSelector().resourceId("register-cameraCaptureButton")');
   await captureButton.waitForDisplayed({ timeout: 10000 });
   await captureButton.click();
@@ -65,7 +69,7 @@ async function fillStep3(code = "573920") {
 
 async function fillStep4ExceptDocuments() {
   await selectDropdownOption("register-dobDayInput", "01");
-  await selectDropdownOption("register-dobMonthInput", "01");
+  await selectDropdownOption("register-dobMonthInput", "January");
   await selectDropdownOption("register-dobYearInput", String(new Date().getFullYear() - 16));
 
   await selectDropdownOption("register-nationalityInput", "Mexico");

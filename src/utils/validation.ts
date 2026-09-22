@@ -61,10 +61,25 @@ export const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => {
   return { label: day, value: day };
 });
 
-export const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
-  const month = String(i + 1).padStart(2, "0");
-  return { label: month, value: month };
-});
+const MONTH_NAMES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const MONTH_NAMES_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+export const MONTH_OPTIONS = MONTH_NAMES_EN.map((label, i) => ({
+  label,
+  value: String(i + 1).padStart(2, "0"),
+}));
+
+export const MONTH_OPTIONS_ES = MONTH_NAMES_ES.map((label, i) => ({
+  label,
+  value: String(i + 1).padStart(2, "0"),
+}));
 
 export function buildYearOptions(): { label: string; value: string }[] {
   const currentYear = new Date().getFullYear();
