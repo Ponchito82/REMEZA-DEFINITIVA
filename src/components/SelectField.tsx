@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, Modal, ScrollView } from "react-native";
-import { ChevronDown, Check } from "lucide-react-native";
+import { View, Text, Pressable } from "react-native";
+import { ChevronDown } from "lucide-react-native";
 import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import OptionSheet from "./ui/OptionSheet";
+import type { IconComponent } from "./ui/GlassInput";
 
 type Option = { label: string; value: string };
 
@@ -11,11 +12,25 @@ type Props = {
   value: string;
   options: Option[];
   placeholder?: string;
+  /** Titulo de la hoja inferior. Si falta, usa `label` y luego `placeholder`. */
+  title?: string;
+  icon?: IconComponent;
+  highlighted?: boolean;
   onSelect: (value: string) => void;
   testID?: string;
 };
 
-export default function SelectField({ label, value, options, placeholder, onSelect, testID }: Props) {
+export default function SelectField({
+  label,
+  value,
+  options,
+  placeholder,
+  title,
+  icon,
+  highlighted = false,
+  onSelect,
+  testID,
+}: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find((option) => option.value === value);
 
@@ -26,7 +41,11 @@ export default function SelectField({ label, value, options, placeholder, onSele
       <Pressable
         onPress={() => setIsOpen(true)}
         testID={testID}
-        style={({ pressed }) => [styles.selectField, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [
+          styles.selectField,
+          highlighted && styles.fieldHighlighted,
+          pressed && { opacity: 0.85 },
+        ]}
       >
         <Text style={selectedOption ? styles.selectFieldText : styles.selectFieldPlaceholder}>
           {selectedOption ? selectedOption.label : placeholder || label}
@@ -34,28 +53,19 @@ export default function SelectField({ label, value, options, placeholder, onSele
         <ChevronDown size={18} color="#9CA3AF" />
       </Pressable>
 
-      <Modal visible={isOpen} transparent animationType="fade" onRequestClose={() => setIsOpen(false)}>
-        <Pressable style={styles.pickerOverlay} onPress={() => setIsOpen(false)}>
-          <Pressable style={styles.modalSheet} onPress={() => {}}>
-            <Text style={styles.pickerTitle}>{label || placeholder}</Text>
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {options.map((option) => (
-                <Pressable
-                  key={option.value}
-                  onPress={() => {
-                    onSelect(option.value);
-                    setIsOpen(false);
-                  }}
-                  style={({ pressed }) => [styles.modalOption, pressed && { opacity: 0.7 }]}
-                >
-                  <Text style={styles.modalOptionText}>{option.label}</Text>
-                  {option.value === value && <Check size={18} color={PURPLE} />}
-                </Pressable>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <OptionSheet
+        visible={isOpen}
+        onClose={() => setIsOpen(false)}
+        title={title || label || placeholder || ""}
+        icon={icon}
+        options={options}
+        value={value}
+        onSelect={(next) => {
+          onSelect(next);
+          setIsOpen(false);
+        }}
+        testID={testID}
+      />
     </View>
   );
 }

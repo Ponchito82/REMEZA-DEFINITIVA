@@ -26,6 +26,8 @@ export const colors = {
   textDisabled: palette.textDisabled,
   glassBorder: palette.glassBorder,
   glassSurface: palette.glassSurface,
+  /** Superficies grandes (hojas inferiores) que necesitan mas opacidad para leerse */
+  glassSurfaceStrong: palette.glassSurfaceStrong,
 } as const;
 
 /**

@@ -8,4 +8,6 @@ export { default as GlassBanner } from "./GlassBanner";
 export { default as LanguageRow } from "./LanguageRow";
 export { default as LanguageToggle } from "./LanguageToggle";
 export { default as Glow } from "./Glow";
+export { default as OptionSheet } from "./OptionSheet";
 export type { IconComponent } from "./GlassInput";
+export type { SheetOption } from "./OptionSheet";

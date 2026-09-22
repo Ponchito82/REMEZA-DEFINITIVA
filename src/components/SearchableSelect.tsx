@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, Pressable, Modal, ScrollView, TextInput } from "react-native";
-import { ChevronDown, Check, Search } from "lucide-react-native";
+import { View, Text, Pressable, TextInput } from "react-native";
+import { ChevronDown, Search } from "lucide-react-native";
 import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import OptionSheet from "./ui/OptionSheet";
+import type { IconComponent } from "./ui/GlassInput";
 
 type Option = { label: string; value: string };
 
@@ -17,6 +18,7 @@ type Props = {
   disabledHint?: string;
   error?: string;
   highlighted?: boolean;
+  icon?: IconComponent;
   onSelect: (value: string) => void;
   testID?: string;
 };
@@ -39,6 +41,7 @@ export default function SearchableSelect({
   disabledHint,
   error,
   highlighted = false,
+  icon,
   onSelect,
   testID,
 }: Props) {
@@ -96,56 +99,33 @@ export default function SearchableSelect({
 
       {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
 
-      <Modal visible={isOpen} transparent animationType="fade" onRequestClose={() => setIsOpen(false)}>
-        <Pressable style={styles.pickerOverlay} onPress={() => setIsOpen(false)}>
-          <Pressable style={styles.modalSheet} onPress={() => {}}>
-            <Text style={styles.pickerTitle}>{label || placeholder}</Text>
-
-            <View style={styles.searchRow}>
-              <Search size={16} color="#9CA3AF" />
-              <TextInput
-                testID={testID ? `${testID}-search` : undefined}
-                value={query}
-                onChangeText={setQuery}
-                placeholder={searchPlaceholder}
-                placeholderTextColor="#9CA3AF"
-                autoCorrect={false}
-                style={styles.searchInput}
-              />
-            </View>
-
-            <ScrollView
-              style={styles.modalScroll}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {filteredOptions.length === 0 ? (
-                <Text
-                  testID={testID ? `${testID}-empty` : undefined}
-                  style={styles.emptyResultsText}
-                >
-                  {emptyResultsText}
-                </Text>
-              ) : (
-                filteredOptions.map((option) => (
-                  <Pressable
-                    key={option.value}
-                    testID={testID ? `${testID}-option-${option.value}` : undefined}
-                    onPress={() => {
-                      onSelect(option.value);
-                      setIsOpen(false);
-                    }}
-                    style={({ pressed }) => [styles.modalOption, pressed && { opacity: 0.7 }]}
-                  >
-                    <Text style={styles.modalOptionText}>{option.label}</Text>
-                    {option.value === value && <Check size={18} color={PURPLE} />}
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <OptionSheet
+        visible={isOpen}
+        onClose={() => setIsOpen(false)}
+        title={label || placeholder || ""}
+        icon={icon}
+        options={filteredOptions}
+        value={value}
+        emptyText={emptyResultsText}
+        onSelect={(next) => {
+          onSelect(next);
+          setIsOpen(false);
+        }}
+        testID={testID}
+      >
+        <View style={styles.searchRow}>
+          <Search size={16} color="#9CA3AF" />
+          <TextInput
+            testID={testID ? `${testID}-search` : undefined}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={searchPlaceholder}
+            placeholderTextColor="#9CA3AF"
+            autoCorrect={false}
+            style={styles.searchInput}
+          />
+        </View>
+      </OptionSheet>
     </View>
   );
 }

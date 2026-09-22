@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, Modal } from "react-native";
-import { ChevronDown, Check } from "lucide-react-native";
+import { View, Text, TextInput, Pressable } from "react-native";
+import { ChevronDown, Globe } from "lucide-react-native";
 import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import OptionSheet from "./ui/OptionSheet";
 import { Language } from "../types/app";
 import { COUNTRY_NAMES, CountryCode, countryOptions, isCountryCode } from "../services/geo";
 import {
@@ -88,36 +88,22 @@ export default function PhoneField({
 
       {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
 
-      <Modal
+      <OptionSheet
         visible={isPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPickerOpen(false)}
-      >
-        <Pressable style={styles.pickerOverlay} onPress={() => setPickerOpen(false)}>
-          <Pressable style={styles.modalSheet} onPress={() => {}}>
-            <Text style={styles.pickerTitle}>{t.selectCountry}</Text>
-
-            {countryOptions(language).map((option) => (
-              <Pressable
-                key={option.value}
-                testID={testID ? `${testID}-country-${option.value}` : undefined}
-                onPress={() => {
-                  if (isCountryCode(option.value)) onCountryChange(option.value);
-                  setPickerOpen(false);
-                }}
-                style={({ pressed }) => [styles.modalOption, pressed && { opacity: 0.7 }]}
-              >
-                <Text style={styles.modalOptionText}>
-                  {COUNTRY_NAMES[option.value as CountryCode][language]}{" "}
-                  ({dialCodeLabel(option.value as CountryCode)})
-                </Text>
-                {option.value === country && <Check size={18} color={PURPLE} />}
-              </Pressable>
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onClose={() => setPickerOpen(false)}
+        title={t.selectCountry}
+        icon={Globe}
+        options={countryOptions(language).map((option) => ({
+          label: `${COUNTRY_NAMES[option.value as CountryCode][language]} (${dialCodeLabel(option.value as CountryCode)})`,
+          value: option.value,
+        }))}
+        value={country}
+        onSelect={(next) => {
+          if (isCountryCode(next)) onCountryChange(next);
+          setPickerOpen(false);
+        }}
+        testID={testID ? `${testID}-countryPicker` : undefined}
+      />
     </View>
   );
 }
