@@ -1,6 +1,34 @@
 import { palette } from "./designSystem";
 
 /**
+ * Tokens de la identidad Remeza, con los nombres del spec de diseno. Es lo que
+ * consumen las pantallas de entrada (Bienvenida y Login) y su libreria de
+ * componentes; el resto del archivo son los alias en mayusculas que todavia
+ * importan las pantallas internas.
+ */
+export const colors = {
+  /** Fondo de pantalla, status bar y barra de navegacion */
+  background: palette.background,
+  /** Reservado para modales */
+  navy: palette.navy,
+  /** Circulo de iconos de input y boton deshabilitado */
+  indigoDeep: palette.indigo,
+  /** Centro de gradientes, borde con foco, brillos y esferas del fondo */
+  violet: palette.violet,
+  /** Lado brillante de los gradientes */
+  violetBright: palette.violetBright,
+  /** Lado profundo de los gradientes */
+  purple: palette.purple,
+  textPrimary: palette.textPrimary,
+  /** Subtitulos y enlaces auxiliares */
+  textSecondary: palette.textSecondary,
+  /** Placeholders, opcion inactiva y boton deshabilitado */
+  textDisabled: palette.textDisabled,
+  glassBorder: palette.glassBorder,
+  glassSurface: palette.glassSurface,
+} as const;
+
+/**
  * Tokens del tema oscuro para las pantallas que todavia usan la hoja de
  * estilos compartida (`styles.ts`). Los valores salen de `designSystem.ts`,
  * que es la paleta del spec: aqui solo se les pone el nombre con el que esas
