@@ -10,8 +10,8 @@ import { translations } from "./src/i18n/translations";
 import { Language, TransactionsFilter, ViewName } from "./src/types/app";
 import { styles } from "./src/theme/styles";
 
-import WelcomeView from "./src/screens/WelcomeView";
-import LoginView from "./src/screens/LoginView";
+import WelcomeScreen from "./src/screens/WelcomeScreen";
+import LoginScreen from "./src/screens/LoginScreen";
 import ForgotAccessCodeView from "./src/screens/ForgotAccessCodeView";
 import RegisterSteps from "./src/screens/RegisterSteps";
 import DashboardView from "./src/screens/DashboardView";
@@ -362,11 +362,11 @@ function AppContent() {
     return (
         <ScreenBackground>
             {view === "welcome" && (
-                <WelcomeView t={t} language={language} setLanguage={setLanguage} setView={setView} />
+                <WelcomeScreen t={t} language={language} setLanguage={setLanguage} setView={setView} />
             )}
 
             {view === "login" && (
-                <LoginView
+                <LoginScreen
                     t={t}
                     language={language}
                     setLanguage={setLanguage}
