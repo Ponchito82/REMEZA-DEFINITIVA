@@ -30,6 +30,12 @@ export const palette = {
   glassSurface: "rgba(25,22,70,0.40)",
   /** Superficie Glass elevada (badges e iconos dentro de un campo) */
   glassSurfaceStrong: "rgba(45,40,105,0.55)",
+  /**
+   * Superficie **opaca** de las hojas inferiores y menus desplegables. Es el
+   * equivalente solido de `glassSurfaceStrong` sobre `background`, para que la
+   * hoja se vea igual pero sin dejar traslucir el formulario de atras.
+   */
+  sheetSurface: "#1A1847",
   /** Error sobre fondo oscuro */
   danger: "#FF6B8A",
   dangerSurface: "rgba(120,20,50,0.35)",
