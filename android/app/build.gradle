@@ -108,6 +108,23 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    // Ruta de proyecto muy larga en Windows (OneDrive\...\REMEZA-DEFINITIVA) hace
+    // que las rutas de objetos de CMake del codegen autolinkeado superen el
+    // limite de 260 caracteres de Windows. Usamos una carpeta de staging corta
+    // bajo el home del usuario para evitarlo.
+    externalNativeBuild {
+        cmake {
+            buildStagingDirectory = new File(System.getProperty("user.home"), "rncxx/app")
+        }
+    }
+
+    // react-native-nitro-image y react-native-nitro-modules empaquetan cada
+    // uno su propia copia de libNitroModules.so, lo que rompe el merge de
+    // librerias nativas. Nos quedamos con la primera que encuentre.
+    packagingOptions {
+        pickFirst 'lib/**/libNitroModules.so'
+    }
 }
 
 dependencies {
