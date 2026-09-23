@@ -13,8 +13,8 @@ type Props = {
 export default function LanguageRow({ label, style }: Props) {
   return (
     <View style={[styles.root, style]}>
-      <Globe size={22} color={colors.textPrimary} strokeWidth={1.75} />
-      <Text style={typography.label}>{label}</Text>
+      <Globe size={22} color={colors.text.primary} strokeWidth={1.75} />
+      <Text style={typography.rowLabel}>{label}</Text>
     </View>
   );
 }

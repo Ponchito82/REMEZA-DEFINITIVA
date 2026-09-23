@@ -7,14 +7,14 @@ import RemezaLogo from "./RemezaLogo";
 
 type Props = {
   /** Lado del cuadro en dp */
-  size: number;
+  size?: number;
   /** Radio de las esquinas en dp */
-  radius: number;
+  radius?: number;
   style?: ViewStyle;
 };
 
 /** Cuadro de marca: degradado corporativo con la "R" blanca centrada. */
-export default function LogoTile({ size, radius, style }: Props) {
+export default function LogoTile({ size = 96, radius = 24, style }: Props) {
   return (
     <View style={[styles.root, style]}>
       <Glow radius={20} opacity={0.45} corner={radius}>

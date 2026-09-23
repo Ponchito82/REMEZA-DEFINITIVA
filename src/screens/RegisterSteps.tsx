@@ -1,15 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ScrollView,
+  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { X, CheckCircle2, Lock, Calendar, Globe, CreditCard, User, Images } from "lucide-react-native";
+import { Check, Lock, Calendar, Globe, CreditCard, User, Images } from "lucide-react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import Clipboard from "@react-native-clipboard/clipboard";
 import MainButton from "../components/MainButton";
@@ -18,11 +18,24 @@ import DocumentCamera from "../components/DocumentCamera";
 import DocumentPreviewCard, { DocumentStatus } from "../components/DocumentPreviewCard";
 import SelectField from "../components/SelectField";
 import PhoneField from "../components/PhoneField";
-import OptionSheet from "../components/ui/OptionSheet";
+import {
+  Button,
+  CloseButton,
+  IconCircle,
+  LinkText,
+  OptionSheet,
+  OtpInput,
+  PinDotsInput,
+  ScreenHeader,
+  StepProgress,
+} from "../components/ui";
+import { CredentialsSummaryCard } from "../components/remeza";
+import { colors } from "../theme/colors";
+import { typography } from "../theme/typography";
+import { spacing } from "../theme/spacing";
 import AddressFields, { ADDRESS_FIELD_KEYS, AddressDetail } from "../components/AddressFields";
 import { Language, ViewName } from "../types/app";
 import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
 import { CountryCode, isCountryCode, stateNameByCode } from "../services/geo";
 import { submitRegistration } from "../api/registration";
 import {
@@ -217,7 +230,6 @@ export default function RegisterSteps(props: Props) {
   const nationalityOptions = language === "es" ? NATIONALITY_OPTIONS_ES : NATIONALITY_OPTIONS;
   const monthOptions = language === "es" ? MONTH_OPTIONS_ES : MONTH_OPTIONS;
 
-  const otpRefs = useRef<Array<TextInput | null>>([]);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(RESEND_SECONDS);
   const [codeResentVisible, setCodeResentVisible] = useState(false);
 
@@ -242,7 +254,6 @@ export default function RegisterSteps(props: Props) {
 
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [isAccessCodeRevealed, setIsAccessCodeRevealed] = useState(false);
 
   const pickIdentificationFront = () => setImageSourceSide("front");
   const pickIdentificationBack = () => setImageSourceSide("back");
@@ -294,30 +305,10 @@ export default function RegisterSteps(props: Props) {
     setCameraVisible(false);
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    const clean = value.replace(/\D/g, "").slice(0, 1);
-    const next = [...otp];
-    next[index] = clean;
-    setOtp(next);
-
-    if (clean && index < otp.length - 1) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyPress = (index: number, key: string) => {
-    if (key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
   const handlePasteCode = async () => {
     const clipboardText = await Clipboard.getString();
     const digits = clipboardText.replace(/\D/g, "").slice(0, otp.length);
-    if (digits.length === otp.length) {
-      setOtp(digits.split(""));
-      otpRefs.current[otp.length - 1]?.focus();
-    }
+    if (digits.length === otp.length) setOtp(digits.split(""));
   };
 
   const resendLabel = `0:${String(resendSecondsLeft).padStart(2, "0")}`;
@@ -472,24 +463,30 @@ export default function RegisterSteps(props: Props) {
   const genderValid = !!registerGender;
   const documentsValid = !!identificationFrontFile && !!identificationBackFile;
 
-  const isStep4Valid =
-    firstNameValid &&
-    paternalLastNameValid &&
-    maternalLastNameValid &&
-    foreignIdValid &&
-    ssnValid &&
-    streetValid &&
-    exteriorNumberValid &&
-    cityValid &&
-    stateValid &&
-    zipValid &&
-    countryValid &&
-    dobValid &&
-    nationalityValid &&
-    foreignIdTypeValid &&
-    genderValid &&
-    emailValid &&
-    documentsValid;
+  const step4Checks = [
+    firstNameValid,
+    paternalLastNameValid,
+    maternalLastNameValid,
+    foreignIdValid,
+    ssnValid,
+    streetValid,
+    exteriorNumberValid,
+    cityValid,
+    stateValid,
+    zipValid,
+    countryValid,
+    dobValid,
+    nationalityValid,
+    foreignIdTypeValid,
+    genderValid,
+    emailValid,
+    documentsValid,
+  ];
+
+  const isStep4Valid = step4Checks.every(Boolean);
+
+  /** Llena el 4.o segmento del stepper segun los campos ya resueltos. */
+  const step4Progress = step4Checks.filter(Boolean).length / step4Checks.length;
 
   const handleCompleteRegistration = () => {
     const isValid = form.validate([
@@ -606,33 +603,20 @@ export default function RegisterSteps(props: Props) {
       >
         <View ref={form.contentRef} collapsable={false}>
         {regStep <= 4 && (
-        <View style={styles.progressRow}>
-          {[1, 2, 3, 4].map((step) => (
-            <View
-              key={step}
-              style={[
-                styles.progressBar,
-                regStep >= step ? styles.progressBarActive : styles.progressBarInactive,
-              ]}
-            />
-          ))}
-        </View>
+          <StepProgress current={regStep} partial={regStep === 4 ? step4Progress : undefined} />
         )}
 
         {regStep <= 4 && (
-        <Pressable
-          testID="register-backButton"
-          onPress={() => (regStep === 1 ? setView("login") : setRegStep(regStep - 1))}
-          style={({ pressed }) => [styles.backGhost, pressed && { opacity: 0.7 }]}
-        >
-          <X size={24} color="#9CA3AF" />
-        </Pressable>
+          <CloseButton
+            testID="register-backButton"
+            onPress={() => (regStep === 1 ? setView("login") : setRegStep(regStep - 1))}
+            style={stepStyles.close}
+          />
         )}
 
         {regStep === 1 && (
           <View>
-            <Text style={styles.stepTitle}>{t.yourNumber}</Text>
-            <Text style={styles.stepSubtitle}>{t.secureAccount}</Text>
+            <ScreenHeader title={t.yourNumber} subtitle={t.secureAccount} />
 
             <PhoneField
               t={t}
@@ -666,53 +650,48 @@ export default function RegisterSteps(props: Props) {
 
         {regStep === 2 && (
           <View style={styles.stepCenter}>
-            <View style={styles.iconCircle}>
-              <CheckCircle2 size={40} color={PURPLE} />
-            </View>
+            <IconCircle
+              icon={Check}
+              size={88}
+              glow
+              color={colors.text.primary}
+              background={colors.primary}
+            />
 
-            <Text style={styles.stepTitleCenter}>{t.smsCode}</Text>
-            <Text style={styles.stepSubtitleCenter}>{t.smsInstruction}</Text>
+            <ScreenHeader
+              title={t.smsCode}
+              subtitle={t.smsInstruction}
+              align="center"
+              style={stepStyles.centerHeader}
+            />
 
-            <View style={styles.otpRow}>
-              {otp.map((digit, i) => (
-                <TextInput
-                  key={i}
-                  ref={(el) => {
-                    otpRefs.current[i] = el;
-                  }}
-                  testID={`register-otpInput-${i}`}
-                  value={digit}
-                  onChangeText={(v) => handleOtpChange(i, v)}
-                  onKeyPress={({ nativeEvent }) => handleOtpKeyPress(i, nativeEvent.key)}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  autoComplete={i === 0 ? "sms-otp" : "off"}
-                  textContentType={i === 0 ? "oneTimeCode" : undefined}
-                  style={styles.otpInput}
-                />
-              ))}
-            </View>
+            <OtpInput
+              testID="register-otpInput"
+              value={otp}
+              onChange={setOtp}
+              style={stepStyles.otp}
+            />
 
-            <View style={styles.otpActionsRow}>
+            <View style={stepStyles.otpActions}>
               {resendSecondsLeft > 0 ? (
                 <Text style={styles.resendText}>
                   {t.resendCodeIn} {resendLabel}
                 </Text>
               ) : (
-                <Pressable
+                <LinkText
                   testID="register-resendCodeLink"
                   onPress={handleResendSms}
                   disabled={isSendingSms}
                 >
-                  <Text style={styles.resendLink}>
-                    {isSendingSms ? t.sendingCode : t.resendCode}
-                  </Text>
-                </Pressable>
+                  {isSendingSms ? t.sendingCode : t.resendCode}
+                </LinkText>
               )}
 
-              <Pressable onPress={handlePasteCode}>
-                <Text style={styles.pasteLink}>{t.pasteCode}</Text>
-              </Pressable>
+              <View style={stepStyles.otpSeparator} />
+
+              <LinkText testID="register-pasteCodeLink" onPress={handlePasteCode}>
+                {t.pasteCode}
+              </LinkText>
             </View>
 
             {codeResentVisible && <Text style={styles.resendText}>{t.codeResent}</Text>}
@@ -723,71 +702,60 @@ export default function RegisterSteps(props: Props) {
               </Text>
             ) : null}
 
-            <MainButton
+            <Button
               testID="register-verifyCodeButton"
+              title={isVerifyingOtp ? t.verifyingCode : t.verifyCode}
               onPress={handleVerifyOtp}
               disabled={otp.some((digit) => digit.length !== 1) || isVerifyingOtp}
-            >
-              {isVerifyingOtp ? t.verifyingCode : t.verifyCode}
-            </MainButton>
+              style={stepStyles.cta}
+            />
           </View>
         )}
 
         {regStep === 3 && (
           <View style={styles.stepCenter}>
-            <View style={styles.iconCircle}>
-              <Lock size={40} color={PURPLE} />
-            </View>
+            <IconCircle icon={Lock} size={88} glow />
 
-            <Text style={styles.stepTitleCenter}>{t.createAccessCode}</Text>
-            <Text style={styles.stepSubtitleCenter}>{t.accessCodeHelp}</Text>
-
-            <TextInput
-              testID="register-accessCodeInput"
-              value={registerAccessCode}
-              onChangeText={(text) => setRegisterAccessCode(text.replace(/\D/g, "").slice(0, 6))}
-              placeholder="••••••"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={6}
-              style={styles.pinInput}
+            <ScreenHeader
+              title={t.createAccessCode}
+              subtitle={t.accessCodeHelp}
+              align="center"
+              style={stepStyles.centerHeader}
             />
 
-            <Text style={[styles.stepSubtitleCenter, { marginBottom: 8, fontSize: 14 }]}>
-              {t.confirmAccessCode}
-            </Text>
+            <PinDotsInput
+              testID="register-accessCodeInput"
+              accessibilityLabel={t.createAccessCode}
+              value={registerAccessCode}
+              onChangeText={(text) => setRegisterAccessCode(text.replace(/\D/g, "").slice(0, 6))}
+            />
 
-            <TextInput
+            <Text style={stepStyles.confirmLabel}>{t.confirmAccessCode}</Text>
+
+            <PinDotsInput
               testID="register-confirmAccessCodeInput"
+              accessibilityLabel={t.confirmAccessCode}
               value={confirmAccessCode}
               onChangeText={(text) => setConfirmAccessCode(text.replace(/\D/g, "").slice(0, 6))}
-              placeholder="••••••"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={6}
-              style={styles.pinInput}
             />
 
             {accessCodeError ? (
-              <Text style={[styles.errorText, { marginBottom: 16 }]}>{accessCodeError}</Text>
+              <Text style={[styles.errorText, stepStyles.error]}>{accessCodeError}</Text>
             ) : null}
 
-            <MainButton
+            <Button
               testID="register-setAccessCodeButton"
+              title={t.setAccessCode}
               onPress={handleSetAccessCode}
               disabled={registerAccessCode.length !== 6 || confirmAccessCode.length !== 6}
-            >
-              {t.setAccessCode}
-            </MainButton>
+              style={stepStyles.cta}
+            />
           </View>
         )}
 
         {regStep === 4 && (
           <View style={styles.step4Container}>
-            <Text style={styles.stepTitle}>{t.personalInfo}</Text>
-            <Text style={styles.stepSubtitleSmall}>{t.personalInfoSubtitle}</Text>
+            <ScreenHeader title={t.personalInfo} subtitle={t.personalInfoSubtitle} />
 
             <View style={styles.stack24}>
               <View style={styles.flex1}>
@@ -1099,68 +1067,67 @@ export default function RegisterSteps(props: Props) {
                 </View>
               ) : null}
 
-              <MainButton
+              <Button
                 testID="register-completeRegistrationButton"
+                title={t.finishRegistration}
                 onPress={handleCompleteRegistration}
                 disabled={isSubmittingRegistration}
-              >
-                {t.finishRegistration}
-              </MainButton>
+                loading={isSubmittingRegistration}
+              />
             </View>
           </View>
         )}
 
         {regStep === 5 && (
           <View style={styles.verifyingWrap} testID="register-verifyingScreen">
-            <ActivityIndicator size="large" color={PURPLE} />
-            <Text style={styles.stepTitleCenter}>{t.verifyingDataTitle}</Text>
-            <Text style={styles.stepSubtitleCenter}>{t.verifyingDataSubtitle}</Text>
+            <ActivityIndicator size="large" color={colors.primaryLight} />
+            <ScreenHeader
+              title={t.verifyingDataTitle}
+              subtitle={t.verifyingDataSubtitle}
+              align="center"
+              style={stepStyles.centerHeader}
+            />
           </View>
         )}
 
         {regStep === 6 && (
           <View style={styles.stepCenter} testID="register-successScreen">
-            <View style={styles.successIconCircle}>
-              <CheckCircle2 size={40} color="#16A34A" />
-            </View>
+            <IconCircle
+              icon={Check}
+              size={88}
+              color={colors.successIcon}
+              background={colors.successBg}
+            />
 
-            <Text style={styles.stepTitleCenter}>{t.registrationVerifiedTitle}</Text>
-            <Text style={styles.stepSubtitleCenter}>{t.registrationVerifiedMessage}</Text>
+            <ScreenHeader
+              title={t.registrationVerifiedTitle}
+              subtitle={t.registrationVerifiedMessage}
+              align="center"
+              style={stepStyles.centerHeader}
+            />
 
-            <View style={styles.credentialsCard}>
-              <View>
-                <Text style={styles.credentialsLabel}>{t.phoneNumber}</Text>
-                <Text style={styles.credentialsValue} testID="register-successPhone">
-                  {dialCodeLabel(registerPhoneCountry)}{" "}
-                  {formatNationalPhone(registerPhone, registerPhoneCountry)}
-                </Text>
-              </View>
+            <CredentialsSummaryCard
+              testID="register-credentialsCard"
+              phoneTestID="register-successPhone"
+              codeTestID="register-successAccessCode"
+              toggleTestID="register-toggleAccessCodeButton"
+              phoneLabel={t.phoneNumber}
+              phone={`${dialCodeLabel(registerPhoneCountry)} ${formatNationalPhone(
+                registerPhone,
+                registerPhoneCountry,
+              )}`}
+              codeLabel={t.accessCodeLabel}
+              code={registerAccessCode}
+              revealLabel={t.showData}
+              style={stepStyles.credentials}
+            />
 
-              <View>
-                <Text style={styles.credentialsLabel}>{t.accessCodeLabel}</Text>
-                <View style={styles.credentialsValueRow}>
-                  <Text style={styles.credentialsValue} testID="register-successAccessCode">
-                    {isAccessCodeRevealed ? registerAccessCode : "••••••"}
-                  </Text>
-                  <Pressable
-                    testID="register-toggleAccessCodeButton"
-                    onPress={() => setIsAccessCodeRevealed((prev) => !prev)}
-                    hitSlop={8}
-                  >
-                    <Text style={styles.credentialsToggleText}>
-                      {isAccessCodeRevealed ? t.hiddeData : t.showData}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            <MainButton
+            <Button
               testID="register-goToLoginButton"
+              title={t.signIn}
               onPress={() => setView("login")}
-            >
-              {t.signIn}
-            </MainButton>
+              style={stepStyles.cta}
+            />
           </View>
         )}
         </View>
@@ -1185,3 +1152,44 @@ export default function RegisterSteps(props: Props) {
     </KeyboardAvoidingView>
   );
 }
+
+const stepStyles = StyleSheet.create({
+  close: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  centerHeader: {
+    marginTop: spacing.xl,
+  },
+  otp: {
+    marginBottom: spacing.xl,
+  },
+  otpActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  /** Separador vertical entre la cuenta atras y "Paste code" */
+  otpSeparator: {
+    width: 1,
+    height: 16,
+    backgroundColor: colors.borderSubtle,
+  },
+  confirmLabel: {
+    ...typography.body,
+    textAlign: "center",
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  error: {
+    marginTop: spacing.md,
+  },
+  credentials: {
+    width: "100%",
+    marginBottom: spacing.xl,
+  },
+  cta: {
+    marginTop: spacing.xl,
+  },
+});

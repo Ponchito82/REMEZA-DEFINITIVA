@@ -1,15 +1,16 @@
 import React from "react";
-import {
-  ScrollView,
-  View,
-  Text,
-  Pressable,
-} from "react-native";
-import { X, User, CheckCircle2 } from "lucide-react-native";
+import { ScrollView, View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import { User, Mail, MapPin } from "lucide-react-native";
 
-import { styles } from "../theme/styles";
-import FormInput from "../components/FormInput";
-import MainButton from "../components/MainButton";
+import {
+  Button,
+  CloseButton,
+  GlassBanner,
+  ScreenHeader,
+  TextField,
+} from "../components/ui";
+import { AvatarPicker } from "../components/remeza";
+import { spacing, screenPadding } from "../theme/spacing";
 import { ViewName } from "../types/app";
 
 type Props = {
@@ -40,66 +41,84 @@ export default function ProfileView({
   handleProfileSave,
 }: Props) {
   return (
-    <View style={styles.pageScreen}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
-        contentContainerStyle={styles.pageContent}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          testID="profile-backButton"
-          onPress={() => setView("dashboard")}
-          style={styles.backButton}
-        >
-          <X size={24} color="#111827" />
-        </Pressable>
+        <CloseButton testID="profile-backButton" onPress={() => setView("dashboard")} />
 
-        <Text style={styles.pageTitle}>{t.profileTitle}</Text>
-        <Text style={styles.pageSubtitle}>
-          {t.personalInfoSubtitle}
-        </Text>
+        <ScreenHeader
+          title={t.profileTitle}
+          subtitle={t.personalInfoSubtitle}
+          style={styles.header}
+        />
 
-        <View style={styles.profileAvatarWrap}>
-          <View style={styles.profileAvatar}>
-            <User size={48} color="#64748B" />
-          </View>
-        </View>
+        <AvatarPicker style={styles.avatar} />
 
-        <View style={styles.stack16}>
-          <FormInput
+        <View style={styles.form}>
+          <TextField
             testID="profile-fullNameInput"
             label={t.fullName}
+            placeholder={t.fullNamePlaceholder}
+            leftIcon={User}
             value={profileFullName}
           />
 
-          <FormInput
+          <TextField
             testID="profile-emailInput"
             label={t.emailAddress}
+            placeholder={t.emailPlaceholder}
+            leftIcon={Mail}
             value={profileEmail}
             onChangeText={setProfileEmail}
             keyboardType="email-address"
           />
 
-          <FormInput
+          <TextField
             testID="profile-addressInput"
             label={t.deliveryAddress}
+            placeholder={t.deliveryAddressPlaceholder}
+            leftIcon={MapPin}
             value={profileAddress}
             onChangeText={setProfileAddress}
           />
 
-          <MainButton testID="profile-saveButton" onPress={handleProfileSave}>
-            {t.saveChanges}
-          </MainButton>
+          <Button
+            testID="profile-saveButton"
+            title={t.saveChanges}
+            onPress={handleProfileSave}
+            radius="pill"
+          />
 
-          {profileSaved && (
-            <View style={styles.transferSuccessBox}>
-              <CheckCircle2 size={18} color="#16A34A" />
-              <Text style={styles.transferSuccessText}>
-                {t.profileUpdated}
-              </Text>
-            </View>
-          )}
+          {profileSaved ? <GlassBanner tone="info" message={t.profileUpdated} /> : null}
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  header: {
+    marginTop: spacing.xxl,
+  },
+  avatar: {
+    marginBottom: spacing.xxl,
+  },
+  form: {
+    gap: spacing.lg,
+  },
+});

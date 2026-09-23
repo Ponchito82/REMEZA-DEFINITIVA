@@ -19,8 +19,8 @@ describe("Dashboard — saldo y navegación [backend]", () => {
   });
 
   it("muestra el saldo simulado al cargar", async () => {
-    await expect($('//*[@text="My Balance"]')).toBeDisplayed();
-    await expect($('//*[@text="$2,450.00"]')).toBeDisplayed();
+    await expect(byId("dashboard-balance-label")).toBeDisplayed();
+    await expect(byId("dashboard-balance-amount")).toHaveText("$2,450.00");
   });
 
   it("el botón de menú abre el drawer de navegación", async () => {

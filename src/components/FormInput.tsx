@@ -1,18 +1,23 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
-import { Eye, EyeOff } from "lucide-react-native";
-import { styles } from "../theme/styles";
+import React from "react";
+import { TextInput } from "react-native";
+import TextField from "./ui/TextField";
+import type { IconComponent } from "./ui/GlassInput";
 
 type Props = {
   label: string;
   placeholder?: string;
+  /**
+   * Opcional a proposito: las pantallas de direccion y beneficiario llevan
+   * icono, y la de Informacion Personal no.
+   */
+  leftIcon?: IconComponent;
   keyboardType?: "default" | "email-address" | "number-pad" | "phone-pad";
-  defaultValue?: string;
   secureTextEntry?: boolean;
   value?: string;
   onChangeText?: (text: string) => void;
   maxLength?: number;
   error?: string;
+  /** Campo enmascarado con ojo para revelarlo */
   secureToggle?: boolean;
   onBlur?: () => void;
   testID?: string;
@@ -20,11 +25,19 @@ type Props = {
   highlighted?: boolean;
 };
 
+/**
+ * Campo de formulario de las pantallas internas. Es una fachada sobre
+ * `TextField`: se conserva porque lo importan una docena de pantallas, pero
+ * todo el aspecto lo pone ya el componente nuevo.
+ *
+ * Los formularios del PDF no llevan icono a la izquierda, asi que aqui no se
+ * expone `leftIcon`.
+ */
 export default function FormInput({
   label,
   placeholder,
+  leftIcon,
   keyboardType = "default",
-  defaultValue = "",
   secureTextEntry = false,
   value,
   onChangeText,
@@ -36,49 +49,21 @@ export default function FormInput({
   inputRef,
   highlighted = false,
 }: Props) {
-  const [isRevealed, setIsRevealed] = useState(false);
-  const isMasked = secureToggle ? !isRevealed : secureTextEntry;
-
   return (
-    <View style={styles.formField}>
-      <Text style={styles.formLabel}>{label}</Text>
-
-      <View style={secureToggle ? styles.passcodeFieldWrap : undefined}>
-        <TextInput
-          ref={inputRef}
-          value={value}
-          onChangeText={onChangeText}
-          defaultValue={defaultValue}
-          placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
-          keyboardType={keyboardType}
-          secureTextEntry={isMasked}
-          maxLength={maxLength}
-          onBlur={onBlur}
-          testID={testID}
-          style={[
-            styles.formInput,
-            secureToggle && { paddingRight: 44 },
-            highlighted && styles.fieldHighlighted,
-          ]}
-        />
-
-        {secureToggle && (
-          <Pressable
-            onPress={() => setIsRevealed((prev) => !prev)}
-            style={styles.eyeToggle}
-            hitSlop={8}
-          >
-            {isRevealed ? (
-              <EyeOff size={18} color="#9CA3AF" />
-            ) : (
-              <Eye size={18} color="#9CA3AF" />
-            )}
-          </Pressable>
-        )}
-      </View>
-
-      {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
-    </View>
+    <TextField
+      label={label || undefined}
+      placeholder={placeholder}
+      leftIcon={leftIcon}
+      value={value}
+      onChangeText={onChangeText}
+      keyboardType={keyboardType}
+      secureTextEntry={secureToggle || secureTextEntry}
+      maxLength={maxLength}
+      error={error || undefined}
+      onBlur={onBlur}
+      testID={testID}
+      inputRef={inputRef}
+      highlighted={highlighted}
+    />
   );
 }

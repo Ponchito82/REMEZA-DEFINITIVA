@@ -19,12 +19,7 @@ export default function KycView({ t, setView }: Props) {
       <Text style={styles.kycTitle}>{t.plaidWidget}</Text>
       <Text style={styles.kycSubtitle}>{t.linkingAccounts}</Text>
 
-      <MainButton
-        testID="kyc-enterDashboardButton"
-        onPress={() => setView("dashboard")}
-        style={styles.kycButton}
-        textStyle={styles.kycButtonText}
-      >
+      <MainButton testID="kyc-enterDashboardButton" onPress={() => setView("dashboard")}>
         {t.enterDashboard}
       </MainButton>
     </View>

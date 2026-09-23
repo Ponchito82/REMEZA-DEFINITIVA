@@ -12,7 +12,7 @@ import LinearGradient from "react-native-linear-gradient";
 import { Language } from "../../types/app";
 import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
-import { brandDiagonal } from "../../theme/gradients";
+import { primaryGradient } from "../../theme/gradients";
 import Glow from "./Glow";
 
 type Props = {
@@ -25,7 +25,7 @@ type Props = {
   style?: ViewStyle;
 };
 
-const TRACK_HEIGHT = 64;
+const TRACK_HEIGHT = 56;
 const TRACK_PADDING = 6;
 const PILL_HEIGHT = TRACK_HEIGHT - TRACK_PADDING * 2;
 const PILL_RADIUS = PILL_HEIGHT / 2;
@@ -80,10 +80,10 @@ export default function LanguageToggle({
             <View style={{ width: pillWidth, height: PILL_HEIGHT }}>
               {/* Sin contorno: con degradado solo va el filo de luz. */}
               <LinearGradient
-                colors={brandDiagonal.colors}
-                locations={brandDiagonal.locations}
-                start={brandDiagonal.start}
-                end={brandDiagonal.end}
+                colors={primaryGradient.colors}
+                locations={primaryGradient.locations}
+                start={primaryGradient.start}
+                end={primaryGradient.end}
                 style={[StyleSheet.absoluteFill, styles.pillSurface]}
               />
               <View style={styles.pillLightLine} pointerEvents="none" />
@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
     padding: TRACK_PADDING,
     borderRadius: TRACK_HEIGHT / 2,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
-    backgroundColor: colors.glassSurface,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
   },
   lightLine: {
     position: "absolute",
@@ -157,6 +157,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   optionTextActive: {
-    color: colors.textPrimary,
+    color: colors.text.primary,
   },
 });

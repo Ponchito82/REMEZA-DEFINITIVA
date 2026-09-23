@@ -1,10 +1,24 @@
 import React, { useCallback } from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
-import { X, Truck, AlertCircle } from "lucide-react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { Truck } from "lucide-react-native";
 
-import { styles } from "../theme/styles";
-import { PURPLE } from "../theme/colors";
+import { typography } from "../theme/typography";
+import { spacing, screenPadding } from "../theme/spacing";
 import MainButton from "../components/MainButton";
+import {
+  CloseButton,
+  GlassBanner,
+  GlassCard,
+  IconCircle,
+  ScreenHeader,
+} from "../components/ui";
 import AddressFields, {
   ADDRESS_FIELD_KEYS,
   AddressDetail,
@@ -122,30 +136,35 @@ export default function PhysicalCardView({
   };
 
   return (
-    <View style={styles.pageScreen}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         ref={form.scrollRef}
-        contentContainerStyle={styles.pageContent}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View ref={form.contentRef} collapsable={false}>
-          <Pressable
+          <CloseButton
             testID="physicalCard-backButton"
             onPress={() => setView("dashboard")}
-            style={styles.backButton}
-          >
-            <X size={24} color="#111827" />
-          </Pressable>
+          />
 
-          <Text style={styles.pageTitle}>{t.physicalCardTitle}</Text>
-          <Text style={styles.pageSubtitle}>{t.physicalCardSubtitle}</Text>
+          <ScreenHeader
+            title={t.physicalCardTitle}
+            subtitle={t.physicalCardSubtitle}
+            style={styles.header}
+          />
 
           {!physicalCardRequested ? (
-            <View style={styles.stack16}>
+            <View style={styles.form}>
               <AddressFields
                 t={t}
                 language={language}
                 testIDPrefix="physicalCard"
+                withIcons
                 value={addressValue}
                 onChange={handleAddressChange}
                 detail={physicalAddressDetail}
@@ -155,10 +174,10 @@ export default function PhysicalCardView({
               />
 
               {form.pendingMessage ? (
-                <View style={styles.formBanner} testID="physicalCard-validationBanner">
-                  <AlertCircle size={18} color="#B91C1C" />
-                  <Text style={styles.formBannerText}>{form.pendingMessage}</Text>
-                </View>
+                <GlassBanner
+                  testID="physicalCard-validationBanner"
+                  message={form.pendingMessage}
+                />
               ) : null}
 
               <MainButton testID="physicalCard-saveAddressButton" onPress={handleSubmit}>
@@ -166,17 +185,15 @@ export default function PhysicalCardView({
               </MainButton>
             </View>
           ) : (
-            <View style={styles.statusCard}>
-              <View style={styles.statusIcon}>
-                <Truck size={28} color={PURPLE} />
-              </View>
+            <View style={styles.status}>
+              <IconCircle icon={Truck} size={72} glow />
 
-              <Text style={styles.statusTitle}>{t.deliveryInProgress}</Text>
-              <Text style={styles.statusText}>{t.deliveryMessage}</Text>
+              <Text style={[typography.h2, styles.statusTitle]}>{t.deliveryInProgress}</Text>
+              <Text style={[typography.body, styles.statusText]}>{t.deliveryMessage}</Text>
 
-              <View style={styles.statusInfoBox}>
-                <Text style={styles.statusInfoLabel}>{t.cardShippedTo}</Text>
-                <Text style={styles.statusInfoValue}>
+              <GlassCard style={styles.statusCard}>
+                <Text style={typography.label}>{t.cardShippedTo}</Text>
+                <Text style={[typography.bodyStrong, styles.statusValue]}>
                   {[
                     physicalAddress1,
                     physicalAddress2,
@@ -188,16 +205,54 @@ export default function PhysicalCardView({
                     .filter(Boolean)
                     .join(", ")}
                 </Text>
-              </View>
+              </GlassCard>
 
-              <View style={styles.statusInfoBox}>
-                <Text style={styles.statusInfoLabel}>{t.status}</Text>
-                <Text style={styles.statusInfoValue}>{t.pendingShipment}</Text>
-              </View>
+              <GlassCard style={styles.statusCard}>
+                <Text style={typography.label}>{t.status}</Text>
+                <Text style={[typography.bodyStrong, styles.statusValue]}>
+                  {t.pendingShipment}
+                </Text>
+              </GlassCard>
             </View>
           )}
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  header: {
+    marginTop: spacing.xxl,
+  },
+  form: {
+    gap: spacing.lg,
+  },
+  status: {
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  statusTitle: {
+    marginTop: spacing.lg,
+    textAlign: "center",
+  },
+  statusText: {
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  statusCard: {
+    width: "100%",
+  },
+  statusValue: {
+    marginTop: spacing.xs,
+  },
+});

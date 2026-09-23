@@ -1,30 +1,28 @@
 import React from "react";
-import { Pressable, Text } from "react-native";
-import { styles } from "../theme/styles";
+import { StyleProp, ViewStyle } from "react-native";
+import Button from "./ui/Button";
 
 type Props = {
   onPress: () => void;
   children: React.ReactNode;
-  style?: object;
-  textStyle?: object;
+  style?: StyleProp<ViewStyle>;
   disabled?: boolean;
   testID?: string;
 };
 
-export default function MainButton({ onPress, children, style, textStyle, disabled, testID }: Props) {
+/**
+ * CTA de las pantallas internas. Es una fachada sobre `Button`: se conserva
+ * porque lo importan una docena de pantallas con la API de `children`, pero
+ * todo el aspecto lo pone ya el componente nuevo.
+ */
+export default function MainButton({ onPress, children, style, disabled, testID }: Props) {
   return (
-    <Pressable
+    <Button
       testID={testID}
+      title={String(children ?? "")}
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.mainButton,
-        pressed && styles.mainButtonPressed,
-        disabled && { opacity: 0.6 },
-        style,
-      ]}
-    >
-      <Text style={[styles.mainButtonText, textStyle]}>{children}</Text>
-    </Pressable>
+      style={style}
+    />
   );
 }

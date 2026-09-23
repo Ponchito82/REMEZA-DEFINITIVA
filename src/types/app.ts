@@ -12,7 +12,11 @@ export type ViewName =
   | "beneficiaries"
   | "sendMoney"
   | "sendMoneyConfirmation"
-  | "remittanceDetail";
+  | "remittanceDetail"
+  | "multiCurrency"
+  | "disputeOptions"
+  | "twoStepVerification"
+  | "securityAlert";
 
 export type Language = "en" | "es";
 

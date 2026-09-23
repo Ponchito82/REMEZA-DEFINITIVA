@@ -1,5 +1,15 @@
 import React, { useEffect } from "react";
 import { View, Text } from "react-native";
+import {
+  MapPin,
+  Globe,
+  Building2,
+  Route,
+  Home,
+  DoorOpen,
+  Map,
+  FileText,
+} from "lucide-react-native";
 import FormInput from "./FormInput";
 import SearchableSelect from "./SearchableSelect";
 import { styles } from "../theme/styles";
@@ -43,6 +53,11 @@ type Props = {
   detail: AddressDetail;
   onDetailChange: (patch: Partial<AddressDetail>) => void;
   onComposedAddressChange?: (line1: string, line2: string) => void;
+  /**
+   * Iconos dentro de los campos. Va apagado por defecto porque la pantalla de
+   * Informacion Personal no los lleva; la de tarjeta fisica si.
+   */
+  withIcons?: boolean;
   form: ReturnType<typeof useFormFocus>;
 };
 
@@ -81,8 +96,10 @@ export default function AddressFields({
   detail,
   onDetailChange,
   onComposedAddressChange,
+  withIcons = false,
   form,
 }: Props) {
+  const iconFor = (icon: typeof MapPin) => (withIcons ? icon : undefined);
   const cascade = useAddressCascade({ value, onChange });
   const { country } = cascade;
 
@@ -101,6 +118,7 @@ export default function AddressFields({
       <View ref={form.anchor(ADDRESS_FIELD_KEYS.postalCode)} collapsable={false}>
         <FormInput
           testID={`${testIDPrefix}-zipCodeInput`}
+          leftIcon={iconFor(MapPin)}
           label={t.zipCode}
           placeholder={`${t.exampleShort} ${postalExample}`}
           value={value.postalCode}
@@ -127,6 +145,7 @@ export default function AddressFields({
       <View ref={form.anchor(ADDRESS_FIELD_KEYS.country)} collapsable={false}>
         <SearchableSelect
           testID={`${testIDPrefix}-countrySelect`}
+          fieldIcon={iconFor(Globe)}
           label={t.country}
           placeholder={t.selectCountry}
           searchPlaceholder={t.searchCountry}
@@ -142,6 +161,7 @@ export default function AddressFields({
       <View ref={form.anchor(ADDRESS_FIELD_KEYS.state)} collapsable={false}>
         <SearchableSelect
           testID={`${testIDPrefix}-stateSelect`}
+          fieldIcon={iconFor(MapPin)}
           label={t.state}
           placeholder={t.selectState}
           searchPlaceholder={t.searchState}
@@ -159,6 +179,7 @@ export default function AddressFields({
       <View ref={form.anchor(ADDRESS_FIELD_KEYS.city)} collapsable={false}>
         <SearchableSelect
           testID={`${testIDPrefix}-citySelect`}
+          fieldIcon={iconFor(Building2)}
           label={t.city}
           placeholder={t.selectCity}
           searchPlaceholder={t.searchCity}
@@ -176,6 +197,7 @@ export default function AddressFields({
       <View ref={form.anchor(ADDRESS_FIELD_KEYS.street)} collapsable={false}>
         <FormInput
           testID={`${testIDPrefix}-streetInput`}
+          leftIcon={iconFor(Route)}
           label={t.street}
           placeholder={isMexico ? t.streetExampleMx : t.streetExampleUs}
           value={detail.street}
@@ -191,6 +213,7 @@ export default function AddressFields({
         <View style={styles.flex1} ref={form.anchor(ADDRESS_FIELD_KEYS.exteriorNumber)} collapsable={false}>
           <FormInput
             testID={`${testIDPrefix}-exteriorNumberInput`}
+            leftIcon={iconFor(Home)}
             label={t.exteriorNumber}
             placeholder={isMexico ? "123" : "1600"}
             value={detail.exteriorNumber}
@@ -205,6 +228,7 @@ export default function AddressFields({
         <View style={styles.flex1}>
           <FormInput
             testID={`${testIDPrefix}-interiorNumberInput`}
+            leftIcon={iconFor(DoorOpen)}
             label={isMexico ? t.interiorNumber : t.aptSuite}
             placeholder={isMexico ? `${t.optional} · 4B` : `${t.optional} · Apt 4B`}
             value={detail.interiorNumber}
@@ -217,6 +241,7 @@ export default function AddressFields({
       {isMexico ? (
         <FormInput
           testID={`${testIDPrefix}-neighborhoodInput`}
+          leftIcon={iconFor(Map)}
           label={t.neighborhood}
           placeholder={t.neighborhoodExample}
           value={detail.neighborhood}
@@ -227,6 +252,7 @@ export default function AddressFields({
 
       <FormInput
         testID={`${testIDPrefix}-referencesInput`}
+        leftIcon={iconFor(FileText)}
         label={t.addressReferences}
         placeholder={`${t.optional} · ${isMexico ? t.referencesExampleMx : t.referencesExampleUs}`}
         value={detail.references}

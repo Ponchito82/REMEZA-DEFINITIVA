@@ -14,6 +14,8 @@ export type IconComponent = React.ComponentType<{
   size?: number;
   color?: string;
   strokeWidth?: number;
+  /** Los iconos de lucide lo aceptan; lo usan los circulos con icono relleno. */
+  fill?: string;
 }>;
 
 type Props = {

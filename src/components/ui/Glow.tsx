@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, StyleSheet, View, ViewStyle } from "react-native";
+import { Platform, StyleSheet, StyleProp, View, ViewStyle } from "react-native";
 import { colors } from "../../theme/colors";
 
 type Props = {
@@ -14,7 +14,7 @@ type Props = {
   corner: number;
   /** La pieza ocupa todo el ancho disponible */
   stretch?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -41,9 +41,9 @@ export default function Glow({
    * contorno se ve — justo el borde duro que hay que evitar.
    */
   const shadow = Platform.select({
-    android: { boxShadow: `0px ${offsetY}px ${radius}px rgba(84,32,255,${opacity})` },
+    android: { boxShadow: `0px ${offsetY}px ${radius}px rgba(75,35,250,${opacity})` },
     default: {
-      shadowColor: colors.violet,
+      shadowColor: colors.primary,
       shadowOpacity: opacity,
       shadowRadius: radius,
       shadowOffset: { width: 0, height: offsetY },

@@ -1,15 +1,11 @@
 import React from "react";
-import {
-  ScrollView,
-  View,
-  Text,
-  Pressable,
-  TouchableOpacity
-} from "react-native";
-import { BanknoteX, X } from "lucide-react-native";
+import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 
-import { styles } from "../theme/styles";
-import { PURPLE, PURPLE_DARK, SUCCESS_SURFACE, VIOLET_SURFACE, WARNING_SURFACE } from "../theme/colors";
+import { ChipGroup, CloseButton, GlassCard, ScreenHeader } from "../components/ui";
+import { TransactionItem as TransactionRow } from "../components/remeza";
+import type { BadgeVariant } from "../components/ui";
+import { typography } from "../theme/typography";
+import { spacing, screenPadding } from "../theme/spacing";
 import { TransactionsFilter, ViewName } from "../types/app";
 
 type TransactionItem = {
@@ -38,137 +34,91 @@ export default function TransactionsView({
   setTransactionsFilter,
   filteredTransactions,
 }: Props) {
+  const badgeLabels: Record<string, string> = {
+    virtual: t.virtual,
+    physical: t.physical,
+    remittance: t.remittance,
+    trading: t.trading,
+  };
+
   return (
-    <View style={styles.pageScreen}>
-      <ScrollView
-        contentContainerStyle={styles.pageContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Pressable
-          testID="transactions-backButton"
-          onPress={() => setView("dashboard")}
-          style={styles.backButton}
-        >
-          <X size={24} color="#111827" />
-        </Pressable>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <CloseButton testID="transactions-backButton" onPress={() => setView("dashboard")} />
 
-        <Text style={styles.pageTitle}>{t.transactionsTitle}</Text>
-        <Text style={styles.pageSubtitle}>{t.transactionsSubtitle}</Text>
+      <ScreenHeader
+        title={t.transactionsTitle}
+        subtitle={t.transactionsSubtitle}
+        style={styles.header}
+      />
 
-        <View style={styles.filterWrap}>
-          {[
-            { key: "all", label: t.all },
-            { key: "virtual", label: t.virtual },
-            { key: "physical", label: t.physical },
-            { key: "remittance", label: t.remittance },
-            { key: "trading", label: t.trading },
-          ].map((item) => (
+      <ChipGroup
+        testID="transactions-filterChip"
+        options={[
+          { label: t.all, value: "all" },
+          { label: t.virtual, value: "virtual" },
+          { label: t.physical, value: "physical" },
+          { label: t.remittance, value: "remittance" },
+          { label: t.trading, value: "trading" },
+        ]}
+        value={transactionsFilter}
+        onChange={(value) => setTransactionsFilter(value as TransactionsFilter)}
+        style={styles.filters}
+      />
+
+      <View style={styles.list}>
+        {filteredTransactions.length === 0 ? (
+          <GlassCard>
+            <Text style={typography.body}>{t.noTransactions}</Text>
+          </GlassCard>
+        ) : (
+          filteredTransactions.map((item) => (
             <Pressable
-              key={item.key}
-              testID={`transactions-filterChip-${item.key}`}
-              onPress={() => setTransactionsFilter(item.key as TransactionsFilter)}
-              style={[
-                styles.filterChip,
-                transactionsFilter === item.key && styles.filterChipActive,
-              ]}
+              key={item.id}
+              testID={`transactions-item-${item.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              onPress={() => {
+                t.item = item;
+                t.item.mxnAmount = "$9000.00";
+                t.item.exchangeRate = "$18.00";
+                t.item.beneficiary = "Juan Lopez";
+
+                setView("remittanceDetail");
+              }}
+              style={({ pressed }) => pressed && styles.pressed}
             >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  transactionsFilter === item.key &&
-                  styles.filterChipTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
+              <TransactionRow
+                badgeLabel={badgeLabels[item.type] ?? item.type}
+                variant={item.type as BadgeVariant}
+                label={item.label}
+                date={item.date}
+                amount={item.amount}
+              />
             </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.stack12}>
-          {filteredTransactions.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyCardText}>
-                {t.noTransactions}
-              </Text>
-            </View>
-          ) : (
-            filteredTransactions.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                testID={`transactions-item-${item.id}`}
-                style={styles.activityRow}
-                onPress={() => {
-                  t.item = item;               
-                  t.item.mxnAmount = "$9000.00";
-                  t.item.exchangeRate = "$18.00";
-                  t.item.beneficiary = "Juan Lopez";
-
-                  setView("remittanceDetail")
-                }}
-                activeOpacity={0.7}
-              >
-              <View key={item.id} style={styles.activityRow}>
-                <View style={styles.activityLeft}>
-                  <View
-                    style={[
-                      styles.operationBadge,
-                      item.type === "virtual" && {
-                        backgroundColor: VIOLET_SURFACE,
-                      },
-                      item.type === "physical" && {
-                        backgroundColor: WARNING_SURFACE,
-                      },
-                      item.type === "remittance" && {
-                        backgroundColor: PURPLE,
-                      },
-                      item.type === "trading" && {
-                        backgroundColor: SUCCESS_SURFACE,
-                      },
-                    ]}
-                  >
-                    <Text style={[
-                      styles.operationBadgeText,
-                      item.type === "remittance" && {
-                        color: "#ffffff",
-                      }
-                    ]}>
-                      {
-                        item.type === "virtual"
-                          ? t.virtual
-                          : item.type === "physical"
-                            ? t.physical
-                            : item.type === "remittance"
-                              ? t.remittance
-                              : t.trading}
-                    </Text>                    
-                  </View>
-                  
-                  <View>
-                    <Text style={styles.activityLabel}>
-                      {item.label}
-                    </Text>
-                    <Text style={styles.operationDate}>
-                      {item.date}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text
-                  style={[
-                    styles.activityAmount,
-                    { color: item.color },
-                  ]}
-                >
-                  {item.amount}
-                </Text>                
-
-              </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-      </ScrollView>
-    </View>
+          ))
+        )}
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  header: {
+    marginTop: spacing.xxl,
+  },
+  filters: {
+    marginBottom: spacing.xxl,
+  },
+  list: {
+    gap: spacing.md,
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+});

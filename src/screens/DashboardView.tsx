@@ -6,9 +6,9 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  StyleSheet,
 } from "react-native";
 import {
-  Menu,
   CreditCard,
   ShieldOff,
   Eye,
@@ -19,6 +19,8 @@ import Clipboard from "@react-native-clipboard/clipboard";
 import { Clipboard as ClipboardIcon } from "lucide-react-native";
 import { styles } from "../theme/styles";
 import { GLASS_BORDER, GLASS_SURFACE_STRONG, PURPLE } from "../theme/colors";
+import { ActivityItem, BalanceHeader } from "../components/remeza";
+import { spacing, screenPadding } from "../theme/spacing";
 
 type Props = {
   t: any;
@@ -28,6 +30,8 @@ type Props = {
   setIsCardActive: (value: boolean) => void;
 
   setIsMenuOpen: (value: boolean) => void;
+  /** Abre Cuentas multidivisa al tocar el saldo */
+  onBalancePress?: () => void;
 
   transactions: any[];
 
@@ -73,6 +77,7 @@ export default function DashboardView({
   isCardActive,
   setIsCardActive,
   setIsMenuOpen,
+  onBalancePress,
   transactions,
   activeCardIndex,
   setActiveCardIndex,
@@ -109,24 +114,15 @@ export default function DashboardView({
 
   return (
     <View style={styles.dashboardScreen}>
-      <View style={styles.dashboardSafeTop}>
-        <View style={styles.dashboardHeader}>
-          <View>
-            <Text style={styles.kicker}>{t.myBalance}</Text>
-            <Text style={styles.balance}>$2,450.00</Text>
-          </View>
-
-          <Pressable
-            testID="dashboard-menuButton"
-            onPress={() => setIsMenuOpen(true)}
-            style={({ pressed }) => [
-              styles.iconButton,
-              pressed && styles.iconButtonPressed,
-            ]}
-          >
-            <Menu size={24} color="#374151" />
-          </Pressable>
-        </View>
+      <View style={dashboardStyles.header}>
+        <BalanceHeader
+          testID="dashboard-balance"
+          label={t.myBalance}
+          amount="$2,450.00"
+          onMenuPress={() => setIsMenuOpen(true)}
+          onBalancePress={onBalancePress}
+          menuTestID="dashboard-menuButton"
+        />
       </View>
 
       <Modal
@@ -678,27 +674,24 @@ export default function DashboardView({
 
         <View style={styles.stack12}>
           {transactions.map((item, index) => (
-            <View key={index} style={styles.activityRow}>
-              <View style={styles.activityLeft}>
-                <View
-                  style={[
-                    styles.activityIcon,
-                    { backgroundColor: item.bg },
-                  ]}
-                >
-                  {item.icon}
-                </View>
-
-                <Text style={styles.activityLabel}>{item.label}</Text>
-              </View>
-
-              <Text style={[styles.activityAmount, { color: item.color }]}>
-                {item.amount}
-              </Text>
-            </View>
+            <ActivityItem
+              key={index}
+              testID={`dashboard-activityItem-${index}`}
+              label={item.label}
+              amount={item.amount}
+              direction={item.amount.trim().startsWith("+") ? "in" : "out"}
+            />
           ))}
         </View>
       </ScrollView>
     </View>
   );
 }
+
+const dashboardStyles = StyleSheet.create({
+  header: {
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+});

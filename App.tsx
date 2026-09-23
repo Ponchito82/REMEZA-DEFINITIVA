@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Animated } from "react-native";
+import { View, Animated, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
@@ -10,6 +10,11 @@ import { translations } from "./src/i18n/translations";
 import { Language, TransactionsFilter, ViewName } from "./src/types/app";
 import { styles } from "./src/theme/styles";
 
+import ComponentsShowcaseScreen from "./src/screens/ComponentsShowcaseScreen";
+import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScreen";
+import DisputeOptionsScreen from "./src/screens/DisputeOptionsScreen";
+import TwoStepVerificationScreen from "./src/screens/TwoStepVerificationScreen";
+import SecurityAlertScreen from "./src/screens/SecurityAlertScreen";
 import WelcomeScreen from "./src/screens/WelcomeScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import ForgotAccessCodeView from "./src/screens/ForgotAccessCodeView";
@@ -60,6 +65,14 @@ function AppContent() {
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isCardActive, setIsCardActive] = useState(true);
+    const [isShowcaseOpen, setIsShowcaseOpen] = useState(false);
+
+    /**
+     * Mock del dispositivo nuevo. Va en `false` a proposito: en `true`, el
+     * login desviaria a la alerta de seguridad y los 12 specs de Appium, que
+     * esperan el dashboard tras "Sign In", fallarian en el setup.
+     */
+    const [isNewDevice] = useState(false);
 
     useEffect(() => {
         return onUnauthorized((reason) => {
@@ -359,6 +372,14 @@ function AppContent() {
         [t]
     );
 
+    if (__DEV__ && isShowcaseOpen) {
+        return (
+            <ScreenBackground>
+                <ComponentsShowcaseScreen onClose={() => setIsShowcaseOpen(false)} />
+            </ScreenBackground>
+        );
+    }
+
     return (
         <ScreenBackground>
             {view === "welcome" && (
@@ -378,6 +399,7 @@ function AppContent() {
                     prefilledPhone={
                         registerPhone.length === 10 ? toE164(registerPhone, registerPhoneCountry) : ""
                     }
+                    postLoginView={isNewDevice ? "securityAlert" : "dashboard"}
                 />
             )}
 
@@ -452,6 +474,7 @@ function AppContent() {
                     isCardActive={isCardActive}
                     setIsCardActive={setIsCardActive}
                     setIsMenuOpen={setIsMenuOpen}
+                    onBalancePress={() => setView("multiCurrency")}
                     transactions={transactions}
                     activeCardIndex={activeCardIndex}
                     setActiveCardIndex={setActiveCardIndex}
@@ -611,6 +634,22 @@ function AppContent() {
                 />
             )}
 
+            {view === "multiCurrency" && (
+                <MultiCurrencyAccountsScreen t={t} setView={setView} />
+            )}
+
+            {view === "disputeOptions" && (
+                <DisputeOptionsScreen t={t} setView={setView} />
+            )}
+
+            {view === "twoStepVerification" && (
+                <TwoStepVerificationScreen t={t} setView={setView} />
+            )}
+
+            {view === "securityAlert" && (
+                <SecurityAlertScreen t={t} setView={setView} />
+            )}
+
             {view === "remittanceDetail" && (
                 <RemittanceDetail
                     t={t}
@@ -621,15 +660,49 @@ function AppContent() {
 
             <DrawerMenu
                 t={t}
+                language={language}
                 visible={isMenuOpen}
                 overlayOpacity={overlayOpacity}
                 drawerTranslateX={drawerTranslateX}
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
             />
+
+            {__DEV__ ? (
+                <Pressable
+                    testID="dev-showcaseButton"
+                    accessibilityLabel="Open component showcase"
+                    onPress={() => setIsShowcaseOpen(true)}
+                    style={devStyles.showcaseButton}
+                >
+                    <Text style={devStyles.showcaseLabel}>UI</Text>
+                </Pressable>
+            ) : null}
         </ScreenBackground>
     );
 }
+
+/** Atajo de desarrollo: no se compila en release porque va tras `__DEV__`. */
+const devStyles = StyleSheet.create({
+    showcaseButton: {
+        position: "absolute",
+        left: 12,
+        bottom: 96,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(255,255,255,0.07)",
+        borderWidth: 1,
+        borderColor: "rgba(124,92,255,0.45)",
+    },
+    showcaseLabel: {
+        fontFamily: "Inter-SemiBold",
+        fontSize: 13,
+        color: "#FFFFFF",
+    },
+});
 
 export default function App() {
     return (
