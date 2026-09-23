@@ -13,14 +13,15 @@ type Orb = {
   r: number;
   /** Opacidad en el centro */
   alpha: number;
+  color: string;
 };
 
 /** Las cuatro esferas del diseno, cortadas por los bordes de la pantalla. */
 const ORBS: Orb[] = [
-  { x: 0, y: 0.1, r: 0.72, alpha: 0.35 },
-  { x: 1, y: 0.13, r: 0.72, alpha: 0.35 },
-  { x: 0, y: 0.78, r: 0.72, alpha: 0.35 },
-  { x: 1, y: 0.74, r: 0.72, alpha: 0.32 },
+  { x: 1, y: 0.1, r: 0.72, alpha: 0.3, color: colors.bg.glow },
+  { x: 0, y: 0.16, r: 0.66, alpha: 0.18, color: colors.bg.glow },
+  { x: 0, y: 0.78, r: 0.72, alpha: 0.2, color: colors.bg.glow },
+  { x: 1, y: 0.74, r: 0.72, alpha: 0.14, color: colors.bg.glowPink },
 ];
 
 /**
@@ -80,7 +81,7 @@ const WATERMARK_SIZE = 0.42;
  * Nada de imagenes ni de Views apilados: un PNG se pixela al estirarlo y las
  * capas con opacidad dibujan anillos.
  */
-export default function BackgroundOrbs() {
+export default function BackgroundOrbs({ watermark = true }: { watermark?: boolean }) {
   const window = useWindowDimensions();
 
   /**
@@ -114,7 +115,7 @@ export default function BackgroundOrbs() {
                 <Stop
                   key={stop.offset}
                   offset={stop.offset}
-                  stopColor={colors.violet}
+                  stopColor={orb.color}
                   stopOpacity={orb.alpha * stop.alpha}
                 />
               ))}
@@ -156,13 +157,15 @@ export default function BackgroundOrbs() {
         ))}
 
         {/* Marca de agua: por encima de la luz y por debajo del contenido. */}
-        <G
-          translateX={(width - markWidth) / 2}
-          translateY={height * WATERMARK_TOP - markHeight / 2}
-          scale={markScale}
-        >
-          <Path d={remezaGlyph.path} fill="#FFFFFF" fillOpacity={0.045} />
-        </G>
+        {watermark ? (
+          <G
+            translateX={(width - markWidth) / 2}
+            translateY={height * WATERMARK_TOP - markHeight / 2}
+            scale={markScale}
+          >
+            <Path d={remezaGlyph.path} fill="#FFFFFF" fillOpacity={0.022} />
+          </G>
+        ) : null}
 
         <Rect x="0" y="0" width={width} height={height} fill="url(#orbDither)" />
       </Svg>
@@ -171,8 +174,8 @@ export default function BackgroundOrbs() {
 }
 
 const styles = StyleSheet.create({
+  /** Sin fondo propio: el degradado de `ScreenBackground` va por debajo. */
   root: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
   },
 });

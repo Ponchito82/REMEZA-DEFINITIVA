@@ -1,8 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, Pressable } from "react-native";
-import { ChevronDown } from "lucide-react-native";
-import { styles } from "../theme/styles";
-import OptionSheet from "./ui/OptionSheet";
+import React from "react";
+import UiSelectField from "./ui/SelectField";
 import type { IconComponent } from "./ui/GlassInput";
 
 type Option = { label: string; value: string };
@@ -20,6 +17,14 @@ type Props = {
   testID?: string;
 };
 
+/**
+ * Campo de seleccion de las pantallas internas. Es una fachada sobre
+ * `ui/SelectField`: se conserva porque lo importan varias pantallas con esta
+ * API.
+ *
+ * El icono va **solo** a la insignia de la hoja, no dentro del campo: los
+ * formularios del PDF no llevan icono a la izquierda.
+ */
 export default function SelectField({
   label,
   value,
@@ -31,41 +36,17 @@ export default function SelectField({
   onSelect,
   testID,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedOption = options.find((option) => option.value === value);
-
   return (
-    <View style={styles.formField}>
-      {label ? <Text style={styles.formLabel}>{label}</Text> : null}
-
-      <Pressable
-        onPress={() => setIsOpen(true)}
-        testID={testID}
-        style={({ pressed }) => [
-          styles.selectField,
-          highlighted && styles.fieldHighlighted,
-          pressed && { opacity: 0.85 },
-        ]}
-      >
-        <Text style={selectedOption ? styles.selectFieldText : styles.selectFieldPlaceholder}>
-          {selectedOption ? selectedOption.label : placeholder || label}
-        </Text>
-        <ChevronDown size={18} color="#9CA3AF" />
-      </Pressable>
-
-      <OptionSheet
-        visible={isOpen}
-        onClose={() => setIsOpen(false)}
-        title={title || label || placeholder || ""}
-        icon={icon}
-        options={options}
-        value={value}
-        onSelect={(next) => {
-          onSelect(next);
-          setIsOpen(false);
-        }}
-        testID={testID}
-      />
-    </View>
+    <UiSelectField
+      label={label || undefined}
+      placeholder={placeholder || label}
+      value={value}
+      options={options}
+      onSelect={onSelect}
+      sheetIcon={icon}
+      sheetTitle={title || label || placeholder}
+      highlighted={highlighted}
+      testID={testID}
+    />
   );
 }

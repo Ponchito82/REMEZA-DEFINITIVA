@@ -1,11 +1,18 @@
 import React from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
-import { X, CheckCircle2, AlertCircle } from "lucide-react-native";
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { User, MapPin, Building2, Mail, CreditCard } from "lucide-react-native";
 
-import { styles } from "../theme/styles";
 import FormInput from "../components/FormInput";
 import MainButton from "../components/MainButton";
 import PhoneField from "../components/PhoneField";
+import { CloseButton, GlassBanner, ScreenHeader } from "../components/ui";
+import { spacing, screenPadding } from "../theme/spacing";
 import { Language, ViewName } from "../types/app";
 import { CountryCode } from "../services/geo";
 import { isValidNationalPhone } from "../utils/phone";
@@ -111,28 +118,33 @@ export default function BeneficiariesView({
   const highlighted = (key: string) => form.pendingField === key;
 
   return (
-    <View style={styles.pageScreen}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         ref={form.scrollRef}
-        contentContainerStyle={styles.pageContent}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View ref={form.contentRef} collapsable={false}>
-          <Pressable
+          <CloseButton
             testID="beneficiaries-backButton"
             onPress={() => setView("dashboard")}
-            style={styles.backButton}
-          >
-            <X size={24} color="#111827" />
-          </Pressable>
+          />
 
-          <Text style={styles.pageTitle}>{t.createBeneficiary}</Text>
-          <Text style={styles.pageSubtitle}>{t.beneficiarySubtitle}</Text>
+          <ScreenHeader
+            title={t.createBeneficiary}
+            subtitle={t.beneficiarySubtitle}
+            style={styles.header}
+          />
 
-          <View style={styles.stack16}>
+          <View style={styles.form}>
             <View ref={form.anchor("firstName")} collapsable={false}>
               <FormInput
                 testID="beneficiaries-firstNameInput"
+                leftIcon={User}
                 label={t.firstName}
                 placeholder={t.firstNameExample}
                 value={beneficiaryFirstName}
@@ -145,6 +157,7 @@ export default function BeneficiariesView({
             <View ref={form.anchor("paternalLastName")} collapsable={false}>
               <FormInput
                 testID="beneficiaries-paternalLastNameInput"
+                leftIcon={User}
                 label={t.paternalLastName}
                 placeholder={t.paternalLastNameExample}
                 value={beneficiaryPaternalLastName}
@@ -156,6 +169,7 @@ export default function BeneficiariesView({
 
             <FormInput
               testID="beneficiaries-maternalLastNameInput"
+              leftIcon={User}
               label={t.maternalLastName}
               placeholder={`${t.optional} · ${t.maternalLastNameExample}`}
               value={beneficiaryMaternalLastName}
@@ -179,6 +193,7 @@ export default function BeneficiariesView({
 
             <FormInput
               testID="beneficiaries-residenceStateInput"
+              leftIcon={MapPin}
               label={t.residenceState}
               placeholder={t.residenceStateExample}
               value={beneficiaryResidenceState}
@@ -187,6 +202,7 @@ export default function BeneficiariesView({
 
             <FormInput
               testID="beneficiaries-residenceCityInput"
+              leftIcon={Building2}
               label={t.residenceCity}
               placeholder={t.residenceCityExample}
               value={beneficiaryResidenceCity}
@@ -196,6 +212,7 @@ export default function BeneficiariesView({
             <View ref={form.anchor("email")} collapsable={false}>
               <FormInput
                 testID="beneficiaries-emailInput"
+                leftIcon={Mail}
                 label={t.emailAddress}
                 placeholder={t.emailExample}
                 value={beneficiaryEmail}
@@ -209,6 +226,7 @@ export default function BeneficiariesView({
             <View ref={form.anchor("clabe")} collapsable={false}>
               <FormInput
                 testID="beneficiaries-clabeInput"
+                leftIcon={CreditCard}
                 label={t.clabe}
                 placeholder={t.clabeExample}
                 value={beneficiaryClabe}
@@ -221,25 +239,40 @@ export default function BeneficiariesView({
             </View>
 
             {form.pendingMessage ? (
-              <View style={styles.formBanner} testID="beneficiaries-validationBanner">
-                <AlertCircle size={18} color="#B91C1C" />
-                <Text style={styles.formBannerText}>{form.pendingMessage}</Text>
-              </View>
+              <GlassBanner
+                testID="beneficiaries-validationBanner"
+                message={form.pendingMessage}
+              />
             ) : null}
 
             <MainButton testID="beneficiaries-saveButton" onPress={handleSave}>
               {t.saveBeneficiary}
             </MainButton>
 
-            {beneficiarySaved && (
-              <View style={styles.transferSuccessBox}>
-                <CheckCircle2 size={18} color="#16A34A" />
-                <Text style={styles.transferSuccessText}>{t.beneficiarySaved}</Text>
-              </View>
-            )}
+            {beneficiarySaved ? (
+              <GlassBanner tone="info" message={t.beneficiarySaved} />
+            ) : null}
           </View>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  header: {
+    marginTop: spacing.xxl,
+  },
+  form: {
+    gap: spacing.lg,
+  },
+});

@@ -1,9 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
-import { ChevronDown, Globe } from "lucide-react-native";
-import { styles } from "../theme/styles";
+import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { ChevronDown, Globe, Phone } from "lucide-react-native";
 import OptionSheet from "./ui/OptionSheet";
+import TextField from "./ui/TextField";
+import FieldLabel from "./ui/FieldLabel";
 import { Language } from "../types/app";
+import { colors } from "../theme/colors";
+import { typography } from "../theme/typography";
+import { radius, sizes } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 import { COUNTRY_NAMES, CountryCode, countryOptions, isCountryCode } from "../services/geo";
 import {
   PHONE_EXAMPLES,
@@ -28,6 +33,12 @@ type Props = {
   testID?: string;
 };
 
+const SELECTOR_WIDTH = 80;
+
+/**
+ * Lada + numero. Conserva la deteccion automatica de pais y el selector con
+ * las opciones de `services/geo`; el aspecto lo pone ya `TextField`.
+ */
 export default function PhoneField({
   t,
   language,
@@ -57,36 +68,37 @@ export default function PhoneField({
 
   return (
     <View>
-      {label ? <Text style={styles.formLabel}>{label}</Text> : null}
+      {label ? <FieldLabel>{label}</FieldLabel> : null}
 
-      <View style={styles.phoneRow}>
+      <View style={styles.row}>
         <Pressable
           testID={testID ? `${testID}-countryButton` : undefined}
+          accessibilityRole="button"
+          accessibilityLabel={t.selectCountry}
           onPress={() => setPickerOpen(true)}
-          style={({ pressed }) => [
-            styles.prefixBox,
-            styles.prefixBoxRow,
-            pressed && { opacity: 0.85 },
-          ]}
+          style={({ pressed }) => [styles.selector, pressed && styles.pressed]}
         >
-          <Text style={styles.prefixText}>{dialCodeLabel(country)}</Text>
-          <ChevronDown size={14} color="#6B7280" />
+          <Text style={typography.bodyStrong}>{dialCodeLabel(country)}</Text>
+          <ChevronDown size={14} color={colors.text.secondary} />
         </Pressable>
 
-        <TextInput
-          ref={inputRef}
+        <TextField
           testID={testID}
+          accessibilityLabel={label ?? t.phoneNumber}
           value={formatNationalPhone(digits, country)}
           onChangeText={handleChangeText}
           onBlur={onBlur}
           placeholder={PHONE_EXAMPLES[country]}
-          placeholderTextColor="#9CA3AF"
           keyboardType="phone-pad"
-          style={[styles.phoneInput, highlighted && styles.fieldHighlighted]}
+          leftIcon={Phone}
+          iconBackground={colors.primary}
+          iconColor={colors.text.primary}
+          highlighted={highlighted}
+          error={error || undefined}
+          inputRef={inputRef}
+          style={styles.input}
         />
       </View>
-
-      {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
 
       <OptionSheet
         visible={isPickerOpen}
@@ -107,3 +119,29 @@ export default function PhoneField({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+  },
+  selector: {
+    width: SELECTOR_WIDTH,
+    height: sizes.input,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  input: {
+    flex: 1,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+});

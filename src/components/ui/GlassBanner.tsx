@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle } from "react-native";
-import { fontFamily, fontSize, palette, radii } from "../../theme/designSystem";
+import { colors, DANGER_BORDER } from "../../theme/colors";
+import { fontFamily } from "../../theme/typography";
+import { radius } from "../../theme/radius";
 
 type Props = {
   message: string;
@@ -20,13 +22,13 @@ export default function GlassBanner({ message, tone = "danger", testID, style }:
       style={[
         styles.root,
         {
-          backgroundColor: isDanger ? palette.dangerSurface : palette.glassSurface,
-          borderColor: isDanger ? palette.dangerBorder : palette.glassBorder,
+          backgroundColor: isDanger ? colors.dangerBg : colors.surface,
+          borderColor: isDanger ? DANGER_BORDER : colors.border,
         },
         style,
       ]}
     >
-      <Text style={[styles.text, { color: isDanger ? palette.danger : palette.textSecondary }]}>
+      <Text style={[styles.text, { color: isDanger ? colors.danger : colors.text.secondary }]}>
         {message}
       </Text>
     </View>
@@ -38,12 +40,12 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: radii.sm + 4,
+    borderRadius: radius.md,
     borderWidth: 1,
   },
   text: {
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.caption,
+    fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
   },

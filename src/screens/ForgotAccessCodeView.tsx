@@ -1,10 +1,15 @@
 import React, { useState } from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
-import { X, CheckCircle2 } from "lucide-react-native";
-import { styles } from "../theme/styles";
-import FormInput from "../components/FormInput";
-import MainButton from "../components/MainButton";
+import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import { Phone, Lock, KeyRound } from "lucide-react-native";
+import {
+  Button,
+  CloseButton,
+  GlassBanner,
+  ScreenHeader,
+  TextField,
+} from "../components/ui";
 import { ViewName } from "../types/app";
+import { spacing, screenPadding } from "../theme/spacing";
 import { formatUsPhoneDisplay, isWeakPasscode } from "../utils/validation";
 
 type Props = {
@@ -12,6 +17,13 @@ type Props = {
   setView: (view: ViewName) => void;
 };
 
+/**
+ * Recuperacion del codigo de acceso.
+ *
+ * El orden de los campos es parte del contrato de prueba: `forgotAccessCode.spec.js`
+ * los localiza por **indice de `EditText`** (telefono 0, codigo 1, nuevo 2,
+ * confirmacion 3), asi que no se pueden reordenar ni intercalar otro input.
+ */
 export default function ForgotAccessCodeView({ t, setView }: Props) {
   const [phone, setPhone] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -48,74 +60,112 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
   };
 
   return (
-    <View style={styles.pageScreen}>
-      <ScrollView contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-        <Pressable onPress={() => setView("login")} style={styles.backButton}>
-          <X size={24} color="#111827" />
-        </Pressable>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <CloseButton testID="forgot-backButton" onPress={() => setView("login")} />
 
-        <Text style={styles.pageTitle}>{t.forgotAccessCodeTitle}</Text>
-        <Text style={styles.pageSubtitle}>{t.forgotAccessCodeSubtitle}</Text>
+        <ScreenHeader
+          title={t.forgotAccessCodeTitle}
+          subtitle={t.forgotAccessCodeSubtitle}
+          style={styles.header}
+        />
 
         {success ? (
-          <View style={styles.stack16}>
-            <View style={styles.transferSuccessBox}>
-              <CheckCircle2 size={18} color="#16A34A" />
-              <Text style={styles.transferSuccessText}>{t.accessCodeResetSuccess}</Text>
-            </View>
-            <MainButton onPress={() => setView("login")}>{t.backToLogin}</MainButton>
+          <View style={styles.stack}>
+            <GlassBanner tone="info" message={t.accessCodeResetSuccess} />
+            <Button title={t.backToLogin} onPress={() => setView("login")} />
           </View>
         ) : (
-          <View style={styles.stack16}>
-            <FormInput
+          <View style={styles.stack}>
+            <TextField
+              testID="forgot-phoneInput"
               label={t.phoneNumber}
+              leftIcon={Phone}
+              placeholder={t.phoneExample}
               value={formatUsPhoneDisplay(phone)}
               onChangeText={(text) => setPhone(text.replace(/\D/g, "").slice(0, 10))}
               keyboardType="phone-pad"
             />
 
             {!codeSent ? (
-              <MainButton onPress={handleSendCode}>{t.sendRecoveryCode}</MainButton>
+              <Button
+                testID="forgot-sendCodeButton"
+                title={t.sendRecoveryCode}
+                onPress={handleSendCode}
+              />
             ) : (
               <>
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoBoxText}>{t.recoveryCodeSentInfo}</Text>
-                </View>
+                <GlassBanner tone="info" message={t.recoveryCodeSentInfo} />
 
-                <FormInput
+                <TextField
+                  testID="forgot-recoveryCodeInput"
                   label={t.recoveryCodeLabel}
+                  leftIcon={KeyRound}
                   value={recoveryCode}
                   onChangeText={(text) => setRecoveryCode(text.replace(/\D/g, "").slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
                 />
 
-                <FormInput
+                <TextField
+                  testID="forgot-newAccessCodeInput"
                   label={t.newAccessCode}
+                  leftIcon={Lock}
                   value={newAccessCode}
                   onChangeText={(text) => setNewAccessCode(text.replace(/\D/g, "").slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
-                  secureToggle
+                  secureTextEntry
                 />
 
-                <FormInput
+                <TextField
+                  testID="forgot-confirmAccessCodeInput"
                   label={t.confirmNewAccessCode}
+                  leftIcon={Lock}
                   value={confirmAccessCode}
                   onChangeText={(text) => setConfirmAccessCode(text.replace(/\D/g, "").slice(0, 6))}
                   keyboardType="number-pad"
                   maxLength={6}
-                  secureToggle
+                  secureTextEntry
                 />
 
-                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                {error ? <GlassBanner message={error} /> : null}
 
-                <MainButton onPress={handleReset}>{t.resetAccessCode}</MainButton>
+                <Button
+                  testID="forgot-resetButton"
+                  title={t.resetAccessCode}
+                  onPress={handleReset}
+                />
               </>
             )}
           </View>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  header: {
+    marginTop: spacing.xxl,
+  },
+  stack: {
+    gap: spacing.lg,
+  },
+});

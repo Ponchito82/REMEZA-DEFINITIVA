@@ -10,16 +10,18 @@ import {
 } from "react-native";
 import { Phone, Lock, User } from "lucide-react-native";
 import {
+  Button,
   GlassBanner,
-  GlassInput,
-  GradientButton,
   LanguageRow,
   LanguageToggle,
+  LinkText,
   LogoTile,
+  TextField,
 } from "../components/ui";
 import { Language, ViewName } from "../types/app";
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
+import { spacing, screenPadding } from "../theme/spacing";
 import { login } from "../api/auth";
 import { ApiError } from "../api/client";
 import { UnauthorizedReason } from "../api/session";
@@ -35,6 +37,8 @@ type Props = {
   sessionEndedReason?: UnauthorizedReason | null;
   onSessionNoticeDismissed?: () => void;
   prefilledPhone?: string;
+  /** Adonde ir tras autenticar. Cambia si el dispositivo no se reconoce. */
+  postLoginView?: ViewName;
 };
 
 /**
@@ -58,6 +62,7 @@ export default function LoginScreen({
   sessionEndedReason = null,
   onSessionNoticeDismissed,
   prefilledPhone = "",
+  postLoginView = "dashboard",
 }: Props) {
   const [phone, setPhone] = useState(prefilledPhone);
   const [loginAccessCode, setLoginAccessCode] = useState("");
@@ -87,7 +92,7 @@ export default function LoginScreen({
     try {
       const auth = await login(phone, loginAccessCode);
       onLoginSuccess(auth.customerId, auth.token, auth.expiresInMs);
-      setView("dashboard");
+      setView(postLoginView);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError(t.invalidCredentials);
@@ -119,10 +124,10 @@ export default function LoginScreen({
             style={styles.toggle}
           />
 
-          <LogoTile size={124} radius={30} style={styles.logo} />
+          <LogoTile style={styles.logo} />
 
-          <Text style={[typography.title, styles.centered]}>{t.welcome}</Text>
-          <Text style={[typography.subtitle, styles.subtitle]}>{t.signInSubtitle}</Text>
+          <Text style={[typography.display, styles.centered]}>{t.welcome}</Text>
+          <Text style={[typography.body, styles.subtitle]}>{t.signInSubtitle}</Text>
 
           {sessionNotice ? (
             <GlassBanner
@@ -132,9 +137,10 @@ export default function LoginScreen({
             />
           ) : null}
 
-          <GlassInput
+          <TextField
             testID="login-phoneInput"
-            icon={Phone}
+            leftIcon={Phone}
+            shape="pill"
             value={phone}
             onChangeText={setPhone}
             onBlur={() => setPhoneTouched(true)}
@@ -144,9 +150,10 @@ export default function LoginScreen({
             style={styles.phoneField}
           />
 
-          <GlassInput
+          <TextField
             testID="login-accessCodeInput"
-            icon={Lock}
+            leftIcon={Lock}
+            shape="pill"
             value={loginAccessCode}
             onChangeText={(text) => setLoginAccessCode(text.replace(/\D/g, "").slice(0, 6))}
             onBlur={() => setCodeTouched(true)}
@@ -160,23 +167,26 @@ export default function LoginScreen({
 
           {error ? <GlassBanner message={error} style={styles.banner} /> : null}
 
-          <GradientButton
+          {/* Pasa de apagado a degradado en cuanto los dos campos son validos. */}
+          <Button
             testID="login-signInButton"
             title={isSubmitting ? t.signingIn : t.signIn}
-            gradient="diagonal"
+            variant={canSubmit ? "gradient" : "ghost"}
             onPress={handleSignIn}
             disabled={isSubmitting || !canSubmit}
+            loading={isSubmitting}
             style={styles.cta}
           />
 
-          <Pressable
+          <LinkText
             testID="login-forgotAccessCodeLink"
+            tone="plain"
             onPress={() => setView("forgotAccessCode")}
-            hitSlop={8}
             style={styles.forgot}
+            textStyle={typography.link}
           >
-            <Text style={typography.link}>{t.forgotAccessCode}</Text>
-          </Pressable>
+            {t.forgotAccessCode}
+          </LinkText>
 
           <Pressable
             testID="login-registerLink"
@@ -187,11 +197,11 @@ export default function LoginScreen({
             hitSlop={8}
             style={styles.register}
           >
-            <User size={20} color={colors.textPrimary} strokeWidth={1.75} />
-            <Text style={typography.caption}>
+            <User size={20} color={colors.text.primary} strokeWidth={1.75} />
+            <Text style={typography.footnote}>
               {accountPrompt.question}
               {accountPrompt.action ? (
-                <Text style={typography.captionAccent}> {accountPrompt.action}</Text>
+                <Text style={typography.footnoteAccent}> {accountPrompt.action}</Text>
               ) : null}
             </Text>
           </Pressable>
@@ -210,45 +220,45 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 32,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
   },
   toggle: {
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   logo: {
-    marginTop: 44,
+    marginTop: spacing.xxxl,
   },
   centered: {
     textAlign: "center",
-    marginTop: 28,
+    marginTop: spacing.xxl,
   },
   subtitle: {
     textAlign: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   banner: {
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   phoneField: {
-    marginTop: 32,
+    marginTop: spacing.xxxl,
   },
   codeField: {
-    marginTop: 16,
+    marginTop: spacing.lg,
   },
   cta: {
-    marginTop: 28,
+    marginTop: spacing.xxl,
   },
   forgot: {
     alignSelf: "center",
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   register: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "center",
-    gap: 10,
-    marginTop: 32,
+    gap: spacing.sm,
+    marginTop: spacing.xxxl,
   },
 });

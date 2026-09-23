@@ -1,6 +1,5 @@
 import { StyleSheet, Platform, Dimensions } from "react-native";
 import {
-  BACKGROUND,
   DANGER,
   DANGER_SOLID,
   DANGER_BORDER,
