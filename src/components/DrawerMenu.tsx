@@ -9,6 +9,7 @@ import {
   BanknoteArrowDown,
   FileText,
   Globe,
+  Coins,
   LogOut,
 } from "lucide-react-native";
 
@@ -54,7 +55,7 @@ export default function DrawerMenu({
     { id: "beneficiaries", icon: UserCheck, label: t.beneficiaries, onPress: () => go("beneficiaries") },
     { id: "sendMoney", icon: BanknoteArrowDown, label: t.sendMoney, onPress: () => go("sendMoney") },
     { id: "dispute", icon: FileText, label: t.disputeTitle, onPress: () => go("disputeOptions") },
-    { id: "multiCurrency", icon: Globe, label: t.multiCurrencyTitle, onPress: () => go("multiCurrency") },
+    { id: "multiCurrency", icon: Coins, label: t.multiCurrencyTitle, onPress: () => go("multiCurrency") },
   ];
 
   return (
@@ -62,6 +63,8 @@ export default function DrawerMenu({
       visible={visible}
       transparent
       animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={() => setIsMenuOpen(false)}
     >
       <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
@@ -75,7 +78,15 @@ export default function DrawerMenu({
       <Animated.View
         style={[styles.drawer, { transform: [{ translateX: drawerTranslateX }] }]}
       >
-        <View style={[styles.content, { paddingTop: insets.top + spacing.lg }]}>
+        <View
+          style={[
+            styles.content,
+            {
+              paddingTop: insets.top + spacing.lg,
+              paddingBottom: insets.bottom + spacing.xxl,
+            },
+          ]}
+        >
           <CloseButton
             testID="drawer-closeButton"
             shape="circle"
@@ -141,7 +152,11 @@ const styles = StyleSheet.create({
   },
   /**
    * Panel **opaco**: con una superficie translucida se transparentaba el
-   * dashboard de atras y las filas costaban de leer.
+   * dashboard de atras y las filas costaban de leer. El Modal va con
+   * `statusBarTranslucent`/`navigationBarTranslucent` para que overlay y panel
+   * cubran tambien las barras del sistema; sin eso el panel empezaba bajo la
+   * barra de estado, dejaba franjas sin oscurecer y el `insets.top` se sumaba
+   * dos veces.
    */
   drawer: {
     position: "absolute",
@@ -150,16 +165,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 300,
     backgroundColor: colors.sheetSurface,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    shadowOffset: { width: -6, height: 0 },
-    elevation: 16,
+    boxShadow: "-6px 0px 24px 0px rgba(0,0,0,0.3)",
   },
   content: {
     flex: 1,
     paddingHorizontal: screenPadding,
-    paddingBottom: spacing.xxl,
   },
   close: {
     alignSelf: "flex-end",
