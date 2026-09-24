@@ -17,7 +17,7 @@ type Props = {
   title: string;
   subtitle?: string;
   right?: ListRowRight;
-  /** Texto de la derecha cuando `right` es "value" */
+  /** Texto de la derecha. Con `right="chevron"` va antes del chevron. */
   value?: string;
   valueColor?: string;
   /** Estado del toggle o del radio */
@@ -80,6 +80,9 @@ export default function ListRow({
         ) : null}
       </View>
 
+      {right === "chevron" && value ? (
+        <Text style={[textStyles.value, valueColor ? { color: valueColor } : null]}>{value}</Text>
+      ) : null}
       {right === "chevron" ? (
         <ChevronRight size={20} color={iconColor} strokeWidth={1.75} />
       ) : null}
