@@ -8,7 +8,6 @@ import {
   Mail,
   CreditCard,
   CircleAlert,
-  CircleCheck,
 } from "lucide-react-native";
 
 import FormInput from "../components/FormInput";
@@ -22,8 +21,7 @@ import {
 } from "../components/ui";
 import { spacing } from "../theme/spacing";
 import { Language, ViewName } from "../types/app";
-import { isValidNationalPhone } from "../utils/phone";
-import { isValidEmail, isValidPersonName } from "../utils/validation";
+import { BENEFICIARY_PHONE_COUNTRY, beneficiaryRules } from "../utils/beneficiary";
 import { useFormFocus } from "../hooks/useFormFocus";
 
 type Props = {
@@ -55,12 +53,10 @@ type Props = {
   beneficiaryClabe: string;
   setBeneficiaryClabe: (value: string) => void;
 
-  beneficiarySaved: boolean;
+  /** Valido: pasa a "Confirmar datos del beneficiario" (34) */
   handleBeneficiarySave: () => void;
 };
 
-/** Quien recibe siempre es de Mexico: la lada va fija en +52. */
-const BENEFICIARY_PHONE_COUNTRY = "MX";
 
 export default function BeneficiariesView({
   t,
@@ -82,39 +78,20 @@ export default function BeneficiariesView({
   setBeneficiaryEmail,
   beneficiaryClabe,
   setBeneficiaryClabe,
-  beneficiarySaved,
   handleBeneficiarySave,
 }: Props) {
   const form = useFormFocus();
 
   const handleSave = () => {
-    const isValid = form.validate([
-      {
-        key: "firstName",
-        valid: isValidPersonName(beneficiaryFirstName),
-        message: t.requiredFirstName,
-      },
-      {
-        key: "paternalLastName",
-        valid: isValidPersonName(beneficiaryPaternalLastName),
-        message: t.requiredLastName,
-      },
-      {
-        key: "phone",
-        valid: isValidNationalPhone(beneficiaryPhone, BENEFICIARY_PHONE_COUNTRY),
-        message: beneficiaryPhone.length === 0 ? t.requiredPhone : t.invalidPhoneForCountry,
-      },
-      {
-        key: "email",
-        valid: beneficiaryEmail.length === 0 || isValidEmail(beneficiaryEmail),
-        message: t.requiredEmail,
-      },
-      {
-        key: "clabe",
-        valid: beneficiaryClabe.replace(/\D/g, "").length === 18,
-        message: t.requiredClabe,
-      },
-    ]);
+    const isValid = form.validate(
+      beneficiaryRules(t, {
+        firstName: beneficiaryFirstName,
+        paternalLastName: beneficiaryPaternalLastName,
+        phone: beneficiaryPhone,
+        email: beneficiaryEmail,
+        clabe: beneficiaryClabe,
+      }),
+    );
 
     if (!isValid) return;
     handleBeneficiarySave();
@@ -128,9 +105,9 @@ export default function BeneficiariesView({
           contra esta vista para desplazar hasta el que falta. */}
       <View ref={form.contentRef} collapsable={false}>
         <BackButton
-          testID="beneficiaries-backButton"
+          testID="beneficiaryForm.backButton"
           accessibilityLabel={t.back}
-          onPress={() => setView("dashboard")}
+          onPress={() => setView("beneficiaries")}
         />
 
         <ScreenHeader
@@ -252,15 +229,6 @@ export default function BeneficiariesView({
             title={t.saveBeneficiary}
             onPress={handleSave}
           />
-
-          {beneficiarySaved ? (
-            <InfoCard
-              testID="beneficiaries.savedCard"
-              icon={CircleCheck}
-              tone="success"
-              text={t.beneficiarySaved}
-            />
-          ) : null}
         </View>
       </View>
     </ScreenLayout>
