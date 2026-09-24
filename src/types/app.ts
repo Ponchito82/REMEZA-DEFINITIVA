@@ -63,3 +63,20 @@ export function canCancelTransaction(tx: Transaction, now: number = Date.now()):
   if (tx.type !== "remittance" || tx.status !== "pending") return false;
   return tx.createdAt === undefined || now - tx.createdAt <= REMITTANCE_CANCEL_WINDOW_MS;
 }
+
+/** Beneficiario de remesas. Quien recibe siempre es de Mexico (+52). */
+export type Beneficiary = {
+  id: string;
+  firstName: string;
+  paternalLastName: string;
+  maternalLastName?: string;
+  fullName: string;
+  /** Telefono ya formateado con la lada +52 */
+  phone: string;
+  city: string;
+  state: string;
+  email?: string;
+  clabe?: string;
+  favorite: boolean;
+  createdAt: number;
+};

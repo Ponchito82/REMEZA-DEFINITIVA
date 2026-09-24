@@ -1,3 +1,5 @@
+import { screenTranslations } from "./screenTranslations";
+
 export const translations = {
   en: {
     getStarted: "Get Started",
@@ -327,6 +329,7 @@ export const translations = {
     yesItWasMe: "Yes, it was me",
     noItWasntMe: "No, it wasn't me",
     contactSupport: "Contact support",
+    ...screenTranslations.en,
   },
   es: {
     getStarted: "Comenzar",
@@ -656,5 +659,6 @@ export const translations = {
     yesItWasMe: "Sí, fui yo",
     noItWasntMe: "No, no fui yo",
     contactSupport: "Contactar soporte",
+    ...screenTranslations.es,
   },
 };
