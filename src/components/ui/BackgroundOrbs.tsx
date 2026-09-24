@@ -92,8 +92,8 @@ const WATERMARK_SIZE = 0.42;
  */
 function streakPaths(width: number, height: number) {
   const left = [
-    { from: [-0.08, 0.99], ctrl: [0.18, 0.93], to: [0.42, 0.72] },
-    { from: [-0.08, 0.95], ctrl: [0.1, 0.9], to: [0.3, 0.74] },
+    { from: [-0.04, 0.99], ctrl: [0.1, 0.95], to: [0.24, 0.84] },
+    { from: [-0.04, 0.94], ctrl: [0.05, 0.9], to: [0.15, 0.83] },
   ];
   return left.flatMap(({ from, ctrl, to }) => {
     const d = (mirror: boolean) => {

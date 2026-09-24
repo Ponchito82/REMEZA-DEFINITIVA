@@ -36,7 +36,7 @@ export default function BankConnectedScreen({ t, language, account, onBack, onCo
     >
       <BankAccountCard
         bankName={account.bankName}
-        accountType={t.accountEndingIn.replace("{last4}", last4(account.clabe))}
+        accountType={t[account.typeKey]}
         last4={last4(account.clabe)}
         onPress={onContinue}
       />

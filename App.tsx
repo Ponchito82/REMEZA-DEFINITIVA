@@ -128,16 +128,6 @@ function AppContent() {
         setCustomerId(null);
     }, [view]);
 
-    useEffect(() => {
-        if (
-            view === "welcome" ||
-            view === "login" ||
-            view === "register" ||
-            view === "forgotAccessCode"
-        )
-            return;
-        verifySession();
-    }, [view]);
 
     const [registerPhone, setRegisterPhone] = useState("");
     const [registerPhoneCountry, setRegisterPhoneCountry] = useState<CountryCode>("US");
@@ -501,6 +491,24 @@ function AppContent() {
         setSupportReturnView(returnTo);
         setView("support");
     };
+
+    /**
+     * Vistas que se usan sin sesion. La recuperacion de acceso (21 y la via por
+     * correo) y el soporte abierto desde ella tambien lo son: si se sondeara la
+     * sesion ahi, el 401 devolveria al Login con "Tu sesion expiro".
+     */
+    const isPublicView =
+        view === "welcome" ||
+        view === "login" ||
+        view === "register" ||
+        view === "forgotAccessCode" ||
+        view === "recoverAccess" ||
+        (view === "support" && supportReturnView === "recoverAccess");
+
+    useEffect(() => {
+        if (isPublicView) return;
+        verifySession();
+    }, [view, isPublicView]);
 
     const handleProfileOpen = (target: ProfileTarget) => {
         setProfileNotice("");
