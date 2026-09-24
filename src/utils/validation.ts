@@ -167,3 +167,23 @@ export const NATIONALITY_OPTIONS_ES = [
   "Uruguay",
   "Otro",
 ].map((label) => ({ label, value: label }));
+
+/**
+ * Reglas visibles de un codigo de acceso de 6 digitos, las mismas que aplica
+ * `isWeakPasscode`, separadas para pintarlas como checklist.
+ */
+export function accessCodeChecks(code: string) {
+  const sixDigits = /^\d{6}$/.test(code);
+  const allSame = code.length > 0 && code.split("").every((digit) => digit === code[0]);
+  const digits = code.split("").map(Number);
+  const ascending = code.length > 1 && digits.every((d, i) => i === 0 || d === digits[i - 1] + 1);
+  const descending = code.length > 1 && digits.every((d, i) => i === 0 || d === digits[i - 1] - 1);
+  const notRepeated = sixDigits && !allSame;
+  const notSequential = sixDigits && !ascending && !descending;
+  const varied = new Set(code.split("")).size >= 4;
+
+  /** Segmentos del medidor, de 0 a 4 */
+  const level = [sixDigits, notRepeated, notSequential, sixDigits && varied].filter(Boolean).length;
+
+  return { sixDigits, notRepeated, notSequential, level };
+}
