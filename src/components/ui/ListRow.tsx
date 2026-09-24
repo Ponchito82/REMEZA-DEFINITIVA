@@ -12,6 +12,8 @@ export type ListRowRight = "chevron" | "toggle" | "radio" | "value" | "lock" | "
 
 type Props = {
   icon?: IconComponent;
+  /** Icono suelto, sin el circulo de fondo */
+  bareIcon?: boolean;
   /** Sustituye al circulo de icono: avatar, bandera, etc. */
   leading?: React.ReactNode;
   title: string;
@@ -39,6 +41,7 @@ type Props = {
  */
 export default function ListRow({
   icon: Icon,
+  bareIcon = false,
   leading,
   title,
   subtitle,
@@ -60,7 +63,11 @@ export default function ListRow({
   const content = (
     <>
       {leading ??
-        (Icon ? (
+        (Icon && bareIcon ? (
+          <View style={styles.bareIcon}>
+            <Icon size={26} color={iconColor} strokeWidth={1.75} />
+          </View>
+        ) : Icon ? (
           <View style={[styles.iconCircle, isDanger && styles.iconCircleDanger]}>
             <Icon size={24} color={iconColor} strokeWidth={1.75} />
           </View>
@@ -164,6 +171,10 @@ const styles = StyleSheet.create({
   },
   iconCircleDanger: {
     backgroundColor: "rgba(250,0,110,0.18)",
+  },
+  bareIcon: {
+    width: 40,
+    alignItems: "center",
   },
   text: {
     flex: 1,

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Animated, Pressable, Text, StyleSheet } from "react-native";
+import { Animated, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
@@ -8,7 +8,6 @@ import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/co
 
 import { translations } from "./src/i18n/translations";
 import { Language, Transaction, TransactionsFilter, ViewName } from "./src/types/app";
-import { styles } from "./src/theme/styles";
 
 import ComponentsShowcaseScreen from "./src/screens/ComponentsShowcaseScreen";
 import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScreen";
@@ -29,6 +28,7 @@ import BeneficiariesView from "./src/screens/BeneficiariesView";
 import SendMoneyView from "./src/screens/SendMoneyView";
 import TransactionDetailView from "./src/screens/TransactionDetailView";
 import AppealView from "./src/screens/AppealView";
+import LogoutConfirmScreen from "./src/screens/LogoutConfirmScreen";
 import SendMoneyConfirmationView from "./src/screens/SendMoneyConfirmationView";
 import { AddressDetail, EMPTY_ADDRESS_DETAIL } from "./src/components/AddressFields";
 import { CountryCode, stateNameByCode } from "./src/services/geo";
@@ -47,8 +47,8 @@ function AppContent() {
 
     const [view, setView] = useState<ViewName>("welcome");
     const [regStep, setRegStep] = useState(1);
-    const [authToken, setAuthToken] = useState<string | null>(null);
-    const [customerId, setCustomerId] = useState<string | null>(null);
+    const [_authToken, setAuthToken] = useState<string | null>(null);
+    const [_customerId, setCustomerId] = useState<string | null>(null);
     const [sessionEndedReason, setSessionEndedReason] = useState<UnauthorizedReason | null>(null);
 
     const handleLoginSuccess = (
@@ -63,6 +63,13 @@ function AppContent() {
     };
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    /** Pantalla a la que vuelve "Cancelar" en la confirmacion de cierre de sesion */
+    const [logoutReturnView, setLogoutReturnView] = useState<ViewName>("dashboard");
+    const requestLogout = () => {
+        setLogoutReturnView(view);
+        setView("logoutConfirm");
+    };
     const [isCardActive, setIsCardActive] = useState(true);
     const [isShowcaseOpen, setIsShowcaseOpen] = useState(false);
 
@@ -271,16 +278,6 @@ function AppContent() {
         },
     ];
 
-    type Beneficiary = {
-        id: string;
-        fullName: string;
-        phone: string;
-        city: string;
-        state: string;
-    };
-
-    const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
-
     const amountToReceiveMxn = Number(sendAmountUsd || 0) * exchangeRate;
 
     const handleSendMoney = () => {
@@ -379,7 +376,7 @@ function AppContent() {
                 useNativeDriver: true,
             }),
         ]).start();
-    }, [isMenuOpen]);
+    }, [isMenuOpen, overlayOpacity, drawerTranslateX]);
 
     const transactions = useMemo(
         () => [
@@ -409,8 +406,16 @@ function AppContent() {
         );
     }
 
+    /** Pantallas que en el PDF llevan las lineas de luz de las esquinas (31+) */
+    const hasStreaks =
+        view === "beneficiaries" ||
+        view === "sendMoney" ||
+        view === "sendMoneyConfirmation" ||
+        view === "transactionDetail" ||
+        view === "logoutConfirm";
+
     return (
-        <ScreenBackground>
+        <ScreenBackground streaks={hasStreaks}>
             {view === "welcome" && (
                 <WelcomeScreen t={t} language={language} setLanguage={setLanguage} setView={setView} />
             )}
@@ -657,6 +662,14 @@ function AppContent() {
                 />
             )}
 
+            {view === "logoutConfirm" && (
+                <LogoutConfirmScreen
+                    t={t}
+                    onConfirm={() => setView("login")}
+                    onCancel={() => setView(logoutReturnView)}
+                />
+            )}
+
             <DrawerMenu
                 t={t}
                 visible={isMenuOpen}
@@ -664,6 +677,7 @@ function AppContent() {
                 drawerTranslateX={drawerTranslateX}
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
+                onLogout={requestLogout}
             />
 
             {__DEV__ ? (

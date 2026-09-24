@@ -15,7 +15,8 @@ export type ViewName =
   | "appeal"
   | "multiCurrency"
   | "twoStepVerification"
-  | "securityAlert";
+  | "securityAlert"
+  | "logoutConfirm";
 
 export type Language = "en" | "es";
 

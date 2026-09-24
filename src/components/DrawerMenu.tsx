@@ -24,6 +24,8 @@ type Props = {
   drawerTranslateX: Animated.Value;
   setIsMenuOpen: (value: boolean) => void;
   setView: (view: ViewName) => void;
+  /** Cierre de sesion. Sin el, el item navega directo al login como antes. */
+  onLogout?: () => void;
 };
 
 export default function DrawerMenu({
@@ -33,6 +35,7 @@ export default function DrawerMenu({
   drawerTranslateX,
   setIsMenuOpen,
   setView,
+  onLogout,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -104,7 +107,11 @@ export default function DrawerMenu({
             label={t.logout}
             danger
             last
-            onPress={() => go("login")}
+            onPress={() => {
+              if (!onLogout) return go("login");
+              setIsMenuOpen(false);
+              onLogout();
+            }}
           />
         </View>
       </Animated.View>

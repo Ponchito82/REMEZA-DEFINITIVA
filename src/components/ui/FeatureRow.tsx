@@ -7,6 +7,8 @@ type Props = {
   icon: IconComponent;
   title: string;
   subtitle?: string;
+  /** Icono suelto, sin circulo */
+  bareIcon?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
