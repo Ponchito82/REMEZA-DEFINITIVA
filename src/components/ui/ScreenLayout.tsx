@@ -29,6 +29,8 @@ type Props = {
   /** Botones fijos abajo, fuera del scroll */
   footer?: React.ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Ref del ScrollView, para pantallas que desplazan hasta un campo */
+  scrollRef?: React.Ref<ScrollView>;
   testID?: string;
 };
 
@@ -51,6 +53,7 @@ export default function ScreenLayout({
   plain = false,
   footer,
   contentStyle,
+  scrollRef,
   testID,
 }: Props) {
   return (
@@ -63,6 +66,7 @@ export default function ScreenLayout({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
