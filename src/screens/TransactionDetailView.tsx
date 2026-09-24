@@ -1,11 +1,47 @@
-import React, { useState } from "react";
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import {
+  AlertCircle,
+  ArrowLeftRight,
+  Building2,
+  CalendarDays,
+  CircleDollarSign,
+  CircleX,
+  Clock,
+  FileText,
+  Hash,
+  Info,
+  Landmark,
+  Receipt,
+  Tag,
+  User,
+} from "lucide-react-native";
 
-import { Badge, Button, CloseButton, GlassBanner, GlassCard, ScreenHeader } from "../components/ui";
-import { colors } from "../theme/colors";
-import { typography } from "../theme/typography";
-import { spacing, screenPadding } from "../theme/spacing";
-import { PROVIDER_NAMES, Transaction, ViewName, canCancelTransaction } from "../types/app";
+import {
+  Badge,
+  DetailRow,
+  HeroIcon,
+  InfoCard,
+  PrimaryButton,
+  ProgressBar,
+  ScreenHeader,
+  ScreenLayout,
+  SecondaryButton,
+  StatusBadge,
+} from "../components/ui";
+import type { IconComponent, StatusKind } from "../components/ui";
+import { colors, tokens } from "../theme/colors";
+import { textStyles } from "../theme/typography";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
+import {
+  PROVIDER_NAMES,
+  REMITTANCE_CANCEL_WINDOW_MS,
+  Transaction,
+  TransactionStatus,
+  ViewName,
+  canCancelTransaction,
+} from "../types/app";
 
 type Props = {
   t: any;
@@ -16,7 +52,7 @@ type Props = {
   appealed: boolean;
 };
 
-type DetailRow = { key: string; label: string; value: string };
+type Row = { key: string; label: string; value: string; icon: IconComponent; valueColor?: string };
 
 const formatUsd = (value: number) =>
   `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -24,9 +60,32 @@ const formatUsd = (value: number) =>
 const formatMxn = (value: number) =>
   `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
 
+/** "12:34" a partir de milisegundos */
+const formatClock = (ms: number) => {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+};
+
+const STATUS_KIND: Record<TransactionStatus, StatusKind> = {
+  completed: "completed",
+  pending: "inProgress",
+  cancelled: "cancelled",
+};
+
+const STATUS_COLOR: Record<TransactionStatus, string> = {
+  completed: tokens.successText,
+  pending: tokens.warningText,
+  cancelled: tokens.dangerText,
+};
+
 /**
  * Desglose de un movimiento, sea del tipo que sea. Las remesas en proceso
  * dentro de la ventana de 30 minutos se pueden cancelar desde aqui.
+ *
+ * Las superficies van en el color solido del menu desplegable
+ * (`colors.sheetSurface`), no en vidrio: asi se aprobo.
  */
 export default function TransactionDetailView({
   t,
@@ -37,14 +96,35 @@ export default function TransactionDetailView({
 }: Props) {
   const [confirming, setConfirming] = useState(false);
 
+  /**
+   * Reloj para el tiempo restante de cancelacion. Solo corre cuando hay una
+   * remesa con hora de creacion; al vencer, `canCancelTransaction` pasa a
+   * `false` en el siguiente tic y el boton desaparece solo.
+   */
+  const [now, setNow] = useState(() => Date.now());
+  const hasWindow =
+    transaction?.type === "remittance" &&
+    transaction.status === "pending" &&
+    transaction.createdAt !== undefined;
+
+  useEffect(() => {
+    if (!hasWindow) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasWindow]);
+
   const goBack = () => setView("transactions");
 
   if (!transaction) {
     return (
-      <ScrollView contentContainerStyle={styles.content}>
-        <CloseButton testID="transactionDetail-backButton" onPress={goBack} />
-        <ScreenHeader title={t.transactionDetail} style={styles.header} />
-      </ScrollView>
+      <ScreenLayout
+        showBack
+        onBack={goBack}
+        backTestID="transactionDetail-backButton"
+        backAccessibilityLabel={t.back}
+      >
+        <ScreenHeader icon={Receipt} title={t.transactionDetail} style={styles.header} />
+      </ScreenLayout>
     );
   }
 
@@ -57,38 +137,66 @@ export default function TransactionDetailView({
   }[transaction.status];
 
   const isRemittance = transaction.type === "remittance";
-  const cancellable = canCancelTransaction(transaction);
+  const cancellable = canCancelTransaction(transaction, now);
   const cancelled = transaction.status === "cancelled";
 
-  const rows: DetailRow[] = [
-    { key: "type", label: t.transactionType, value: typeLabel },
-    { key: "provider", label: t.operatedBy, value: PROVIDER_NAMES[transaction.provider] },
-    { key: "concept", label: t.concept, value: label },
+  const remainingMs =
+    hasWindow && transaction.createdAt !== undefined
+      ? REMITTANCE_CANCEL_WINDOW_MS - (now - transaction.createdAt)
+      : 0;
+
+  const rows: Row[] = [
+    { key: "type", label: t.transactionType, value: typeLabel, icon: Tag },
+    {
+      key: "provider",
+      label: t.operatedBy,
+      value: PROVIDER_NAMES[transaction.provider],
+      icon: Building2,
+    },
+    { key: "concept", label: t.concept, value: label, icon: FileText },
   ];
 
   if (isRemittance) {
     rows.push(
-      { key: "amountUsd", label: t.amountToSendUsd, value: formatUsd(transaction.amountUsd) },
+      {
+        key: "amountUsd",
+        label: t.amountToSendUsd,
+        value: formatUsd(transaction.amountUsd),
+        icon: CircleDollarSign,
+      },
       {
         key: "exchangeRate",
         label: t.exchangeRate,
         value: `1 USD = ${(transaction.exchangeRate ?? 0).toFixed(2)} MXN`,
+        icon: ArrowLeftRight,
       },
       {
         key: "amountMxn",
         label: t.amountToReceiveMxn,
         value: formatMxn(transaction.mxnAmount ?? 0),
+        icon: Landmark,
       },
-      { key: "beneficiary", label: t.beneficiary, value: transaction.beneficiary ?? t.notAvailable },
+      {
+        key: "beneficiary",
+        label: t.beneficiary,
+        value: transaction.beneficiary ?? t.notAvailable,
+        icon: User,
+      },
     );
   } else {
-    rows.push({ key: "amount", label: t.amountLabel, value: transaction.amount });
+    rows.push({ key: "amount", label: t.amountLabel, value: transaction.amount, icon: CircleDollarSign });
   }
 
   rows.push(
-    { key: "date", label: t.dateLabel, value: transaction.date },
-    { key: "status", label: t.status, value: statusLabel },
-    { key: "reference", label: t.referenceLabel, value: transaction.reference },
+    { key: "date", label: t.dateLabel, value: transaction.date, icon: CalendarDays },
+    {
+      key: "status",
+      label: t.status,
+      value: statusLabel,
+      icon: Info,
+      valueColor: STATUS_COLOR[transaction.status],
+    },
+    { key: "reference", label: t.referenceLabel, value: transaction.reference, icon: Hash },
   );
 
   const handleConfirmCancel = () => {
@@ -97,166 +205,168 @@ export default function TransactionDetailView({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <CloseButton testID="transactionDetail-backButton" onPress={goBack} />
-
+    <ScreenLayout
+      showBack
+      onBack={goBack}
+      backTestID="transactionDetail-backButton"
+      backAccessibilityLabel={t.back}
+    >
       <ScreenHeader
+        icon={cancelled ? CircleX : Receipt}
+        iconVariant={cancelled ? "ring" : "filled"}
+        iconTone={cancelled ? "danger" : "default"}
         title={t.transactionDetail}
         subtitle={isRemittance && !cancelled ? t.remittanceCancelationInfo : undefined}
         style={styles.header}
       />
 
-      <GlassCard size="lg" style={[styles.solid, styles.hero]}>
+      <View style={[styles.card, styles.hero]}>
         <Badge label={typeLabel} variant={transaction.type} />
         <Text
           testID="transactionDetail-amount"
-          style={[
-            typography.display,
-            styles.heroAmount,
-            cancelled && styles.heroAmountCancelled,
-          ]}
+          style={[textStyles.amountLarge, cancelled && styles.heroAmountCancelled]}
         >
           {transaction.amount}
         </Text>
-        <Text style={typography.caption}>{statusLabel}</Text>
-      </GlassCard>
+        <StatusBadge status={STATUS_KIND[transaction.status]} label={statusLabel} />
+      </View>
 
-      <GlassCard size="lg" style={[styles.solid, styles.rows]}>
-        {rows.map((row, index) => (
-          <View
-            key={row.key}
-            style={[styles.row, index < rows.length - 1 && styles.rowDivider]}
-          >
-            <Text style={[typography.caption, styles.rowLabel]}>{row.label}</Text>
-            <Text
-              testID={`transactionDetail-${row.key}`}
-              style={[typography.bodyStrong, styles.rowValue]}
-            >
-              {row.value}
+      {cancellable && hasWindow && !confirming ? (
+        <View testID="transactionDetail.countdown" style={[styles.card, styles.countdown]}>
+          <ProgressBar progress={remainingMs / REMITTANCE_CANCEL_WINDOW_MS} />
+          <View style={styles.countdownRow}>
+            <View style={styles.countdownLabel}>
+              <Clock size={16} color={tokens.textSecondary} strokeWidth={1.75} />
+              <Text style={textStyles.caption}>{t.timeRemaining}</Text>
+            </View>
+            <Text testID="transactionDetail.countdownValue" style={textStyles.rowTitle}>
+              {formatClock(remainingMs)}
             </Text>
           </View>
+        </View>
+      ) : null}
+
+      <View style={styles.rows}>
+        {rows.map((row) => (
+          <DetailRow
+            key={row.key}
+            icon={row.icon}
+            label={row.label}
+            value={row.value}
+            valueColor={row.valueColor}
+            surfaceColor={colors.sheetSurface}
+            valueTestID={`transactionDetail-${row.key}`}
+          />
         ))}
-      </GlassCard>
+      </View>
 
       {cancelled ? (
-        <GlassBanner
+        <InfoCard
           testID="transactionDetail-cancelledBanner"
-          tone="info"
-          message={t.operationCancelled}
+          icon={CircleX}
+          tone="danger"
+          text={t.operationCancelled}
           style={styles.notice}
         />
       ) : null}
 
       {isRemittance && !cancelled && !cancellable ? (
-        <GlassBanner
+        <InfoCard
           testID="transactionDetail-notCancellable"
-          tone="info"
-          message={t.cancelNotAvailable}
+          text={t.cancelNotAvailable}
           style={styles.notice}
         />
       ) : null}
 
       {cancellable && !confirming ? (
-        <Button
+        <SecondaryButton
           testID="transactionDetail-cancelButton"
           title={t.cancelOperation}
-          variant="outline"
-          rightAdornment="none"
+          tone="danger"
           onPress={() => setConfirming(true)}
           style={styles.action}
         />
       ) : null}
 
       {!confirming && appealed ? (
-        <GlassBanner
+        <InfoCard
           testID="transactionDetail-appealedBanner"
-          tone="info"
-          message={t.appealInReview}
+          icon={Clock}
+          tone="warning"
+          text={t.appealInReview}
           style={styles.notice}
         />
       ) : null}
 
       {!confirming && !appealed ? (
-        <Button
+        <SecondaryButton
           testID="transactionDetail-appealButton"
           title={t.appealOperation}
-          variant="outline"
-          rightAdornment="none"
           onPress={() => setView("appeal")}
           style={cancellable ? styles.actionNext : styles.action}
         />
       ) : null}
 
       {cancellable && confirming ? (
-        <GlassCard
-          size="lg"
-          style={[styles.solid, styles.confirm]}
-          testID="transactionDetail-confirmCard"
-        >
-          <Text style={typography.bodyStrong}>{t.cancelConfirmTitle}</Text>
-          <Text style={typography.body}>{t.cancelConfirmMessage}</Text>
+        <View testID="transactionDetail-confirmCard" style={[styles.card, styles.confirm]}>
+          <HeroIcon icon={AlertCircle} variant="ring" tone="danger" size={64} />
+          <Text style={[textStyles.sectionTitle, styles.centerText]}>{t.cancelConfirmTitle}</Text>
+          <Text style={[textStyles.subtitle, styles.confirmMessage]}>{t.cancelConfirmMessage}</Text>
 
-          <Button
+          <PrimaryButton
             testID="transactionDetail-confirmCancelButton"
             title={t.cancelConfirmYes}
-            rightAdornment="none"
+            tone="danger"
             onPress={handleConfirmCancel}
           />
-          <Button
+          <SecondaryButton
             testID="transactionDetail-keepButton"
             title={t.cancelConfirmNo}
-            variant="outline"
-            rightAdornment="none"
             onPress={() => setConfirming(false)}
           />
-        </GlassCard>
+        </View>
       ) : null}
-    </ScrollView>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
   header: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
   },
   /** Superficie opaca, la misma del menu desplegable, para que el fondo no se transparente */
-  solid: {
+  card: {
     backgroundColor: colors.sheetSurface,
+    borderWidth: 1,
+    borderColor: tokens.glassBorderStrong,
+    borderRadius: metrics.radius.card,
+    padding: spacing.lg,
   },
   hero: {
     alignItems: "flex-start",
     gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  heroAmount: {
-    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   heroAmountCancelled: {
     textDecorationLine: "line-through",
-    color: colors.text.secondary,
+    color: tokens.textDisabled,
+  },
+  countdown: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  countdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  countdownLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   rows: {
-    paddingVertical: spacing.xs,
-  },
-  row: {
-    paddingVertical: spacing.md,
-    gap: spacing.xs,
-  },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  rowLabel: {
-    color: colors.text.secondary,
-  },
-  rowValue: {
-    color: colors.text.primary,
+    gap: metrics.rowGap,
   },
   notice: {
     marginTop: spacing.lg,
@@ -270,5 +380,13 @@ const styles = StyleSheet.create({
   confirm: {
     marginTop: spacing.xl,
     gap: spacing.md,
+    alignItems: "stretch",
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  confirmMessage: {
+    marginBottom: spacing.sm,
   },
 });

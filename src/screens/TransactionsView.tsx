@@ -1,12 +1,18 @@
 import React from "react";
-import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { History } from "lucide-react-native";
 
-import { ChipGroup, CloseButton, GlassCard, ScreenHeader } from "../components/ui";
-import { TransactionItem as TransactionRow } from "../components/remeza";
-import type { BadgeVariant } from "../components/ui";
-import { typography } from "../theme/typography";
-import { spacing, screenPadding } from "../theme/spacing";
-import { Transaction, TransactionsFilter, ViewName } from "../types/app";
+import {
+  InfoCard,
+  ScreenHeader,
+  ScreenLayout,
+  SegmentedTabs,
+  TransactionRow,
+} from "../components/ui";
+import { tokens } from "../theme/colors";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
+import { Transaction, TransactionStatus, TransactionsFilter, ViewName } from "../types/app";
 
 type Props = {
   t: any;
@@ -19,6 +25,16 @@ type Props = {
   onSelectTransaction: (id: string) => void;
 };
 
+const STATUS_COLOR: Record<TransactionStatus, string> = {
+  completed: tokens.successText,
+  pending: tokens.warningText,
+  cancelled: tokens.dangerText,
+};
+
+/**
+ * Historial de movimientos. Los filtros siguen siendo los de producto
+ * (virtual, fisica, remesa): filtran por `type` en `App` y los usan los specs.
+ */
 export default function TransactionsView({
   t,
   setView,
@@ -27,25 +43,29 @@ export default function TransactionsView({
   filteredTransactions,
   onSelectTransaction,
 }: Props) {
-  const badgeLabels: Record<string, string> = {
-    virtual: t.virtual,
-    physical: t.physical,
-    remittance: t.remittance,
+  const statusLabels: Record<TransactionStatus, string> = {
+    completed: t.statusCompleted,
+    pending: t.statusPending,
+    cancelled: t.statusCancelled,
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <CloseButton testID="transactions-backButton" onPress={() => setView("dashboard")} />
-
+    <ScreenLayout
+      showBack
+      onBack={() => setView("dashboard")}
+      backTestID="transactions-backButton"
+      backAccessibilityLabel={t.back}
+    >
       <ScreenHeader
+        icon={History}
         title={t.transactionsTitle}
         subtitle={t.transactionsSubtitle}
         style={styles.header}
       />
 
-      <ChipGroup
+      <SegmentedTabs
         testID="transactions-filterChip"
-        options={[
+        items={[
           { label: t.all, value: "all" },
           { label: t.virtual, value: "virtual" },
           { label: t.physical, value: "physical" },
@@ -58,51 +78,37 @@ export default function TransactionsView({
 
       <View style={styles.list}>
         {filteredTransactions.length === 0 ? (
-          <GlassCard>
-            <Text style={typography.body}>{t.noTransactions}</Text>
-          </GlassCard>
+          <InfoCard text={t.noTransactions} />
         ) : (
           filteredTransactions.map((item) => (
-            <Pressable
+            <TransactionRow
               key={item.id}
               testID={`transactions-item-${item.id}`}
-              accessibilityRole="button"
               accessibilityLabel={item.label}
+              title={item.label}
+              date={item.date}
+              status={statusLabels[item.status]}
+              statusColor={STATUS_COLOR[item.status]}
+              amount={item.amount}
+              currency="USD"
+              struck={item.status === "cancelled"}
               onPress={() => onSelectTransaction(item.id)}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <TransactionRow
-                badgeLabel={badgeLabels[item.type] ?? item.type}
-                variant={item.type as BadgeVariant}
-                label={item.label}
-                date={item.status === "cancelled" ? `${item.date} · ${t.statusCancelled}` : item.date}
-                amount={item.amount}
-              />
-            </Pressable>
+            />
           ))
         )}
       </View>
-    </ScrollView>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
   header: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
   },
   filters: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   list: {
-    gap: spacing.md,
-  },
-  pressed: {
-    opacity: 0.8,
+    gap: metrics.rowGap,
   },
 });

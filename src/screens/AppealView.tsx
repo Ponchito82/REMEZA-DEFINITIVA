@@ -1,18 +1,19 @@
 import React, { useState } from "react";
-import { ScrollView, View, Text, StyleSheet } from "react-native";
-import { MessageSquareWarning } from "lucide-react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Clock, MessageSquareWarning } from "lucide-react-native";
 
 import {
-  Button,
-  CloseButton,
-  GlassBanner,
-  GlassCard,
+  InfoCard,
+  PrimaryButton,
   ScreenHeader,
+  ScreenLayout,
   SelectField,
+  StatusBadge,
 } from "../components/ui";
-import { colors } from "../theme/colors";
-import { typography } from "../theme/typography";
-import { spacing, screenPadding } from "../theme/spacing";
+import { colors, tokens } from "../theme/colors";
+import { textStyles } from "../theme/typography";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 import { PROVIDER_NAMES, Transaction, ViewName } from "../types/app";
 
 type Props = {
@@ -47,37 +48,38 @@ export default function AppealView({
   }));
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+    <ScreenLayout
+      showBack
+      onBack={goBack}
+      backTestID="appeal-backButton"
+      backAccessibilityLabel={t.back}
     >
-      <CloseButton testID="appeal-backButton" onPress={goBack} />
-
       <ScreenHeader
+        icon={MessageSquareWarning}
         title={t.appealTitle}
         subtitle={t.appealSubtitle}
         style={styles.header}
       />
 
       {transaction ? (
-        <GlassCard size="lg" style={styles.summary}>
-          <Text testID="appeal-concept" style={typography.bodyStrong}>
+        <View style={styles.summary}>
+          <Text testID="appeal-concept" style={textStyles.rowTitle}>
             {label}
           </Text>
-          <Text style={typography.caption}>
+          <Text style={textStyles.caption}>
             {`${PROVIDER_NAMES[transaction.provider]} · ${transaction.reference}`}
           </Text>
-          <Text style={[typography.amount, styles.amount]}>{transaction.amount}</Text>
-        </GlassCard>
+          <Text style={[textStyles.amountLarge, styles.amount]}>{transaction.amount}</Text>
+          {submitted ? <StatusBadge status="inReview" label={t.appealInReview} /> : null}
+        </View>
       ) : null}
 
       {submitted ? (
-        <GlassBanner
+        <InfoCard
           testID="appeal-submittedBanner"
-          tone="info"
-          message={t.appealSubmitted}
-          style={styles.notice}
+          icon={Clock}
+          tone="warning"
+          text={t.appealSubmitted}
         />
       ) : (
         <View style={styles.form}>
@@ -91,42 +93,36 @@ export default function AppealView({
             onSelect={setReason}
           />
 
-          <Button
+          <PrimaryButton
             testID="appeal-submitButton"
             title={t.appealSubmit}
-            rightAdornment="none"
             disabled={!reason || !transaction}
             onPress={() => transaction && onSubmitAppeal(transaction.id, reason)}
           />
         </View>
       )}
-    </ScrollView>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
   header: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
   },
   /** Superficie opaca, la misma del menu desplegable */
   summary: {
     backgroundColor: colors.sheetSurface,
+    borderWidth: 1,
+    borderColor: tokens.glassBorderStrong,
+    borderRadius: metrics.radius.card,
+    padding: spacing.lg,
     gap: spacing.xs,
     marginBottom: spacing.xl,
   },
   amount: {
-    marginTop: spacing.sm,
+    marginVertical: spacing.sm,
   },
   form: {
     gap: spacing.xl,
-  },
-  notice: {
-    marginTop: spacing.sm,
   },
 });
