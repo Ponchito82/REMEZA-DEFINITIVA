@@ -1,23 +1,21 @@
 import React from "react";
-import {
-  ScrollView,
-  View,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { DollarSign, TrendingUp, Percent, Coins } from "lucide-react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { CircleAlert, CircleCheck, DollarSign, Send } from "lucide-react-native";
 
 import {
-  Button,
-  CloseButton,
-  FieldLabel,
-  GlassBanner,
+  Avatar,
+  InfoCard,
+  KeyValueCard,
+  ListRow,
+  PrimaryButton,
   ScreenHeader,
+  ScreenLayout,
   TextField,
 } from "../components/ui";
-import { AvailableBalanceCard, BeneficiaryItem } from "../components/remeza";
-import { spacing, screenPadding } from "../theme/spacing";
+import { AvailableBalanceCard } from "../components/remeza";
+import { textStyles } from "../theme/typography";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 import { ViewName } from "../types/app";
 
 type Beneficiary = {
@@ -50,6 +48,11 @@ type Props = {
   handleSendMoney: () => void;
 };
 
+/**
+ * Enviar dinero: lo visual de la pantalla 13, con la eleccion de destinatario
+ * de la 32 en la misma pantalla. El saldo es el de `App`, asi que refleja los
+ * reembolsos de remesas canceladas.
+ */
 export default function SendMoneyView({
   t,
   setView,
@@ -66,121 +69,113 @@ export default function SendMoneyView({
   handleSendMoney,
 }: Props) {
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <ScreenLayout
+      keyboard
+      showBack
+      onBack={() => setView("dashboard")}
+      backTestID="sendMoney-backButton"
+      backAccessibilityLabel={t.back}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <CloseButton testID="sendMoney-backButton" onPress={() => setView("dashboard")} />
+      <ScreenHeader
+        icon={Send}
+        title={t.sendMoneyTitle}
+        subtitle={t.sendMoneySubtitle}
+        style={styles.header}
+      />
 
-        <ScreenHeader
-          title={t.sendMoneyTitle}
-          subtitle={t.sendMoneySubtitle}
-          style={styles.header}
+      <AvailableBalanceCard
+        testID="sendMoney-availableBalance"
+        label={t.availableUsdBalance}
+        amount={`$${availableUsdBalance.toFixed(2)}`}
+        style={styles.balance}
+      />
+
+      <View style={styles.form}>
+        <TextField
+          testID="sendMoney-amountInput"
+          label={t.amountToSendUsd}
+          leftIcon={DollarSign}
+          value={sendAmountUsd}
+          onChangeText={(value) => setSendAmountUsd(value.replace(/[^0-9.]/g, ""))}
+          keyboardType="decimal-pad"
         />
 
-        <AvailableBalanceCard
-          testID="sendMoney-availableBalance"
-          label={t.availableUsdBalance}
-          amount={`$${availableUsdBalance.toFixed(2)}`}
-          style={styles.balance}
+        <KeyValueCard
+          items={[
+            {
+              key: "exchangeRate",
+              label: t.exchangeRate,
+              value: `1 USD = $${exchangeRate.toFixed(2)} MXN`,
+            },
+            { key: "commission", label: t.commission, value: t.commissionDetail },
+            {
+              key: "amountToReceive",
+              label: t.amountToReceiveMxn,
+              value: `$${amountToReceiveMxn.toFixed(2)} MXN`,
+              testID: "sendMoney-amountToReceive",
+            },
+          ]}
         />
 
-        <View style={styles.form}>
-          <TextField
-            testID="sendMoney-amountInput"
-            label={t.amountToSendUsd}
-            leftIcon={DollarSign}
-            value={sendAmountUsd}
-            onChangeText={(value) => setSendAmountUsd(value.replace(/[^0-9.]/g, ""))}
-            keyboardType="decimal-pad"
-          />
+        <View style={styles.beneficiaries}>
+          <Text style={textStyles.overline}>{t.beneficiaryList}</Text>
 
-          <TextField
-            label={t.exchangeRate}
-            leftIcon={TrendingUp}
-            value={`1 USD = $${exchangeRate.toFixed(2)} MXN`}
-            editable={false}
-          />
-
-          <TextField
-            label={t.commission}
-            leftIcon={Percent}
-            value={t.commissionDetail}
-            editable={false}
-          />
-
-          <TextField
-            testID="sendMoney-amountToReceive"
-            label={t.amountToReceiveMxn}
-            leftIcon={Coins}
-            value={`$${amountToReceiveMxn.toFixed(2)} MXN`}
-            editable={false}
-          />
-
-          <View>
-            <FieldLabel>{t.beneficiaryList}</FieldLabel>
-
-            <View style={styles.beneficiaries}>
-              {beneficiaries.map((beneficiary) => (
-                <BeneficiaryItem
-                  key={beneficiary.id}
-                  testID={`sendMoney-beneficiaryCard-${beneficiary.id}`}
-                  name={beneficiary.fullName}
-                  phone={beneficiary.phone}
-                  city={`${beneficiary.city}, ${beneficiary.state}`}
-                  selected={selectedBeneficiaryId === beneficiary.id}
-                  onPress={() => setSelectedBeneficiaryId(beneficiary.id)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <Button
-            testID="sendMoney-sendButton"
-            title={t.sendTransfer}
-            onPress={handleSendMoney}
-            radius="pill"
-            disabled={!selectedBeneficiaryId}
-          />
-
-          {sendMoneySuccess ? (
-            <GlassBanner testID="sendMoney-successMessage" tone="info" message={t.moneySent} />
-          ) : null}
-
-          {sendMoneyError ? (
-            <GlassBanner testID="sendMoney-errorMessage" message={sendMoneyError} />
-          ) : null}
+          {beneficiaries.map((beneficiary) => (
+            <ListRow
+              key={beneficiary.id}
+              testID={`sendMoney-beneficiaryCard-${beneficiary.id}`}
+              accessibilityLabel={beneficiary.fullName}
+              leading={<Avatar name={beneficiary.fullName} size={metrics.rowIconCircle} />}
+              title={beneficiary.fullName}
+              subtitle={`${beneficiary.phone}\n${beneficiary.city}, ${beneficiary.state}`}
+              right="radio"
+              selected={selectedBeneficiaryId === beneficiary.id}
+              onPress={() => setSelectedBeneficiaryId(beneficiary.id)}
+            />
+          ))}
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        <PrimaryButton
+          testID="sendMoney-sendButton"
+          title={t.sendTransfer}
+          showArrow
+          onPress={handleSendMoney}
+          disabled={!selectedBeneficiaryId}
+        />
+
+        {sendMoneySuccess ? (
+          <InfoCard
+            testID="sendMoney-successMessage"
+            icon={CircleCheck}
+            tone="success"
+            text={t.moneySent}
+          />
+        ) : null}
+
+        {sendMoneyError ? (
+          <InfoCard
+            testID="sendMoney-errorMessage"
+            icon={CircleAlert}
+            tone="danger"
+            text={sendMoneyError}
+          />
+        ) : null}
+      </View>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
   header: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
   },
   balance: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   form: {
     gap: spacing.lg,
   },
   beneficiaries: {
-    gap: spacing.md,
+    gap: metrics.rowGap,
   },
 });

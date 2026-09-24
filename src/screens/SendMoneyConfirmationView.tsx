@@ -1,16 +1,18 @@
 import React from "react";
-import {
-  ScrollView,
-  View,
-  Text,
-  Pressable,
-} from "react-native";
-import { X, CheckCircle2, AlertCircle, User } from "lucide-react-native";
+import { View, StyleSheet } from "react-native";
+import { CircleAlert, CircleCheck, Send } from "lucide-react-native";
 
-import { styles } from "../theme/styles";
-import { DANGER, PURPLE } from "../theme/colors";
-import FormInput from "../components/FormInput";
-import MainButton from "../components/MainButton";
+import {
+  Avatar,
+  InfoCard,
+  KeyValueCard,
+  ListRow,
+  PrimaryButton,
+  ScreenHeader,
+  ScreenLayout,
+} from "../components/ui";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 import { ViewName } from "../types/app";
 
 type Beneficiary = {
@@ -43,134 +45,101 @@ type Props = {
   handleSendMoney: () => void;
 };
 
+/**
+ * Resultado del envio, con lo visual de la pantalla 42. La logica no cambia:
+ * se llega aqui con el envio ya hecho y "Confirmar" vuelve a llamar a
+ * `handleSendMoney`, como esperan los specs.
+ */
 export default function SendMoneyConfirmationView({
   t,
   setView,
-  availableUsdBalance,
   sendAmountUsd,
-  setSendAmountUsd,
   exchangeRate,
   amountToReceiveMxn,
   beneficiaries,
   selectedBeneficiaryId,
-  setSelectedBeneficiaryId,
   sendMoneySuccess,
   sendMoneyError,
   handleSendMoney,
 }: Props) {
-  const selectedBeneficiary = beneficiaries.find(
-    (b) => b.id === selectedBeneficiaryId
-  );
+  const selectedBeneficiary = beneficiaries.find((b) => b.id === selectedBeneficiaryId);
 
   return (
-    <View style={styles.pageScreen}>
-      <ScrollView
-        contentContainerStyle={styles.pageContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Pressable
-          testID="sendMoneyConfirmation-backButton"
-          onPress={() => setView("dashboard")}
-          style={styles.backButton}
-        >
-          <X size={24} color="#111827" />
-        </Pressable>
+    <ScreenLayout
+      showBack
+      onBack={() => setView("dashboard")}
+      backTestID="sendMoneyConfirmation-backButton"
+      backAccessibilityLabel={t.back}
+    >
+      <ScreenHeader
+        icon={sendMoneySuccess ? CircleCheck : Send}
+        iconVariant={sendMoneySuccess ? "ring" : "filled"}
+        iconTone={sendMoneySuccess ? "success" : "default"}
+        title={t.sendMoneyConfirmationTitle}
+        subtitle={t.sendMoneyConfirmationSubtitle}
+        style={styles.header}
+      />
 
-        <Text style={styles.pageTitle}>{t.sendMoneyConfirmationTitle}</Text>
-        <Text style={styles.pageSubtitle}>{t.sendMoneyConfirmationSubtitle}</Text>
+      <View style={styles.stack}>
+        {sendMoneySuccess ? (
+          <InfoCard
+            testID="sendMoneyConfirmation-successMessage"
+            icon={CircleCheck}
+            tone="success"
+            text={t.moneySent}
+          />
+        ) : null}
 
-        <View style={styles.stack16}>
+        <KeyValueCard
+          items={[
+            { key: "amountToSend", label: t.amountToSendUsd, value: `$${sendAmountUsd} USD` },
+            {
+              key: "exchangeRate",
+              label: t.exchangeRate,
+              value: `1 USD = $${exchangeRate.toFixed(2)} MXN`,
+            },
+            { key: "commission", label: t.commission, value: t.commissionDetail },
+            {
+              key: "amountToReceive",
+              label: t.amountToReceiveMxn,
+              value: `$${amountToReceiveMxn.toFixed(2)} MXN`,
+            },
+          ]}
+        />
 
-          <View style={styles.statusInfoBox}>
-            <Text style={styles.statusInfoLabel}>{t.amountToSendUsd}</Text>
-            <Text style={styles.statusInfoValue}>${sendAmountUsd} MXN</Text>
-          </View>
+        {selectedBeneficiary ? (
+          <ListRow
+            leading={<Avatar name={selectedBeneficiary.fullName} size={metrics.rowIconCircle} />}
+            title={selectedBeneficiary.fullName}
+            subtitle={`${selectedBeneficiary.phone}\n${selectedBeneficiary.city}, ${selectedBeneficiary.state}`}
+            right="none"
+          />
+        ) : null}
 
-          <View style={styles.statusInfoBox}>
-            <Text style={styles.statusInfoLabel}>{t.exchangeRate}</Text>
-            <Text style={styles.statusInfoValue}>1 USD = ${exchangeRate.toFixed(2)} MXN</Text>
-          </View>
+        <PrimaryButton
+          testID="sendMoneyConfirmation-confirmButton"
+          title={t.confirmTransfer}
+          onPress={handleSendMoney}
+        />
 
-          <View style={styles.statusInfoBox}>
-            <Text style={styles.statusInfoLabel}>{t.commission}</Text>
-            <Text style={styles.statusInfoValue}>{t.commissionDetail}</Text>
-          </View>
-
-          <View style={styles.statusInfoBox}>
-            <Text style={styles.statusInfoLabel}>{t.amountToReceiveMxn}</Text>
-            <Text style={styles.statusInfoValue}>${amountToReceiveMxn.toFixed(2)} MXN</Text>
-          </View>
-
-          <View>
-            <Text style={styles.formLabel}>{t.beneficiaryList}</Text>
-            <View style={styles.stack12}>
-
-              <View style={[
-                styles.beneficiaryCard,
-                styles.beneficiaryCardSelected,
-              ]}>
-                <View style={styles.beneficiaryIcon}>
-                  <User
-                    size={20}
-                    color={PURPLE}
-                  />
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[
-                      styles.beneficiaryName,
-                      styles.beneficiaryNameSelected,
-                    ]}
-                  >
-                    {selectedBeneficiary?.fullName}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.beneficiaryMeta,
-                      styles.beneficiaryMetaSelected,
-                    ]}
-                  >
-                    {selectedBeneficiary?.phone}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.beneficiaryMeta,
-                      styles.beneficiaryMetaSelected,
-                    ]}
-                  >
-                    {selectedBeneficiary?.city}, {selectedBeneficiary?.state}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <MainButton testID="sendMoneyConfirmation-confirmButton" onPress={handleSendMoney}>
-            {t.confirmTransfer}
-          </MainButton>
-
-          {sendMoneySuccess && (
-            <View testID="sendMoneyConfirmation-successMessage" style={styles.transferSuccessBox}>
-              <CheckCircle2 size={18} color="#16A34A" />
-              <Text style={styles.transferSuccessText}>
-                {t.moneySent}
-              </Text>
-            </View>
-          )}
-
-          {!!sendMoneyError && (
-            <View testID="sendMoneyConfirmation-errorMessage" style={styles.errorBox}>
-              <AlertCircle size={18} color={DANGER} />
-              <Text style={styles.errorText}>
-                {sendMoneyError}
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </View>
+        {sendMoneyError ? (
+          <InfoCard
+            testID="sendMoneyConfirmation-errorMessage"
+            icon={CircleAlert}
+            tone="danger"
+            text={sendMoneyError}
+          />
+        ) : null}
+      </View>
+    </ScreenLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    marginTop: spacing.lg,
+  },
+  stack: {
+    gap: spacing.lg,
+  },
+});

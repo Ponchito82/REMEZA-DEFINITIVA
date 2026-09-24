@@ -486,7 +486,7 @@ export const translations = {
     remittanceCancelationInfo: "Puedes cancelar una remesa hasta 30 minutos después de haberla creado.",
     cancelOperation: "Cancelar operación",
     timeRemaining: "Tiempo restante",
-    sendMoneyConfirmationTitle: "Send Money Envió de Dinero",
+    sendMoneyConfirmationTitle: "Confirmación de envío",
     sendMoneyConfirmationSubtitle: "Al confirmar el envio tienes hasta 30 minutos para realizar la cancelación de esta operación.",
     confirmTransfer: "Confirmar transferencia",
     activateYourCard: "Activa tu Tarjeta",
