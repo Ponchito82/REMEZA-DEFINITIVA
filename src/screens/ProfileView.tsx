@@ -1,8 +1,23 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { User, Mail, MapPin, Phone, Lock } from "lucide-react-native";
+import {
+  Bell,
+  CircleCheck,
+  CircleHelp,
+  CreditCard,
+  Gauge,
+  Headset,
+  Lock,
+  LogOut,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Trash2,
+  User,
+} from "lucide-react-native";
 
-import { Avatar, DetailRow, InfoCard, ScreenHeader, ScreenLayout } from "../components/ui";
+import { Avatar, DetailRow, InfoCard, ListRow, ScreenHeader, ScreenLayout } from "../components/ui";
 import type { IconComponent } from "../components/ui";
 import { textStyles } from "../theme/typography";
 import { metrics } from "../theme/radius";
@@ -17,7 +32,23 @@ type Props = {
   email: string;
   phone: string;
   address: string;
+
+  /** Accesos del perfil (pantalla 19) */
+  onOpen: (target: ProfileTarget) => void;
+  /** Aviso de una accion recien hecha (p. ej. tarjeta eliminada) */
+  notice?: string;
 };
+
+export type ProfileTarget =
+  | "security"
+  | "notifications"
+  | "paymentMethods"
+  | "helpCenter"
+  | "support"
+  | "cardLimits"
+  | "blockCard"
+  | "deleteCard"
+  | "logout";
 
 type ProfileRow = {
   key: string;
@@ -30,8 +61,20 @@ type ProfileRow = {
  * Perfil de solo lectura. Los datos vienen del KYC, asi que aqui solo se
  * consultan: cambiarlos pasa por soporte. Por eso no hay "Editar perfil" y
  * cada fila lleva candado en lugar de chevron.
+ *
+ * Debajo van los accesos de ajustes del PDF (19), menos "Editar perfil" y
+ * "Preferencias", y una seccion de tarjeta con limites, bloqueo y eliminar.
  */
-export default function ProfileView({ t, setView, fullName, email, phone, address }: Props) {
+export default function ProfileView({
+  t,
+  setView,
+  fullName,
+  email,
+  phone,
+  address,
+  onOpen,
+  notice,
+}: Props) {
   const rows: ProfileRow[] = [
     { key: "fullName", label: t.fullName, value: fullName, icon: User },
     { key: "email", label: t.emailAddress, value: email, icon: Mail },
@@ -82,6 +125,81 @@ export default function ProfileView({ t, setView, fullName, email, phone, addres
         text={t.profileReadOnlyNotice}
         style={styles.notice}
       />
+
+      {notice ? (
+        <InfoCard
+          testID="profile.actionNotice"
+          icon={CircleCheck}
+          tone="success"
+          text={notice}
+          style={styles.notice}
+        />
+      ) : null}
+
+      <Text style={[textStyles.overline, styles.section]}>{t.profileSettingsSection}</Text>
+      <View style={styles.rows}>
+        <ListRow
+          testID="profile.securityRow"
+          icon={ShieldCheck}
+          title={t.profileSecurity}
+          onPress={() => onOpen("security")}
+        />
+        <ListRow
+          testID="profile.notificationsRow"
+          icon={Bell}
+          title={t.profileNotifications}
+          onPress={() => onOpen("notifications")}
+        />
+        <ListRow
+          testID="profile.paymentMethodsRow"
+          icon={CreditCard}
+          title={t.profilePaymentMethods}
+          onPress={() => onOpen("paymentMethods")}
+        />
+        <ListRow
+          testID="profile.helpCenterRow"
+          icon={CircleHelp}
+          title={t.profileHelpCenter}
+          onPress={() => onOpen("helpCenter")}
+        />
+        <ListRow
+          testID="profile.supportRow"
+          icon={Headset}
+          title={t.profileContactSupport}
+          onPress={() => onOpen("support")}
+        />
+      </View>
+
+      <Text style={[textStyles.overline, styles.section]}>{t.profileCardSection}</Text>
+      <View style={styles.rows}>
+        <ListRow
+          testID="profile.cardLimitsRow"
+          icon={Gauge}
+          title={t.profileCardLimits}
+          onPress={() => onOpen("cardLimits")}
+        />
+        <ListRow
+          testID="profile.blockCardRow"
+          icon={Lock}
+          title={t.profileBlockCard}
+          onPress={() => onOpen("blockCard")}
+        />
+        <ListRow
+          testID="profile.deleteCardRow"
+          icon={Trash2}
+          title={t.profileDeleteCard}
+          onPress={() => onOpen("deleteCard")}
+        />
+      </View>
+
+      <ListRow
+        testID="profile.logoutRow"
+        icon={LogOut}
+        title={t.logout}
+        tone="danger"
+        onPress={() => onOpen("logout")}
+        style={styles.logout}
+      />
     </ScreenLayout>
   );
 }
@@ -106,5 +224,12 @@ const styles = StyleSheet.create({
   },
   notice: {
     marginTop: spacing.lg,
+  },
+  section: {
+    marginTop: spacing.xxl,
+    marginBottom: spacing.md,
+  },
+  logout: {
+    marginTop: spacing.xxl,
   },
 });

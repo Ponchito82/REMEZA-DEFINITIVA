@@ -16,7 +16,24 @@ export type ViewName =
   | "multiCurrency"
   | "twoStepVerification"
   | "securityAlert"
-  | "logoutConfirm";
+  | "logoutConfirm"
+  | "recoverAccess"
+  | "security"
+  | "notifications"
+  | "bankAccounts"
+  | "support"
+  | "servicePayments"
+  | "cardControls"
+  | "beneficiaryForm"
+  | "beneficiaryConfirm"
+  | "beneficiaryAdded"
+  | "beneficiaryDetail"
+  | "beneficiaryEdit"
+  | "beneficiaryDelete"
+  | "transferProcessing"
+  | "transferSuccess"
+  | "transferFailed"
+  | "transferReceipt";
 
 export type Language = "en" | "es";
 

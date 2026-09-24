@@ -9,6 +9,7 @@ import {
   BanknoteArrowDown,
   Coins,
   LogOut,
+  ReceiptText,
 } from "lucide-react-native";
 
 import { CloseButton } from "./ui";
@@ -50,6 +51,12 @@ export default function DrawerMenu({
     { id: "physicalCard", icon: Package, label: t.requestPhysicalCard, onPress: () => go("physicalCard") },
     { id: "beneficiaries", icon: UserCheck, label: t.beneficiaries, onPress: () => go("beneficiaries") },
     { id: "sendMoney", icon: BanknoteArrowDown, label: t.sendMoney, onPress: () => go("sendMoney") },
+    {
+      id: "servicePayments",
+      icon: ReceiptText,
+      label: t.drawerServicePayments,
+      onPress: () => go("servicePayments"),
+    },
     { id: "multiCurrency", icon: Coins, label: t.multiCurrencyTitle, onPress: () => go("multiCurrency") },
   ];
 
