@@ -14,17 +14,26 @@ type Props = {
   language: Language;
   entry: SupportEntry;
   onExit: () => void;
+  /** Abre "Cancelar o disputar" (2), que vive en App */
+  onDispute: () => void;
 };
 
 /** Soporte: en vivo (5), chat (16) y centro de ayuda (18). */
-export default function SupportFlow({ t, language, entry, onExit }: Props) {
+export default function SupportFlow({ t, language, entry, onExit, onDispute }: Props) {
   const { step, push, pop } = useStepStack<Step>(entry, onExit);
 
   switch (step) {
     case "chat":
       return <SupportChatScreen t={t} language={language} onBack={pop} />;
     case "helpCenter":
-      return <HelpCenterScreen t={t} onBack={pop} onContactSupport={() => push("live")} />;
+      return (
+        <HelpCenterScreen
+          t={t}
+          onBack={pop}
+          onContactSupport={() => push("live")}
+          onDispute={onDispute}
+        />
+      );
     default:
       return (
         <LiveSupportScreen

@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import {
   BookOpen,
   CircleHelp,
+  FileText,
   Headset,
   Info,
   ShieldCheck,
@@ -16,6 +17,8 @@ type Props = {
   t: any;
   onBack: () => void;
   onContactSupport: () => void;
+  /** Cancelar o disputar (2) */
+  onDispute: () => void;
 };
 
 const TOPIC_ICONS: Record<(typeof MOCK_HELP_TOPICS)[number], IconComponent> = {
@@ -29,7 +32,7 @@ const TOPIC_ICONS: Record<(typeof MOCK_HELP_TOPICS)[number], IconComponent> = {
  * Centro de ayuda (pantalla 18). El PDF no trae pantallas para cada tema,
  * asi que cada fila despliega su respuesta debajo.
  */
-export default function HelpCenterScreen({ t, onBack, onContactSupport }: Props) {
+export default function HelpCenterScreen({ t, onBack, onContactSupport, onDispute }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -61,6 +64,13 @@ export default function HelpCenterScreen({ t, onBack, onContactSupport }: Props)
           ) : null}
         </View>
       ))}
+
+      <ListRow
+        testID="helpCenter.disputeRow"
+        icon={FileText}
+        title={t.help_dispute}
+        onPress={onDispute}
+      />
 
       <ListRow
         testID="helpCenter.contactRow"

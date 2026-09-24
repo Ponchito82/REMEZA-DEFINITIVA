@@ -24,6 +24,9 @@ import DrawerMenu from "./src/components/DrawerMenu";
 import ProfileView from "./src/screens/ProfileView";
 import type { ProfileTarget } from "./src/screens/ProfileView";
 import NotificationSettingsScreen from "./src/screens/NotificationSettingsScreen";
+import DisputeScreen from "./src/screens/DisputeScreen";
+import DisputeTrackingScreen from "./src/screens/DisputeTrackingScreen";
+import TransferHistoryScreen from "./src/screens/TransferHistoryScreen";
 import BeneficiaryListScreen from "./src/screens/beneficiaries/BeneficiaryListScreen";
 import ConfirmBeneficiaryScreen from "./src/screens/beneficiaries/ConfirmBeneficiaryScreen";
 import BeneficiaryAddedScreen from "./src/screens/beneficiaries/BeneficiaryAddedScreen";
@@ -836,6 +839,7 @@ function AppContent() {
                     sendMoneySuccess={sendMoneySuccess}
                     sendMoneyError={sendMoneyError}
                     handleSendMoney={handleSendMoney}
+                    onOpenHistory={() => setView("transferHistory")}
                 />
             )}
 
@@ -993,6 +997,7 @@ function AppContent() {
                     language={language}
                     entry={supportEntry}
                     onExit={() => setView(supportReturnView)}
+                    onDispute={() => setView("dispute")}
                 />
             )}
 
@@ -1032,6 +1037,36 @@ function AppContent() {
                     availableUsdBalance={availableUsdBalance}
                     onPaid={handleServicePaid}
                     onExit={() => setView("dashboard")}
+                />
+            )}
+
+            {view === "dispute" && (
+                <DisputeScreen
+                    t={t}
+                    onBack={() => openSupport("helpCenter", supportReturnView)}
+                    onChoose={(option) => {
+                        if (option === "tracking") return setView("disputeTracking");
+                        setTransactionsFilter(option === "cancel" ? "remittance" : "all");
+                        setView("transactions");
+                    }}
+                />
+            )}
+
+            {view === "disputeTracking" && (
+                <DisputeTrackingScreen
+                    t={t}
+                    appealed={allTransactions.filter((tx) => appeals[tx.id])}
+                    onBack={() => setView("dispute")}
+                    onOpen={openTransaction}
+                />
+            )}
+
+            {view === "transferHistory" && (
+                <TransferHistoryScreen
+                    t={t}
+                    transactions={allTransactions}
+                    onBack={() => setView("sendMoney")}
+                    onOpen={openTransaction}
                 />
             )}
 

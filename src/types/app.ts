@@ -33,7 +33,10 @@ export type ViewName =
   | "transferProcessing"
   | "transferSuccess"
   | "transferFailed"
-  | "transferReceipt";
+  | "transferReceipt"
+  | "dispute"
+  | "disputeTracking"
+  | "transferHistory";
 
 export type Language = "en" | "es";
 

@@ -5,6 +5,7 @@ import { CircleAlert, CircleCheck, DollarSign, Send } from "lucide-react-native"
 import {
   Avatar,
   InfoCard,
+  TextLink,
   KeyValueCard,
   ListRow,
   PrimaryButton,
@@ -46,6 +47,8 @@ type Props = {
   sendMoneyError: string;
 
   handleSendMoney: () => void;
+  /** Historial de envios (14) */
+  onOpenHistory: () => void;
 };
 
 /**
@@ -67,6 +70,7 @@ export default function SendMoneyView({
   sendMoneySuccess,
   sendMoneyError,
   handleSendMoney,
+  onOpenHistory,
 }: Props) {
   return (
     <ScreenLayout
@@ -160,6 +164,12 @@ export default function SendMoneyView({
             text={sendMoneyError}
           />
         ) : null}
+
+        <TextLink
+          testID="sendMoney.historyLink"
+          title={t.viewTransferHistory}
+          onPress={onOpenHistory}
+        />
       </View>
     </ScreenLayout>
   );
