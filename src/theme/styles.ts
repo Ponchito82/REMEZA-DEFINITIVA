@@ -6,6 +6,7 @@ import {
   DANGER_SURFACE,
   GLASS_BORDER,
   GLASS_SURFACE,
+  SHEET_SURFACE,
   GLASS_SURFACE_STRONG,
   PURPLE,
   PURPLE_DEEP,
@@ -1032,7 +1033,8 @@ modalOverlay: {
 
 modalContent: {
   width: "100%",
-  backgroundColor: GLASS_SURFACE,
+  // Opaco, como el menu desplegable: sin transparencia sobre el dashboard.
+  backgroundColor: SHEET_SURFACE,
   borderRadius: 20,
   padding: 20,
 },

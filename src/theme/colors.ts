@@ -59,7 +59,6 @@ export const colors = {
     virtual: { bg: "#2A1A7A", text: "#FFFFFF" },
     physical: { bg: "#4A4A63", text: "#FFFFFF" },
     remittance: { bg: "#5B1FFF", text: "#FFFFFF" },
-    trading: { bg: "#1E4B55", text: "#FFFFFF" },
   },
 
   /** Segmentos pendientes del stepper */

@@ -623,7 +623,7 @@ export default function RegisterSteps(props: Props) {
               language={language}
               testID="register-phoneInput"
               country={registerPhoneCountry}
-              onCountryChange={setRegisterPhoneCountry}
+              lockCountry
               digits={registerPhone}
               onDigitsChange={setRegisterPhone}
               onBlur={() => setPhoneTouched(true)}
@@ -642,6 +642,7 @@ export default function RegisterSteps(props: Props) {
               testID="register-nextButton"
               onPress={handleSendPhoneCode}
               disabled={!isRegisterPhoneValid || isSendingSms}
+              style={stepStyles.cta}
             >
               {isSendingSms ? t.sendingCode : t.next}
             </MainButton>

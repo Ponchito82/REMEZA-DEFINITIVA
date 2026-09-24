@@ -97,7 +97,7 @@ export default function SendMoneyView({
             leftIcon={DollarSign}
             value={sendAmountUsd}
             onChangeText={(value) => setSendAmountUsd(value.replace(/[^0-9.]/g, ""))}
-            keyboardType="number-pad"
+            keyboardType="decimal-pad"
           />
 
           <TextField

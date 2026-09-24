@@ -22,11 +22,14 @@ describe("Listado y filtro de transacciones (TransactionsView) [backend]", () =>
     await goToTransactions();
   });
 
-  it("con el filtro 'All' muestra las 4 transacciones simuladas", async () => {
+  it("con el filtro 'All' muestra las 3 transacciones simuladas", async () => {
     await expect(byId("transactions-item-1")).toBeDisplayed();
     await expect(byId("transactions-item-2")).toBeDisplayed();
     await expect(byId("transactions-item-3")).toBeDisplayed();
-    await expect(byId("transactions-item-4")).toBeDisplayed();
+  });
+
+  it("no existe el filtro de Trading", async () => {
+    await expect(byId("transactions-filterChip-trading")).not.toBeExisting();
   });
 
   it("filtrar por 'Virtual' deja solo la transacción virtual", async () => {
@@ -35,7 +38,6 @@ describe("Listado y filtro de transacciones (TransactionsView) [backend]", () =>
     await expect(byId("transactions-item-1")).toBeDisplayed();
     await expect(byId("transactions-item-2")).not.toBeDisplayed();
     await expect(byId("transactions-item-3")).not.toBeDisplayed();
-    await expect(byId("transactions-item-4")).not.toBeDisplayed();
   });
 
   it("filtrar por 'Remittance' deja solo la remesa", async () => {
@@ -44,15 +46,23 @@ describe("Listado y filtro de transacciones (TransactionsView) [backend]", () =>
     await expect(byId("transactions-item-3")).toBeDisplayed();
     await expect(byId("transactions-item-1")).not.toBeDisplayed();
     await expect(byId("transactions-item-2")).not.toBeDisplayed();
-    await expect(byId("transactions-item-4")).not.toBeDisplayed();
   });
 
-  it("volver a 'All' después de filtrar restaura las 4 transacciones", async () => {
-    await byId("transactions-filterChip-trading").click();
+  it("volver a 'All' después de filtrar restaura las 3 transacciones", async () => {
+    await byId("transactions-filterChip-physical").click();
     await byId("transactions-filterChip-all").click();
 
     await expect(byId("transactions-item-1")).toBeDisplayed();
-    await expect(byId("transactions-item-4")).toBeDisplayed();
+    await expect(byId("transactions-item-3")).toBeDisplayed();
+  });
+
+  it("cualquier movimiento abre su desglose, también uno virtual", async () => {
+    await byId("transactions-item-1").click();
+
+    await byId("transactionDetail-backButton").waitForDisplayed({ timeout: 10000 });
+    await expect($('//*[@text="Transaction Detail"]')).toBeDisplayed();
+    await expect($('//*[@text="+$500.00"]')).toBeDisplayed();
+    await expect(byId("transactionDetail-cancelButton")).not.toBeExisting();
   });
 
   it("el botón de regresar vuelve al Dashboard", async () => {

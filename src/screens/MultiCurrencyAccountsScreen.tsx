@@ -1,8 +1,8 @@
 import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
-import { Globe, Plus } from "lucide-react-native";
+import { Globe } from "lucide-react-native";
 
-import { Button, CloseButton, IconCircle, ScreenHeader } from "../components/ui";
+import { CloseButton, IconCircle, ScreenHeader } from "../components/ui";
 import { CurrencyAccountCard } from "../components/remeza";
 import type { FlagCountry } from "../components/ui";
 import { sizes } from "../theme/radius";
@@ -62,19 +62,6 @@ export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
           />
         ))}
       </View>
-
-      <Button
-        testID="multiCurrency.addCurrencyButton"
-        title={t.addCurrency}
-        onPress={() => console.log("[multiCurrency] agregar moneda")}
-        variant="gradient"
-        deepGradient
-        size="lg"
-        radius="md"
-        leftIcon={Plus}
-        rightAdornment="none"
-        style={styles.cta}
-      />
     </ScrollView>
   );
 }
@@ -93,8 +80,5 @@ const styles = StyleSheet.create({
   accounts: {
     marginTop: spacing.xxl,
     gap: spacing.md,
-  },
-  cta: {
-    marginTop: spacing.lg,
   },
 });
