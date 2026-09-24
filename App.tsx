@@ -7,12 +7,11 @@ import { ScreenBackground } from "./src/components/ui";
 import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/colors";
 
 import { translations } from "./src/i18n/translations";
-import { Language, TransactionsFilter, ViewName } from "./src/types/app";
+import { Language, Transaction, TransactionsFilter, ViewName } from "./src/types/app";
 import { styles } from "./src/theme/styles";
 
 import ComponentsShowcaseScreen from "./src/screens/ComponentsShowcaseScreen";
 import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScreen";
-import DisputeOptionsScreen from "./src/screens/DisputeOptionsScreen";
 import TwoStepVerificationScreen from "./src/screens/TwoStepVerificationScreen";
 import SecurityAlertScreen from "./src/screens/SecurityAlertScreen";
 import WelcomeScreen from "./src/screens/WelcomeScreen";
@@ -26,13 +25,13 @@ import DrawerMenu from "./src/components/DrawerMenu";
 import ProfileView from "./src/screens/ProfileView";
 import TransactionsView from "./src/screens/TransactionsView";
 import PhysicalCardView from "./src/screens/PhysicalCardView";
-import TradingView from "./src/screens/TradingView";
 import BeneficiariesView from "./src/screens/BeneficiariesView";
 import SendMoneyView from "./src/screens/SendMoneyView";
-import RemittanceDetail from "./src/screens/RemittanceDetail";
+import TransactionDetailView from "./src/screens/TransactionDetailView";
+import AppealView from "./src/screens/AppealView";
 import SendMoneyConfirmationView from "./src/screens/SendMoneyConfirmationView";
 import { AddressDetail, EMPTY_ADDRESS_DETAIL } from "./src/components/AddressFields";
-import { CountryCode } from "./src/services/geo";
+import { CountryCode, stateNameByCode } from "./src/services/geo";
 import {
     UnauthorizedReason,
     clearSession,
@@ -109,9 +108,6 @@ function AppContent() {
     const patchRegisterAddressDetail = (patch: Partial<AddressDetail>) =>
         setRegisterAddressDetail((prev) => ({ ...prev, ...patch }));
 
-    const [physicalAddressDetail, setPhysicalAddressDetail] = useState<AddressDetail>(EMPTY_ADDRESS_DETAIL);
-    const patchPhysicalAddressDetail = (patch: Partial<AddressDetail>) =>
-        setPhysicalAddressDetail((prev) => ({ ...prev, ...patch }));
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [registerAccessCode, setRegisterAccessCode] = useState("");
 
@@ -136,92 +132,111 @@ function AppContent() {
     const [identificationFrontFile, setIdentificationFrontFile] = useState<string | null>(null);
     const [identificationBackFile, setIdentificationBackFile] = useState<string | null>(null);
 
-    const [profileFullName] = useState("");
-    const [profileEmail, setProfileEmail] = useState("");
-    const [profileAddress, setProfileAddress] = useState("");
-    const [profileSaved, setProfileSaved] = useState(false);
-    const handleProfileSave = () => { setProfileSaved(true); };
+    // El perfil es de solo lectura: se arma con los datos que la persona dio en
+    // el KYC del registro y no hay forma de editarlos desde la app.
+    const profileFullName = [registerFirstName, registerPaternalLastName, registerMaternalLastName]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(" ");
+    const profilePhone = registerPhone.length > 0 ? toE164(registerPhone, registerPhoneCountry) : "";
+    const profileAddress = [
+        [registerAddressDetail.exteriorNumber, registerAddressDetail.street].filter(Boolean).join(" "),
+        registerAddressDetail.interiorNumber ? `Apt ${registerAddressDetail.interiorNumber}` : "",
+        registerCity,
+        [registerState ? stateNameByCode("US", registerState) : "", registerZipCode]
+            .filter(Boolean)
+            .join(" "),
+    ]
+        .filter(Boolean)
+        .join(", ");
 
-    const [physicalAddress1, setPhysicalAddress1] = useState("");
-    const [physicalAddress2, setPhysicalAddress2] = useState("");
-    const [physicalCity, setPhysicalCity] = useState("");
-    const [physicalState, setPhysicalState] = useState("");
-    const [physicalZip, setPhysicalZip] = useState("");
-    const [physicalCountry, setPhysicalCountry] = useState("");
     const [physicalCardRequested, setPhysicalCardRequested] = useState(false);
 
-    const allTransactions = [
+    const [transactionRecords, setTransactionRecords] = useState<Transaction[]>(() => [
         {
             id: "1",
             type: "virtual",
-            label: t.zelleDeposit,
+            labelKey: "zelleDeposit",
+            label: "Zelle Deposit",
             amount: "+$500.00",
+            amountUsd: 500,
             date: "MAR 02, 2026",
-            color: "#16A34A",
+            status: "completed",
+            provider: "blackpay",
+            reference: "RMZ-000001",
         },
         {
             id: "2",
             type: "physical",
             label: "POS Purchase",
             amount: "-$46.20",
+            amountUsd: 46.2,
             date: "MAR 05, 2026",
-            color: "#EF4444",
+            status: "completed",
+            provider: "blackpay",
+            reference: "RMZ-000002",
         },
         {
             id: "3",
             type: "remittance",
-            label: "Mario Diaz / 1500 MXN",
-            amount: "$100.00",
+            label: "Mario Diaz / 1,725.00 MXN",
+            amount: "-$100.00",
+            amountUsd: 100,
             date: "MAR 05, 2026",
-            color: "#EF4444",
+            status: "pending",
+            provider: "remeza",
+            reference: "RMZ-000003",
+            mxnAmount: 1725,
+            exchangeRate: 17.25,
+            beneficiary: "Mario Diaz",
         },
-        {
-            id: "4",
-            type: "trading",
-            label: "Wallet Transfer",
-            amount: "-$120.00",
-            date: "MAR 08, 2026",
-            color: "#EF4444",
-        },
-    ];
+    ]);
+
+    const allTransactions = useMemo(
+        () =>
+            transactionRecords.map((tx) => ({
+                ...tx,
+                label: tx.labelKey ? (t as any)[tx.labelKey] : tx.label,
+            })),
+        [transactionRecords, t]
+    );
 
     const [transactionsFilter, setTransactionsFilter] = useState<TransactionsFilter>("all");
     const filteredTransactions = useMemo(() => {
         return transactionsFilter === "all"
             ? allTransactions
             : allTransactions.filter((item) => item.type === transactionsFilter);
-    }, [transactionsFilter, t]);
+    }, [transactionsFilter, allTransactions]);
 
-    const [tradingKycStarted, setTradingKycStarted] = useState(false);
-    const [tradingKycVerified, setTradingKycVerified] = useState(false);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+    const selectedTransaction = allTransactions.find((tx) => tx.id === selectedTransactionId);
 
-    const [walletId] = useState("WLT-9X7A-32BC-4410");
-    const [walletFunds, setWalletFunds] = useState(3250.75);
+    const openTransaction = (id: string) => {
+        setSelectedTransactionId(id);
+        setView("transactionDetail");
+    };
 
-    const [destinationWalletId, setDestinationWalletId] = useState("");
-    const [transferAmount, setTransferAmount] = useState("");
+    // Apelaciones enviadas, por id de movimiento: motivo elegido.
+    const [appeals, setAppeals] = useState<Record<string, string>>({});
 
-    const [transferSubmitted, setTransferSubmitted] = useState(false);
+    const handleSubmitAppeal = (id: string, reason: string) => {
+        setAppeals((prev) => ({ ...prev, [id]: reason }));
+    };
 
-    const handleTradingTransfer = () => {
-        const amount = Number(transferAmount);
+    const handleCancelTransaction = (id: string) => {
+        const target = transactionRecords.find((tx) => tx.id === id);
+        if (!target || target.status !== "pending") return;
 
-        if (!amount || amount <= 0 || amount > walletFunds || !destinationWalletId.trim()) {
-            return;
-        }
-
-        setWalletFunds((prev) => Number((prev - amount).toFixed(2)));
-        setTransferSubmitted(true);
-
-        setTransferAmount("");
-        setDestinationWalletId("");
+        setTransactionRecords((prev) =>
+            prev.map((tx) => (tx.id === id ? { ...tx, status: "cancelled" } : tx))
+        );
+        setAvailableUsdBalance((prev) => Number((prev + target.amountUsd).toFixed(2)));
     };
 
     const [beneficiaryFirstName, setBeneficiaryFirstName] = useState("");
     const [beneficiaryPaternalLastName, setBeneficiaryPaternalLastName] = useState("");
     const [beneficiaryMaternalLastName, setBeneficiaryMaternalLastName] = useState("");
     const [beneficiaryPhone, setBeneficiaryPhone] = useState("");
-    const [beneficiaryPhoneCountry, setBeneficiaryPhoneCountry] = useState<CountryCode>("MX");
     const [beneficiaryResidenceState, setBeneficiaryResidenceState] = useState("");
     const [beneficiaryResidenceCity, setBeneficiaryResidenceCity] = useState("");
     const [beneficiaryEmail, setBeneficiaryEmail] = useState("");
@@ -238,19 +253,6 @@ function AppContent() {
     const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState("");
     const [sendMoneySuccess, setSendMoneySuccess] = useState(false);
     const [sendMoneyError, setSendMoneyError] = useState("");
-
-    type TransactionItem = {
-        id: string;
-        type: string;
-        label: string;
-        amount: string;
-        mxnAmount: string;
-        exchangeRate: string;
-        beneficiary: string;
-        date: string;
-        color: string;
-    };
-    const [item, setItem] = useState<TransactionItem | undefined>();
 
     const beneficiaries = [
         {
@@ -296,7 +298,34 @@ function AppContent() {
             return;
         }
 
+        const beneficiary = beneficiaries.find((b) => b.id === selectedBeneficiaryId);
+        const mxnAmount = Number((amount * exchangeRate).toFixed(2));
+        const createdAt = Date.now();
+
         setAvailableUsdBalance((prev) => Number((prev - amount).toFixed(2)));
+        setTransactionRecords((prev) => [
+            {
+                id: `tx-${createdAt}`,
+                type: "remittance",
+                label: `${beneficiary?.fullName ?? ""} / ${mxnAmount.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })} MXN`,
+                amount: `-$${amount.toFixed(2)}`,
+                amountUsd: amount,
+                date: new Date(createdAt)
+                    .toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+                    .toUpperCase(),
+                status: "pending",
+                provider: "remeza",
+                reference: `RMZ-${String(createdAt).slice(-6)}`,
+                createdAt,
+                mxnAmount,
+                exchangeRate,
+                beneficiary: beneficiary?.fullName,
+            },
+            ...prev,
+        ]);
         setSendMoneySuccess(true);
 
         setView("sendMoneyConfirmation");
@@ -506,13 +535,10 @@ function AppContent() {
                 <ProfileView
                     t={t}
                     setView={setView}
-                    profileFullName={profileFullName}
-                    profileEmail={profileEmail}
-                    setProfileEmail={setProfileEmail}
-                    profileAddress={profileAddress}
-                    setProfileAddress={setProfileAddress}
-                    profileSaved={profileSaved}
-                    handleProfileSave={handleProfileSave}
+                    fullName={profileFullName}
+                    email={registerEmail.trim()}
+                    phone={profilePhone}
+                    address={profileAddress}
                 />
             )}
 
@@ -523,50 +549,17 @@ function AppContent() {
                     transactionsFilter={transactionsFilter}
                     setTransactionsFilter={setTransactionsFilter}
                     filteredTransactions={filteredTransactions}
+                    onSelectTransaction={openTransaction}
                 />
             )}
 
             {view === "physicalCard" && (
                 <PhysicalCardView
                     t={t}
-                    language={language}
                     setView={setView}
-                    physicalAddress1={physicalAddress1}
-                    setPhysicalAddress1={setPhysicalAddress1}
-                    physicalAddress2={physicalAddress2}
-                    setPhysicalAddress2={setPhysicalAddress2}
-                    physicalCity={physicalCity}
-                    setPhysicalCity={setPhysicalCity}
-                    physicalState={physicalState}
-                    setPhysicalState={setPhysicalState}
-                    physicalZip={physicalZip}
-                    setPhysicalZip={setPhysicalZip}
-                    physicalCountry={physicalCountry}
-                    setPhysicalCountry={setPhysicalCountry}
-                    physicalAddressDetail={physicalAddressDetail}
-                    setPhysicalAddressDetail={patchPhysicalAddressDetail}
+                    deliveryAddress={profileAddress}
                     physicalCardRequested={physicalCardRequested}
                     handlePhysicalCardSubmit={handlePhysicalCardSubmit}
-                />
-            )}
-
-            {view === "trading" && (
-                <TradingView
-                    t={t}
-                    language={language}
-                    setView={setView}
-                    tradingKycStarted={tradingKycStarted}
-                    setTradingKycStarted={setTradingKycStarted}
-                    tradingKycVerified={tradingKycVerified}
-                    setTradingKycVerified={setTradingKycVerified}
-                    walletId={walletId}
-                    walletFunds={walletFunds}
-                    destinationWalletId={destinationWalletId}
-                    setDestinationWalletId={setDestinationWalletId}
-                    transferAmount={transferAmount}
-                    setTransferAmount={setTransferAmount}
-                    transferSubmitted={transferSubmitted}
-                    handleTradingTransfer={handleTradingTransfer}
                 />
             )}
 
@@ -583,8 +576,6 @@ function AppContent() {
                     setBeneficiaryMaternalLastName={setBeneficiaryMaternalLastName}
                     beneficiaryPhone={beneficiaryPhone}
                     setBeneficiaryPhone={setBeneficiaryPhone}
-                    beneficiaryPhoneCountry={beneficiaryPhoneCountry}
-                    setBeneficiaryPhoneCountry={setBeneficiaryPhoneCountry}
                     beneficiaryResidenceState={beneficiaryResidenceState}
                     setBeneficiaryResidenceState={setBeneficiaryResidenceState}
                     beneficiaryResidenceCity={beneficiaryResidenceCity}
@@ -638,10 +629,6 @@ function AppContent() {
                 <MultiCurrencyAccountsScreen t={t} setView={setView} />
             )}
 
-            {view === "disputeOptions" && (
-                <DisputeOptionsScreen t={t} setView={setView} />
-            )}
-
             {view === "twoStepVerification" && (
                 <TwoStepVerificationScreen t={t} setView={setView} />
             )}
@@ -650,17 +637,28 @@ function AppContent() {
                 <SecurityAlertScreen t={t} setView={setView} />
             )}
 
-            {view === "remittanceDetail" && (
-                <RemittanceDetail
+            {view === "transactionDetail" && (
+                <TransactionDetailView
                     t={t}
                     setView={setView}
-                    item={item}
+                    transaction={selectedTransaction}
+                    onCancelTransaction={handleCancelTransaction}
+                    appealed={!!(selectedTransactionId && appeals[selectedTransactionId])}
+                />
+            )}
+
+            {view === "appeal" && (
+                <AppealView
+                    t={t}
+                    setView={setView}
+                    transaction={selectedTransaction}
+                    submittedReason={selectedTransactionId ? appeals[selectedTransactionId] : undefined}
+                    onSubmitAppeal={handleSubmitAppeal}
                 />
             )}
 
             <DrawerMenu
                 t={t}
-                language={language}
                 visible={isMenuOpen}
                 overlayOpacity={overlayOpacity}
                 drawerTranslateX={drawerTranslateX}

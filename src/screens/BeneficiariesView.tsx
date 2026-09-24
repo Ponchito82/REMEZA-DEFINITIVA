@@ -14,7 +14,6 @@ import PhoneField from "../components/PhoneField";
 import { CloseButton, GlassBanner, ScreenHeader } from "../components/ui";
 import { spacing, screenPadding } from "../theme/spacing";
 import { Language, ViewName } from "../types/app";
-import { CountryCode } from "../services/geo";
 import { isValidNationalPhone } from "../utils/phone";
 import { isValidEmail, isValidPersonName } from "../utils/validation";
 import { useFormFocus } from "../hooks/useFormFocus";
@@ -36,9 +35,6 @@ type Props = {
   beneficiaryPhone: string;
   setBeneficiaryPhone: (value: string) => void;
 
-  beneficiaryPhoneCountry: CountryCode;
-  setBeneficiaryPhoneCountry: (value: CountryCode) => void;
-
   beneficiaryResidenceState: string;
   setBeneficiaryResidenceState: (value: string) => void;
 
@@ -55,6 +51,9 @@ type Props = {
   handleBeneficiarySave: () => void;
 };
 
+/** Quien recibe siempre es de Mexico: la lada va fija en +52. */
+const BENEFICIARY_PHONE_COUNTRY = "MX";
+
 export default function BeneficiariesView({
   t,
   language,
@@ -67,8 +66,6 @@ export default function BeneficiariesView({
   setBeneficiaryMaternalLastName,
   beneficiaryPhone,
   setBeneficiaryPhone,
-  beneficiaryPhoneCountry,
-  setBeneficiaryPhoneCountry,
   beneficiaryResidenceState,
   setBeneficiaryResidenceState,
   beneficiaryResidenceCity,
@@ -96,7 +93,7 @@ export default function BeneficiariesView({
       },
       {
         key: "phone",
-        valid: isValidNationalPhone(beneficiaryPhone, beneficiaryPhoneCountry),
+        valid: isValidNationalPhone(beneficiaryPhone, BENEFICIARY_PHONE_COUNTRY),
         message: beneficiaryPhone.length === 0 ? t.requiredPhone : t.invalidPhoneForCountry,
       },
       {
@@ -182,8 +179,8 @@ export default function BeneficiariesView({
                 language={language}
                 label={t.phoneNumber}
                 testID="beneficiaries-phoneInput"
-                country={beneficiaryPhoneCountry}
-                onCountryChange={setBeneficiaryPhoneCountry}
+                country={BENEFICIARY_PHONE_COUNTRY}
+                lockCountry
                 digits={beneficiaryPhone}
                 onDigitsChange={setBeneficiaryPhone}
                 inputRef={form.input("phone")}

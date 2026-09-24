@@ -161,7 +161,6 @@ export default function ComponentsShowcaseScreen({ onClose }: { onClose: () => v
             { label: "Virtual", value: "virtual" },
             { label: "Physical", value: "physical" },
             { label: "Remittance", value: "remittance" },
-            { label: "Trading", value: "trading" },
           ]}
           value={chip}
           onChange={setChip}
@@ -170,7 +169,6 @@ export default function ComponentsShowcaseScreen({ onClose }: { onClose: () => v
           <Badge label="Virtual" variant="virtual" />
           <Badge label="Physical" variant="physical" />
           <Badge label="Remittance" variant="remittance" />
-          <Badge label="Trading" variant="trading" />
         </View>
       </Section>
 
@@ -234,7 +232,6 @@ export default function ComponentsShowcaseScreen({ onClose }: { onClose: () => v
         <TransactionItem badgeLabel="Virtual" variant="virtual" label="Zelle Deposit" date="MAR 02, 2026" amount="+$500.00" />
         <TransactionItem badgeLabel="Physical" variant="physical" label="POS Purchase" date="MAR 05, 2026" amount="-$46.20" />
         <TransactionItem badgeLabel="Remittance" variant="remittance" label="Mario Diaz / 1500 MXN" date="MAR 06, 2026" amount="$100.00" />
-        <TransactionItem badgeLabel="Trading" variant="trading" label="Wallet Transfer" date="MAR 08, 2026" amount="-$120.00" />
       </Section>
 
       <Section title="Envio y alta">

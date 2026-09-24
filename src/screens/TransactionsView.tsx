@@ -6,16 +6,7 @@ import { TransactionItem as TransactionRow } from "../components/remeza";
 import type { BadgeVariant } from "../components/ui";
 import { typography } from "../theme/typography";
 import { spacing, screenPadding } from "../theme/spacing";
-import { TransactionsFilter, ViewName } from "../types/app";
-
-type TransactionItem = {
-  id: string;
-  type: string;
-  label: string;
-  amount: string;
-  date: string;
-  color: string;
-};
+import { Transaction, TransactionsFilter, ViewName } from "../types/app";
 
 type Props = {
   t: any;
@@ -24,7 +15,8 @@ type Props = {
   transactionsFilter: TransactionsFilter;
   setTransactionsFilter: (filter: TransactionsFilter) => void;
 
-  filteredTransactions: TransactionItem[];
+  filteredTransactions: Transaction[];
+  onSelectTransaction: (id: string) => void;
 };
 
 export default function TransactionsView({
@@ -33,12 +25,12 @@ export default function TransactionsView({
   transactionsFilter,
   setTransactionsFilter,
   filteredTransactions,
+  onSelectTransaction,
 }: Props) {
   const badgeLabels: Record<string, string> = {
     virtual: t.virtual,
     physical: t.physical,
     remittance: t.remittance,
-    trading: t.trading,
   };
 
   return (
@@ -58,7 +50,6 @@ export default function TransactionsView({
           { label: t.virtual, value: "virtual" },
           { label: t.physical, value: "physical" },
           { label: t.remittance, value: "remittance" },
-          { label: t.trading, value: "trading" },
         ]}
         value={transactionsFilter}
         onChange={(value) => setTransactionsFilter(value as TransactionsFilter)}
@@ -77,21 +68,14 @@ export default function TransactionsView({
               testID={`transactions-item-${item.id}`}
               accessibilityRole="button"
               accessibilityLabel={item.label}
-              onPress={() => {
-                t.item = item;
-                t.item.mxnAmount = "$9000.00";
-                t.item.exchangeRate = "$18.00";
-                t.item.beneficiary = "Juan Lopez";
-
-                setView("remittanceDetail");
-              }}
+              onPress={() => onSelectTransaction(item.id)}
               style={({ pressed }) => pressed && styles.pressed}
             >
               <TransactionRow
                 badgeLabel={badgeLabels[item.type] ?? item.type}
                 variant={item.type as BadgeVariant}
                 label={item.label}
-                date={item.date}
+                date={item.status === "cancelled" ? `${item.date} · ${t.statusCancelled}` : item.date}
                 amount={item.amount}
               />
             </Pressable>

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CountryCode, CountryDetection, GeoOption, geo, isCountryCode } from "../services/geo";
+import { CountryCode, GeoOption, geo } from "../services/geo";
 import { isValidPostalCode, postalCodeBase, sanitizePostalCodeInput } from "../utils/postalCode";
+
+/** Quienes envian estan en Estados Unidos: es el unico pais de direccion. */
+export const ADDRESS_COUNTRY: CountryCode = "US";
 
 export type AddressValue = {
   postalCode: string;
@@ -14,140 +17,143 @@ type Params = {
   onChange: (patch: Partial<AddressValue>) => void;
 };
 
+/** Resultado de la ultima consulta del codigo postal */
+export type PostalLookupStatus = "idle" | "loading" | "found" | "notFound";
+
 export type AddressCascade = {
   states: GeoOption[];
   cities: GeoOption[];
-  detection: CountryDetection["status"] | "idle";
-  country: CountryCode | null;
+  lookupStatus: PostalLookupStatus;
   postalCodeValid: boolean;
   isStateEnabled: boolean;
   isCityEnabled: boolean;
   setPostalCode: (raw: string) => void;
-  setCountry: (code: string) => void;
   setStateCode: (code: string) => void;
   setCity: (city: string) => void;
 };
 
 export function useAddressCascade({ value, onChange }: Params): AddressCascade {
-  const country = isCountryCode(value.country) ? value.country : null;
-  const postalCodeValid = isValidPostalCode(value.postalCode, country);
+  const postalCodeValid = isValidPostalCode(value.postalCode, ADDRESS_COUNTRY);
+  const zip5 = postalCodeValid ? postalCodeBase(value.postalCode) : "";
 
   const [states, setStates] = useState<GeoOption[]>([]);
-  const [cities, setCities] = useState<GeoOption[]>([]);
-  const [detection, setDetection] = useState<CountryDetection["status"] | "idle">("idle");
+  const [lookupCities, setLookupCities] = useState<string[]>([]);
+  const [lookupStateCode, setLookupStateCode] = useState("");
+  const [stateCities, setStateCities] = useState<string[]>([]);
+  const [lookupStatus, setLookupStatus] = useState<PostalLookupStatus>("idle");
 
-  const manualCountryRef = useRef(false);
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    if (!isValidPostalCode(value.postalCode, country)) {
-      setDetection("idle");
-      return;
-    }
-
-    const requestId = ++requestIdRef.current;
-
-    geo.detectCountry(value.postalCode).then((result) => {
-      if (requestId !== requestIdRef.current) return;
-
-      setDetection(result.status);
-
-      if (result.status === "detected" && !manualCountryRef.current && result.country !== country) {
-        onChange({ country: result.country, stateCode: "", city: "" });
-      }
-    });
-  }, [value.postalCode, country, onChange]);
+  // La API y el estado local cambian de identidad en cada render del padre;
+  // el efecto de consulta solo debe reaccionar al codigo postal.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   useEffect(() => {
-    if (!country) {
-      setStates([]);
-      return;
-    }
+    if (value.country !== ADDRESS_COUNTRY) onChangeRef.current({ country: ADDRESS_COUNTRY });
+  }, [value.country]);
 
+  useEffect(() => {
     let active = true;
-    geo.getStates(country).then((options) => {
+    geo.getStates(ADDRESS_COUNTRY).then((options) => {
       if (active) setStates(options);
     });
-
     return () => {
       active = false;
     };
-  }, [country]);
+  }, []);
 
   useEffect(() => {
-    if (!country || !value.stateCode) {
-      setCities([]);
+    if (!zip5) {
+      setLookupCities([]);
+      setLookupStateCode("");
+      setLookupStatus("idle");
       return;
     }
 
     let active = true;
-    geo.getCities(country, value.stateCode).then((options) => {
-      if (active) setCities(options);
+    setLookupStatus("loading");
+
+    geo.lookupPostalCode(ADDRESS_COUNTRY, zip5).then((result) => {
+      if (!active) return;
+
+      if (result.status === "notFound") {
+        setLookupCities([]);
+        setLookupStateCode("");
+        setLookupStatus("notFound");
+        return;
+      }
+
+      setLookupCities(result.cities);
+      setLookupStateCode(result.stateCode);
+      setLookupStatus("found");
+      onChangeRef.current({
+        stateCode: result.stateCode,
+        city: result.cities.length === 1 ? result.cities[0] : "",
+      });
     });
 
     return () => {
       active = false;
     };
-  }, [country, value.stateCode]);
+  }, [zip5]);
 
+  // Si la persona corrige el estado a mano, las ciudades del ZIP ya no aplican
+  // y se ofrecen las del estado elegido.
   useEffect(() => {
-    if (!country || !postalCodeValid || value.stateCode) return;
+    if (!value.stateCode || value.stateCode === lookupStateCode) {
+      setStateCities([]);
+      return;
+    }
 
     let active = true;
-    geo.getStateByPostalCode(country, postalCodeBase(value.postalCode)).then((option) => {
-      if (active && option) onChange({ stateCode: option.value, city: "" });
+    geo.getCities(ADDRESS_COUNTRY, value.stateCode).then((options) => {
+      if (active) setStateCities(options.map((option) => option.value));
     });
-
     return () => {
       active = false;
     };
-  }, [country, postalCodeValid, value.postalCode, value.stateCode, onChange]);
+  }, [value.stateCode, lookupStateCode]);
+
+  const cityNames = value.stateCode && value.stateCode === lookupStateCode ? lookupCities : stateCities;
+  const cities: GeoOption[] = cityNames.map((city) => ({ label: city, value: city }));
 
   const setPostalCode = useCallback(
     (raw: string) => {
-      const sanitized = sanitizePostalCodeInput(raw, country);
+      const sanitized = sanitizePostalCodeInput(raw, ADDRESS_COUNTRY);
       if (sanitized === value.postalCode) return;
 
-      manualCountryRef.current = false;
-      onChange({ postalCode: sanitized, stateCode: "", city: "" });
-    },
-    [country, value.postalCode, onChange],
-  );
+      // Agregar o quitar el +4 no cambia el ZIP de 5 digitos: conserva estado y ciudad.
+      if (postalCodeBase(sanitized) === postalCodeBase(value.postalCode)) {
+        onChangeRef.current({ postalCode: sanitized });
+        return;
+      }
 
-  const setCountry = useCallback(
-    (code: string) => {
-      if (code === value.country) return;
-      manualCountryRef.current = true;
-      onChange({ country: code, stateCode: "", city: "" });
+      onChangeRef.current({ postalCode: sanitized, stateCode: "", city: "" });
     },
-    [value.country, onChange],
+    [value.postalCode],
   );
 
   const setStateCode = useCallback(
     (code: string) => {
       if (code === value.stateCode) return;
-      onChange({ stateCode: code, city: "" });
+      onChangeRef.current({ stateCode: code, city: "" });
     },
-    [value.stateCode, onChange],
+    [value.stateCode],
   );
 
-  const setCity = useCallback(
-    (city: string) => {
-      onChange({ city });
-    },
-    [onChange],
-  );
+  const setCity = useCallback((city: string) => {
+    onChangeRef.current({ city });
+  }, []);
+
+  const lookupReady = postalCodeValid && lookupStatus !== "notFound";
 
   return {
     states,
     cities,
-    detection,
-    country,
+    lookupStatus,
     postalCodeValid,
-    isStateEnabled: postalCodeValid && !!country,
-    isCityEnabled: postalCodeValid && !!country && !!value.stateCode,
+    isStateEnabled: lookupReady,
+    isCityEnabled: lookupReady && !!value.stateCode && cities.length > 0,
     setPostalCode,
-    setCountry,
     setStateCode,
     setCity,
   };

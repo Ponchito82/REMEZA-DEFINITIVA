@@ -87,9 +87,11 @@ async function fillStep4ExceptDocuments() {
   await setValueScrolled("register-zipCodeInput", "90001");
   await hideKeyboard();
 
-  await selectFromSearchable("register-countrySelect", "US", "United");
-  await selectFromSearchable("register-stateSelect", "CA", "California");
-  await selectFromSearchable("register-citySelect", "Los Angeles", "Los Angeles");
+  // El ZIP consulta la API de codigos postales de EE. UU. y autocompleta
+  // estado y ciudad; el pais va fijo en Estados Unidos.
+  await browser.pause(2000);
+  await expect(await scrollToId("register-stateSelect")).toHaveText("California");
+  await expect(await scrollToId("register-citySelect")).toHaveText("Los Angeles");
 
   await setValueScrolled("register-streetInput", "Main St");
   await hideKeyboard();
@@ -243,7 +245,7 @@ describe("Registro paso 4 — datos personales", () => {
   it("Estado bloqueado sin código postal válido y habilitado al capturarlo", async () => {
     await expect(await scrollToId("register-stateSelect")).toBeDisabled();
 
-    await setValueScrolled("register-zipCodeInput", "10000");
+    await setValueScrolled("register-zipCodeInput", "10001");
     await hideKeyboard();
 
     await expect(await scrollToId("register-stateSelect")).toBeEnabled();
