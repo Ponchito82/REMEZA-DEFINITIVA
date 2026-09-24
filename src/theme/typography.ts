@@ -1,5 +1,5 @@
 import { TextStyle } from "react-native";
-import { colors } from "./colors";
+import { colors, tokens } from "./colors";
 
 /**
  * Escala tipografica del PDF de diseno.
@@ -200,5 +200,91 @@ export const typography = {
     fontFamily: fontFamily.semibold,
     fontSize: 14,
     color: colors.text.primary,
+  },
+} as const satisfies Record<string, TextStyle>;
+
+/**
+ * Escala del PDF de 59 pantallas. Convive con la de arriba: las pantallas ya
+ * aprobadas siguen con `typography` y las rediseñadas usan esta.
+ */
+export const textStyles = {
+  title: {
+    ...base,
+    fontFamily: fontFamily.bold,
+    fontSize: 28,
+    lineHeight: 34,
+    color: tokens.textPrimary,
+    textAlign: "center",
+  },
+  subtitle: {
+    ...base,
+    fontFamily: fontFamily.regular,
+    fontSize: 16,
+    lineHeight: 22,
+    color: tokens.textSecondary,
+    textAlign: "center",
+  },
+  sectionTitle: {
+    ...base,
+    fontFamily: fontFamily.bold,
+    fontSize: 20,
+    lineHeight: 26,
+    color: tokens.textPrimary,
+  },
+  rowTitle: {
+    ...base,
+    fontFamily: fontFamily.semibold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: tokens.textPrimary,
+  },
+  rowSubtitle: {
+    ...base,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: tokens.textSecondary,
+  },
+  overline: {
+    ...base,
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: tokens.textDisabled,
+  },
+  value: {
+    ...base,
+    fontFamily: fontFamily.regular,
+    fontSize: 16,
+    lineHeight: 22,
+    color: tokens.textPrimary,
+  },
+  amountLarge: {
+    ...base,
+    fontFamily: fontFamily.semibold,
+    fontSize: 32,
+    lineHeight: 38,
+    color: tokens.textPrimary,
+  },
+  button: {
+    ...base,
+    fontFamily: fontFamily.semibold,
+    fontSize: 17,
+    color: tokens.textPrimary,
+  },
+  link: {
+    ...base,
+    fontFamily: fontFamily.semibold,
+    fontSize: 14,
+    color: tokens.textLink,
+  },
+  caption: {
+    ...base,
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: tokens.textSecondary,
   },
 } as const satisfies Record<string, TextStyle>;

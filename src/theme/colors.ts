@@ -165,3 +165,61 @@ export const WARNING_SURFACE = "rgba(251,191,36,0.16)";
 /** Velos de los modales, sobre fondo ya oscuro. */
 export const SCRIM = "rgba(2,2,26,0.72)";
 export const SCRIM_SOFT = "rgba(2,2,26,0.45)";
+
+/* ------------------------------------------------------------------ *
+ * Tokens del PDF "Disenos de Pantallas Remeza" (59 pantallas)
+ *
+ * Van aparte y no sobre las claves planas de arriba: esas ya pintan Home,
+ * Login y el menu con otros valores, y reescribirlas los re-skinearia. Las
+ * pantallas rediseñadas consumen solo `tokens`.
+ * ------------------------------------------------------------------ */
+
+export const tokens = {
+  background: "#03051D",
+  /** Modales y hojas inferiores */
+  navy: "#080B32",
+  /** Cajas OTP y boton deshabilitado */
+  indigoDeep: "#11104A",
+  /** Acento, foco y toggle encendido. Nunca como color de texto chico. */
+  violet: "#5420FF",
+  /** Aro neon de los iconos grandes */
+  violetBright: "#7417FF",
+  /** Final de los degradados */
+  purple: "#3D16C8",
+
+  textPrimary: "#FFFFFF",
+  textSecondary: "#B7B4D1",
+  /** Placeholders y etiquetas en MAYUSCULAS */
+  textDisabled: "#85819F",
+  /** Texto violeta legible: links */
+  textLink: "#A36BFF",
+  /** Iconos dentro de circulos */
+  iconAccent: "#B79CFF",
+
+  glassSurface: "rgba(25,22,70,0.40)",
+  /** Inputs y botones de contorno */
+  glassBorder: "rgba(130,110,255,0.30)",
+  /** Tarjetas y filas de lista */
+  glassBorderStrong: "rgba(80,55,255,0.60)",
+  /** Circulo de icono de las filas */
+  iconCircle: "#2D0F95",
+  backButtonFill: "#100A4B",
+  backButtonBorder: "#3A2B88",
+
+  danger: "#FA006E",
+  dangerButton: "#E0005F",
+  dangerText: "#FF5C8A",
+  dangerSurface: "rgba(250,0,110,0.10)",
+  success: "#08F0C1",
+  successText: "#16CF99",
+  successBadgeText: "#2CD7B9",
+  warningText: "#E3C138",
+  warningSurface: "rgba(227,193,56,0.14)",
+
+  /**
+   * Superficie opaca del menu desplegable. Se conserva con su nombre de
+   * siempre (`colors.sheetSurface`): la usan el Detalle de tarjeta, el modal
+   * "Activar tarjeta" y el Detalle de movimiento.
+   */
+  sheetSurface: colors.sheetSurface,
+} as const;

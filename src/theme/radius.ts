@@ -24,3 +24,18 @@ export const sizes = {
   /** Circulo del icono que va dentro de un input */
   inputIcon: 36,
 } as const;
+
+/** Medidas del PDF de 59 pantallas, para las pantallas rediseñadas. */
+export const metrics = {
+  radius: { button: 16, card: 16, input: 16, otp: 12, tab: 12, back: 12 },
+  buttonHeight: 56,
+  listRowMin: 76,
+  detailRowMin: 60,
+  inputHeight: 56,
+  otpBox: { width: 52, height: 60 },
+  backButton: 44,
+  heroIcon: 96,
+  rowIconCircle: 52,
+  gutter: 20,
+  rowGap: 10,
+} as const;

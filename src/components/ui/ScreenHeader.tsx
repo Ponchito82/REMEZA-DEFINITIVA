@@ -1,7 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle } from "react-native";
-import { typography } from "../../theme/typography";
+import { typography, textStyles } from "../../theme/typography";
 import { spacing } from "../../theme/spacing";
+import HeroIcon from "./HeroIcon";
+import type { HeroTone } from "./HeroIcon";
+import type { IconComponent } from "./GlassInput";
 
 type Props = {
   title: string;
@@ -14,6 +17,15 @@ type Props = {
   size?: "screen" | "hero" | "section";
   style?: ViewStyle;
   testID?: string;
+  /**
+   * Icono protagonista del PDF de 59 pantallas. Con el, el encabezado se
+   * centra y usa la escala nueva (`textStyles.title` / `subtitle`).
+   */
+  icon?: IconComponent;
+  iconVariant?: "filled" | "ring";
+  iconTone?: HeroTone;
+  iconBadge?: "check" | "x";
+  iconSpinning?: boolean;
 };
 
 /**
@@ -28,7 +40,40 @@ export default function ScreenHeader({
   size = "screen",
   style,
   testID,
+  icon,
+  iconVariant,
+  iconTone,
+  iconBadge,
+  iconSpinning,
 }: Props) {
+  if (icon) {
+    return (
+      <View style={[styles.root, styles.centered, style]}>
+        <HeroIcon
+          icon={icon}
+          variant={iconVariant}
+          tone={iconTone}
+          badge={iconBadge}
+          spinning={iconSpinning}
+        />
+        <Text
+          testID={testID ? `${testID}-title` : undefined}
+          style={[textStyles.title, styles.heroIconTitle]}
+        >
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text
+            testID={testID ? `${testID}-subtitle` : undefined}
+            style={[textStyles.subtitle, styles.subtitle]}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
   const centered = align === "center";
 
   const titleStyle =
@@ -77,6 +122,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: spacing.sm,
+  },
+  heroIconTitle: {
+    marginTop: 20,
   },
   heroTitle: {
     ...typography.h1,

@@ -11,6 +11,8 @@ type Props = {
   watermark?: boolean;
   /** Envuelve el contenido en un ScrollView, para pantallas largas */
   scroll?: boolean;
+  /** Lineas de luz en las esquinas inferiores (pantallas 31+ del PDF) */
+  streaks?: boolean;
 };
 
 /**
@@ -25,6 +27,7 @@ export default function ScreenBackground({
   children,
   watermark = true,
   scroll = false,
+  streaks = false,
 }: Props) {
   const insets = useSafeAreaInsets();
   const padding = { paddingTop: insets.top, paddingBottom: insets.bottom };
@@ -40,7 +43,7 @@ export default function ScreenBackground({
         pointerEvents="none"
       />
 
-      <BackgroundOrbs watermark={watermark} />
+      <BackgroundOrbs watermark={watermark} streaks={streaks} />
 
       {scroll ? (
         <ScrollView

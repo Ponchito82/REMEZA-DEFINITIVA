@@ -26,6 +26,25 @@ export { default as LinkText } from "./LinkText";
 export { default as OptionSheet } from "./OptionSheet";
 
 export { default as GlassBanner } from "./GlassBanner";
+
+/* --- Componentes del PDF de 59 pantallas --- */
+export { default as ScreenLayout } from "./ScreenLayout";
+export { default as BackButton } from "./BackButton";
+export { default as HeroIcon } from "./HeroIcon";
+export { default as PrimaryButton } from "./PrimaryButton";
+export { default as SecondaryButton } from "./SecondaryButton";
+export { default as ListRow } from "./ListRow";
+export { default as FeatureRow } from "./FeatureRow";
+export { default as DetailRow } from "./DetailRow";
+export { default as KeyValueCard } from "./KeyValueCard";
+export { default as InfoCard } from "./InfoCard";
+export { default as SegmentedTabs } from "./SegmentedTabs";
+export { default as Toggle } from "./Toggle";
+export { default as RadioDot } from "./RadioDot";
+export { default as StatusBadge } from "./StatusBadge";
+export { default as ProgressBar } from "./ProgressBar";
+export { default as Avatar } from "./Avatar";
+export { default as TransactionRow } from "./TransactionRow";
 export { default as LanguageRow } from "./LanguageRow";
 export { default as LanguageToggle } from "./LanguageToggle";
 
@@ -40,3 +59,10 @@ export type { ButtonVariant, ButtonAdornment } from "./Button";
 export type { FlagCountry } from "./FlagIcon";
 export type { BadgeVariant } from "./Badge";
 export type { ChipOption } from "./ChipGroup";
+export type { HeroTone } from "./HeroIcon";
+export type { ListRowRight } from "./ListRow";
+export type { DetailRowRight } from "./DetailRow";
+export type { KeyValueItem } from "./KeyValueCard";
+export type { InfoTone } from "./InfoCard";
+export type { SegmentedTabItem } from "./SegmentedTabs";
+export type { StatusKind } from "./StatusBadge";
