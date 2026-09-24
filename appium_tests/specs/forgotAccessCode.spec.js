@@ -20,7 +20,12 @@ const goToForgotAccessCode = async () => {
   await $('android=new UiSelector().resourceId("login-phoneInput")').waitForDisplayed({ timeout: 15000 });
   await $('android=new UiSelector().resourceId("login-forgotAccessCodeLink")').click();
 
-  await $('//*[@text="Recover access code"]').waitForDisplayed({ timeout: 10000 });
+  // "Recupera tu acceso" (21): se elige la via por telefono y se continua.
+  await $('android=new UiSelector().resourceId("recoverAccess.option.phone")').waitForDisplayed({ timeout: 10000 });
+  await $('android=new UiSelector().resourceId("recoverAccess.option.phone")').click();
+  await $('android=new UiSelector().resourceId("recoverAccess.continueButton")').click();
+
+  await $('android=new UiSelector().resourceId("forgot-phoneInput")').waitForDisplayed({ timeout: 10000 });
 };
 
 const sendRecoveryCode = async (phone = "5512345678") => {
