@@ -33,7 +33,8 @@ type Props = {
   /** Contenido entre el encabezado y los botones: filas, avisos, campos */
   children?: React.ReactNode;
   primary?: StatusAction & { tone?: "primary" | "danger" };
-  secondary?: StatusAction & { tone?: "neutral" | "danger" | "accent" };
+  /** `filled` la pinta igual que la accion principal (dos botones del mismo peso) */
+  secondary?: StatusAction & { tone?: "neutral" | "danger" | "accent"; filled?: boolean };
   /** Enlace final, con una linea previa opcional ("¿No recibiste el codigo?") */
   link?: { title: string; onPress: () => void; prompt?: string; testID?: string };
   showBack?: boolean;
@@ -107,7 +108,17 @@ export default function StatusScreen({
               tone={primary.tone}
             />
           ) : null}
-          {secondary ? (
+          {secondary?.filled ? (
+            <PrimaryButton
+              testID={secondary.testID}
+              title={secondary.title}
+              onPress={secondary.onPress}
+              disabled={secondary.disabled}
+              loading={secondary.loading}
+              showArrow={secondary.showArrow}
+              iconLeft={secondary.iconLeft}
+            />
+          ) : secondary ? (
             <SecondaryButton
               testID={secondary.testID}
               title={secondary.title}
