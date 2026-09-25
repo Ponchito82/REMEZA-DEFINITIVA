@@ -18,10 +18,11 @@ mensajes de error correctos.
 | `specs/beneficiaries.spec.js` | Alta de beneficiario (`handleBeneficiarySave`, sin validación ni fetch). No cubre listado/selección: esa UI vive en `SendMoneyView` (ver `sendMoney.spec.js`). |
 | `specs/forgotAccessCode.spec.js` | Flujo completo de recuperación de código: teléfono inválido, código débil/mismatch, reseteo exitoso y vuelta a Sign In. |
 | `specs/sendMoneyConfirmation.spec.js` | Pantalla de confirmación tras un envío exitoso, botón de regresar, y reenvío con saldo ya reducido (`Insufficient funds.`). |
-| `specs/profile.spec.js` | Perfil de solo lectura: muestra los datos del KYC, el aviso, y no expone campos editables ni botón de guardar. |
+| `specs/profile.spec.js` | Perfil de solo lectura: muestra los datos del cliente, el aviso "Tu información está protegida", y no expone campos editables ni botón de guardar. |
 | `specs/transactionDetail.spec.js` | Desglose de un movimiento de cualquier tipo, y cancelación de una remesa en proceso (confirmación, estado "Cancelled" y regreso al listado). |
 | `specs/transactions.spec.js` | Listado de las 3 transacciones simuladas, filtro por tipo (virtual/physical/remittance) y apertura del desglose. |
 | `specs/physicalCard.spec.js` | Solicitud de envío de tarjeta física nueva a una dirección (`handlePhysicalCardSubmit`, sin validación ni fetch). No confundir con la activación de tarjeta, que vive en `dashboard.spec.js`. |
+| `specs/support.spec.js` | Soporte en vivo (chat, ticket, llamada), Centro de ayuda sin "Cancelar o disputar" y la pantalla de Preguntas frecuentes con preguntas desplegables. |
 
 ### Notas de estos specs nuevos
 
@@ -35,7 +36,7 @@ como `10.0.2.2:8700`) y el usuario de prueba **`+525538068807` / `123456`** (Adr
 
 - `login.spec.js` → describe **"Login — backend real [backend]"** (2 casos)
 - `sendMoney.spec.js` → todos (dependen del login real)
-- `dashboard.spec.js`, `beneficiaries.spec.js`, `sendMoneyConfirmation.spec.js`, `profile.spec.js`,
+- `dashboard.spec.js`, `beneficiaries.spec.js`, `sendMoneyConfirmation.spec.js`, `profile.spec.js`, `support.spec.js`,
   `transactionDetail.spec.js`, `transactions.spec.js`, `physicalCard.spec.js` → todos (todos navegan
   primero por un login real para llegar al Dashboard)
 

@@ -26,6 +26,8 @@ type Props = {
   iconTone?: HeroTone;
   iconBadge?: "check" | "x";
   iconSpinning?: boolean;
+  /** Con `iconSpinning`, gira tambien el icono de dentro */
+  iconSpinInner?: boolean;
 };
 
 /**
@@ -45,6 +47,7 @@ export default function ScreenHeader({
   iconTone,
   iconBadge,
   iconSpinning,
+  iconSpinInner,
 }: Props) {
   if (icon) {
     return (
@@ -55,6 +58,7 @@ export default function ScreenHeader({
           tone={iconTone}
           badge={iconBadge}
           spinning={iconSpinning}
+          spinInner={iconSpinInner}
         />
         <Text
           testID={testID ? `${testID}-title` : undefined}

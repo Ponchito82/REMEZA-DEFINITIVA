@@ -13,12 +13,11 @@ type Props = {
   onExit: () => void;
 };
 
-const KEYS: (keyof NotificationPreferences)[] = ["transactions", "security", "promotions", "reminders"];
+const KEYS: (keyof NotificationPreferences)[] = ["transactions", "security"];
 
-/** Notificaciones (pantalla 12). */
+/** Notificaciones (pantalla 12): solo transacciones y seguridad. */
 export default function NotificationSettingsScreen({ t, onExit }: Props) {
   const [prefs, setPrefs] = useState<NotificationPreferences>(MOCK_NOTIFICATION_PREFERENCES);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -30,11 +29,11 @@ export default function NotificationSettingsScreen({ t, onExit }: Props) {
     };
   }, []);
 
-  const handleContinue = async () => {
-    setSaving(true);
-    await saveNotificationPreferences(prefs);
-    setSaving(false);
-    onExit();
+  // Sin boton de continuar: cada cambio se guarda al momento.
+  const handleToggle = (key: keyof NotificationPreferences, value: boolean) => {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    saveNotificationPreferences(next);
   };
 
   return (
@@ -47,13 +46,6 @@ export default function NotificationSettingsScreen({ t, onExit }: Props) {
       icon={Bell}
       title={t.notificationsTitle}
       subtitle={t.notificationsSubtitle}
-      primary={{
-        testID: "notificationSettings.continueButton",
-        title: t.commonContinue,
-        showArrow: true,
-        loading: saving,
-        onPress: handleContinue,
-      }}
     >
       {KEYS.map((key) => (
         <ListRow
@@ -64,7 +56,7 @@ export default function NotificationSettingsScreen({ t, onExit }: Props) {
           subtitle={t[`notif_${key}Desc`]}
           right="toggle"
           selected={prefs[key]}
-          onToggle={(value) => setPrefs((prev) => ({ ...prev, [key]: value }))}
+          onToggle={(value) => handleToggle(key, value)}
         />
       ))}
     </StatusScreen>

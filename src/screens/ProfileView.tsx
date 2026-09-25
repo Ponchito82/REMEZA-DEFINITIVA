@@ -46,7 +46,6 @@ export type ProfileTarget =
   | "helpCenter"
   | "support"
   | "cardLimits"
-  | "blockCard"
   | "deleteCard"
   | "logout";
 
@@ -59,8 +58,8 @@ type ProfileRow = {
 
 /**
  * Perfil de solo lectura. Los datos vienen del KYC, asi que aqui solo se
- * consultan: cambiarlos pasa por soporte. Por eso no hay "Editar perfil" y
- * cada fila lleva candado en lugar de chevron.
+ * consultan: cambiarlos pasa por soporte. Por eso no hay "Editar perfil" ni
+ * accesorio en las filas.
  *
  * Debajo van los accesos de ajustes del PDF (19), menos "Editar perfil" y
  * "Preferencias", y una seccion de tarjeta con limites, bloqueo y eliminar.
@@ -113,7 +112,6 @@ export default function ProfileView({
             icon={row.icon}
             label={row.label}
             value={row.value || t.notAvailable}
-            right="lock"
             valueTestID={`profile-${row.key}Value`}
           />
         ))}
@@ -121,7 +119,7 @@ export default function ProfileView({
 
       <InfoCard
         testID="profile-readOnlyNotice"
-        icon={Lock}
+        icon={ShieldCheck}
         text={t.profileReadOnlyNotice}
         style={styles.notice}
       />
@@ -177,12 +175,6 @@ export default function ProfileView({
           icon={Gauge}
           title={t.profileCardLimits}
           onPress={() => onOpen("cardLimits")}
-        />
-        <ListRow
-          testID="profile.blockCardRow"
-          icon={Lock}
-          title={t.profileBlockCard}
-          onPress={() => onOpen("blockCard")}
         />
         <ListRow
           testID="profile.deleteCardRow"

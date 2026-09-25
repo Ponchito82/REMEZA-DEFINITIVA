@@ -31,6 +31,7 @@ import {
 } from "../components/ui";
 import type { IconComponent, StatusKind } from "../components/ui";
 import { colors, tokens } from "../theme/colors";
+import { useHardwareBack } from "../hooks/useHardwareBack";
 import { textStyles } from "../theme/typography";
 import { metrics } from "../theme/radius";
 import { spacing } from "../theme/spacing";
@@ -95,6 +96,15 @@ export default function TransactionDetailView({
   appealed,
 }: Props) {
   const [confirming, setConfirming] = useState(false);
+
+  // Atras de Android: con la confirmacion de cancelacion abierta, la cierra.
+  useHardwareBack(() => {
+    if (confirming) {
+      setConfirming(false);
+      return true;
+    }
+    return false;
+  });
 
   /**
    * Reloj para el tiempo restante de cancelacion. Solo corre cuando hay una

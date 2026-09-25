@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Share } from "react-native";
 
 import ServicePaymentsScreen from "../screens/services/ServicePaymentsScreen";
 import ServiceReferenceScreen from "../screens/services/ServiceReferenceScreen";
@@ -13,7 +12,8 @@ import {
 import { ServiceProvider } from "../mocks/remeza";
 import { payService, ServicePaymentReceipt } from "../services/servicePayments";
 import { useStepStack } from "../hooks/useStepStack";
-import { formatDateTime } from "../utils/date";
+import { formatDateTime, formatReceiptDate } from "../utils/date";
+import type { ReceiptData } from "../components/ui";
 import { Language } from "../types/app";
 
 type Step = "providers" | "reference" | "amount" | "processing" | "paid" | "receipt" | "failed";
@@ -32,7 +32,11 @@ const money = (value: number) =>
 
 /** Pago de servicios: 17 -> 51 -> 52 -> 53 -> 54 (-> 55) o 56. */
 export default function ServicePaymentFlow({ t, language, availableUsdBalance, onPaid, onExit }: Props) {
-  const { step, push, replace, reset, pop } = useStepStack<Step>("providers", onExit);
+  const { step, push, replace, reset, pop } = useStepStack<Step>(
+    "providers",
+    onExit,
+    (current) => current === "processing",
+  );
   const [provider, setProvider] = useState<ServiceProvider | null>(null);
   const [reference, setReference] = useState("");
   const [amountRaw, setAmountRaw] = useState("");
@@ -63,15 +67,29 @@ export default function ServicePaymentFlow({ t, language, availableUsdBalance, o
       ]
     : [];
 
-  const receiptSummary = receipt
-    ? [...summary, { key: "folio", label: t.commonFolio, value: receipt.folio }]
-    : [];
-
-  const share = () => {
-    Share.share({
-      message: receiptSummary.map((item) => `${item.label}: ${item.value}`).join("\n"),
-    });
-  };
+  const receiptData: ReceiptData | null = receipt
+    ? {
+        operationLabel: t.receiptOperationType,
+        operation: t.receiptServiceOperation,
+        dateText: formatReceiptDate(receipt.paidAt, language),
+        amountLabel: t.receiptAmount,
+        amount: receipt.amount.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        currency: "USD",
+        groups: [
+          [
+            { label: t.commonService, value: providerName },
+            { label: t.referenceLabel, value: receipt.reference },
+          ],
+          [
+            { label: t.receiptDate, value: formatReceiptDate(receipt.paidAt, language) },
+            { label: t.commonFolio, value: receipt.folio },
+          ],
+        ],
+      }
+    : null;
 
   switch (step) {
     case "reference":
@@ -112,7 +130,7 @@ export default function ServicePaymentFlow({ t, language, availableUsdBalance, o
         />
       );
     case "receipt":
-      return <ServiceReceiptScreen t={t} summary={receiptSummary} onBack={pop} onShare={share} />;
+      return receiptData ? <ServiceReceiptScreen t={t} data={receiptData} onBack={pop} /> : null;
     case "failed":
       return (
         <ServicePaymentFailedScreen

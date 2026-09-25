@@ -13,12 +13,13 @@ import {
   ShieldOff,
   Eye,
   EyeOff,
-  Power
+  Lock,
+  LockOpen,
 } from "lucide-react-native";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { Clipboard as ClipboardIcon } from "lucide-react-native";
 import { styles } from "../theme/styles";
-import { GLASS_BORDER, GLASS_SURFACE_STRONG, PURPLE } from "../theme/colors";
+import { GLASS_BORDER, PURPLE, colors } from "../theme/colors";
 import { ActivityItem, BalanceHeader } from "../components/remeza";
 import { spacing, screenPadding } from "../theme/spacing";
 
@@ -132,6 +133,12 @@ export default function DashboardView({
         onRequestClose={() => setShowSecureCodeModal(false)}
       >
         <View style={styles.modalOverlay}>
+          <ScrollView
+            style={dashboardStyles.modalScroll}
+            contentContainerStyle={dashboardStyles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{t.activateYourCard}</Text>
 
@@ -141,7 +148,7 @@ export default function DashboardView({
                 marginTop: 16,
                 padding: 16,
                 borderRadius: 12,
-                backgroundColor: GLASS_SURFACE_STRONG,
+                backgroundColor: "#1C1A47",
               }}
             >
               <Text style={styles.modalSubtitle}>{t.cardNumber}</Text>
@@ -157,6 +164,7 @@ export default function DashboardView({
                 keyboardType="number-pad"
                 maxLength={19}
                 style={styles.secureCodeInput}
+                placeholderTextColor={colors.text.placeholder}
                 placeholder="1234 5678 9012 3456"
               />
 
@@ -177,6 +185,7 @@ export default function DashboardView({
                 keyboardType="number-pad"
                 maxLength={5}
                 style={styles.secureCodeInput}
+                placeholderTextColor={colors.text.placeholder}
                 placeholder="MM/YY"
               />
 
@@ -193,6 +202,7 @@ export default function DashboardView({
                 maxLength={4}
                 secureTextEntry
                 style={styles.secureCodeInput}
+                placeholderTextColor={colors.text.placeholder}
                 placeholder="123"
               />
             </View>
@@ -210,6 +220,7 @@ export default function DashboardView({
               maxLength={6}
               secureTextEntry
               style={styles.secureCodeInput}
+                placeholderTextColor={colors.text.placeholder}
               placeholder="••••••"
             />
 
@@ -229,6 +240,7 @@ export default function DashboardView({
               <Text style={styles.cancelText}>{t.cancel}</Text>
             </Pressable>
           </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -239,6 +251,12 @@ export default function DashboardView({
         onRequestClose={() => setShowVirtualCardModal(false)}
       >
         <View style={styles.modalOverlay}>
+          <ScrollView
+            style={dashboardStyles.modalScroll}
+            contentContainerStyle={dashboardStyles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               {t.activateVirtualCard}
@@ -272,6 +290,7 @@ export default function DashboardView({
               keyboardType="number-pad"
               maxLength={10}
               style={styles.secureCodeInput}
+                placeholderTextColor={colors.text.placeholder}
               placeholder="DD/MM/YYYY"
             />
 
@@ -288,6 +307,7 @@ export default function DashboardView({
               maxLength={6}
               secureTextEntry
               style={styles.secureCodeInput}
+                placeholderTextColor={colors.text.placeholder}
               placeholder="••••••"
             />
 
@@ -309,6 +329,7 @@ export default function DashboardView({
               <Text style={styles.cancelText}>{t.cancel}</Text>
             </Pressable>
           </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -635,39 +656,29 @@ export default function DashboardView({
             </Text>
           </Pressable>
 
-          <Pressable
-            testID="dashboard-toggleCardActiveSwitch"
-            disabled={isFactoryInactive}
-            onPress={() => setIsCardActive(!isCardActive)}
-            style={[
-              styles.switchTrack,
-              {
-                backgroundColor:
-                  isCardActive && !isFactoryInactive ? PURPLE : GLASS_BORDER,
-                opacity: isFactoryInactive ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Power
-              size={18}
-              color={isCardActive && !isFactoryInactive ? "#fff" : "#6B7280"}
+          {!isFactoryInactive ? (
+            <Pressable
+              testID="dashboard-blockCardButton"
+              accessibilityRole="button"
+              accessibilityLabel={isCardActive ? t.blockCardButton : t.unblockCardButton}
+              onPress={() => setIsCardActive(!isCardActive)}
               style={{
-                position: "absolute",
-                left: isCardActive && !isFactoryInactive ? 31 : 8,
-                top: 6,
-                zIndex: 2,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
               }}
-            />
+            >
+              {isCardActive ? (
+                <Lock size={22} color="#6B7280" />
+              ) : (
+                <LockOpen size={22} color={PURPLE} />
+              )}
 
-            <View
-              style={[
-                styles.switchThumb,
-                {
-                  left: isCardActive && !isFactoryInactive ? 25 : 4,
-                },
-              ]}
-            />
-          </Pressable>
+              <Text style={styles.cardToggleText}>
+                {isCardActive ? t.blockCardButton : t.unblockCardButton}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <Text style={styles.sectionTitle}>{t.activity}</Text>
@@ -689,6 +700,15 @@ export default function DashboardView({
 }
 
 const dashboardStyles = StyleSheet.create({
+  /** Con el teclado abierto el modal deja de caber: se desplaza en lugar de recortarse */
+  modalScroll: {
+    flex: 1,
+    alignSelf: "stretch",
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   header: {
     paddingHorizontal: screenPadding,
     paddingTop: spacing.sm,

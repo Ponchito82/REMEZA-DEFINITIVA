@@ -52,6 +52,7 @@ import { dialCodeLabel, formatNationalPhone, isValidNationalPhone, toE164 } from
 import { isValidPostalCode } from "../utils/postalCode";
 import { AddressValue } from "../hooks/useAddressCascade";
 import { useFormFocus } from "../hooks/useFormFocus";
+import { useHardwareBack } from "../hooks/useHardwareBack";
 import {
   isValidEmail,
   isWeakPasscode,
@@ -198,6 +199,18 @@ export default function RegisterSteps(props: Props) {
   } = props;
 
   const form = useFormFocus();
+
+  // Atras de Android = el boton de la pantalla: un paso atras. En el primer
+  // paso lo atiende el historial de App (login/welcome); mientras se envia el
+  // registro (paso 5) no hace nada.
+  useHardwareBack(() => {
+    if (regStep === 5) return true;
+    if (regStep >= 2 && regStep <= 4) {
+      setRegStep(regStep - 1);
+      return true;
+    }
+    return false;
+  });
 
   const addressCountry = isCountryCode(registerCountry) ? registerCountry : null;
 

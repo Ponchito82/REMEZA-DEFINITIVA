@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
-import { Truck, MapPin, Lock, CreditCard } from "lucide-react-native";
+import { MapPin, CreditCard } from "lucide-react-native";
 
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
@@ -9,11 +9,12 @@ import { spacing, screenPadding } from "../theme/spacing";
 import {
   Button,
   CloseButton,
-  GlassBanner,
+  DeliveryAnimation,
   GlassCard,
   IconCircle,
   ScreenHeader,
 } from "../components/ui";
+import { useHardwareBack } from "../hooks/useHardwareBack";
 import { ViewName } from "../types/app";
 
 type Props = {
@@ -42,6 +43,15 @@ export default function PhysicalCardView({
   handlePhysicalCardSubmit,
 }: Props) {
   const [step, setStep] = useState<Step>("address");
+
+  // Atras de Android: de la confirmacion vuelve a la direccion.
+  useHardwareBack(() => {
+    if (!physicalCardRequested && step === "confirm") {
+      setStep("address");
+      return true;
+    }
+    return false;
+  });
 
   const address = deliveryAddress || t.notAvailable;
 
@@ -101,15 +111,7 @@ export default function PhysicalCardView({
                 {address}
               </Text>
             </View>
-
-            <Lock size={16} color={colors.text.placeholder} strokeWidth={2} />
           </GlassCard>
-
-          <GlassBanner
-            testID="physicalCard-kycNotice"
-            tone="info"
-            message={t.deliveryAddressKycNote}
-          />
 
           <Button
             testID="physicalCard-confirmButton"
@@ -122,7 +124,7 @@ export default function PhysicalCardView({
 
       {physicalCardRequested ? (
         <View style={styles.status}>
-          <IconCircle icon={Truck} size={72} glow />
+          <DeliveryAnimation testID="physicalCard-deliveryAnimation" style={styles.animation} />
 
           <Text style={[typography.h2, styles.statusTitle]}>{t.deliveryInProgress}</Text>
           <Text style={[typography.body, styles.statusText]}>{t.deliveryMessage}</Text>
@@ -197,6 +199,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     marginTop: spacing.xxl,
+  },
+  animation: {
+    marginBottom: spacing.sm,
   },
   statusTitle: {
     marginTop: spacing.lg,

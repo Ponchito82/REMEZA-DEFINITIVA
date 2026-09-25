@@ -1,10 +1,19 @@
 import { useCallback, useState } from "react";
 
+import { useHardwareBack } from "./useHardwareBack";
+
 /**
  * Pila de pasos para los flujos de varias pantallas. `pop` en la raiz llama a
  * `onExit`, asi que el boton de atras de la primera pantalla sale del flujo.
+ *
+ * El atras de Android hace lo mismo que el boton de la pantalla: `pop`. Con
+ * `blockBack` se ignora en los pasos donde hay una operacion en curso.
  */
-export function useStepStack<Step extends string>(initial: Step, onExit: () => void) {
+export function useStepStack<Step extends string>(
+  initial: Step,
+  onExit: () => void,
+  blockBack?: (step: Step) => boolean,
+) {
   const [stack, setStack] = useState<Step[]>([initial]);
 
   const push = useCallback((step: Step) => setStack((prev) => [...prev, step]), []);
@@ -26,5 +35,13 @@ export function useStepStack<Step extends string>(initial: Step, onExit: () => v
     setStack((prev) => prev.slice(0, -1));
   }, [stack.length, onExit]);
 
-  return { step: stack[stack.length - 1], push, replace, reset, pop };
+  const step = stack[stack.length - 1];
+
+  useHardwareBack(() => {
+    if (blockBack?.(step)) return true;
+    pop();
+    return true;
+  });
+
+  return { step, push, replace, reset, pop };
 }

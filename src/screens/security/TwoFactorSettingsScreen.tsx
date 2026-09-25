@@ -1,13 +1,11 @@
 import React from "react";
 import {
   CircleCheck,
-  FileText,
   Fingerprint,
   KeyRound,
   Mail,
   MessageSquareMore,
   ShieldCheck,
-  Smartphone,
 } from "lucide-react-native";
 
 import { InfoCard, ListRow, StatusScreen } from "../../components/ui";
@@ -24,8 +22,8 @@ type Props = {
 };
 
 /**
- * Seguridad: verificacion en dos pasos (pantalla 57). Los metodos (app, SMS,
- * correo, codigos de respaldo) se muestran como informativos: el PDF no trae
+ * Seguridad: verificacion en dos pasos (pantalla 57). Los metodos (SMS y
+ * correo) se muestran como informativos: el PDF no trae
  * pantallas para configurarlos. Se suman dos accesos: cambiar el codigo de
  * acceso (58) y biometria (10).
  */
@@ -66,7 +64,6 @@ export default function TwoFactorSettingsScreen({
         selected={twoFactorEnabled}
         onToggle={onToggleTwoFactor}
       />
-      <ListRow bareIcon icon={Smartphone} title={t.authApp} subtitle={t.authAppDesc} right="none" />
       <ListRow
         bareIcon
         icon={MessageSquareMore}
@@ -79,13 +76,6 @@ export default function TwoFactorSettingsScreen({
         icon={Mail}
         title={t.twoFactorEmail}
         subtitle={t.twoFactorEmailDesc}
-        right="none"
-      />
-      <ListRow
-        bareIcon
-        icon={FileText}
-        title={t.backupCodes}
-        subtitle={t.backupCodesDesc}
         right="none"
       />
       <ListRow
