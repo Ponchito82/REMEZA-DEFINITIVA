@@ -4,7 +4,7 @@ import { colors } from "../../theme/colors";
 import { fontFamily } from "../../theme/typography";
 import { radius } from "../../theme/radius";
 
-export type BadgeVariant = "virtual" | "physical" | "remittance" | "trading";
+export type BadgeVariant = "virtual" | "physical" | "remittance";
 
 type Props = {
   label: string;

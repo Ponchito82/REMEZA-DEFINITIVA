@@ -24,11 +24,14 @@ const goToSendMoneyConfirmation = async (amount) => {
 };
 
 describe("Confirmación de envío de dinero (SendMoneyConfirmationView) [backend]", () => {
-  it("tras un envío exitoso, muestra el mensaje de confirmación", async () => {
+  it("confirmar procesa el envío y muestra la transferencia exitosa con su folio", async () => {
     await goToSendMoneyConfirmation("100");
 
-    await expect(byId("sendMoneyConfirmation-successMessage")).toBeDisplayed();
-    await expect($('//*[@text="Money sent successfully."]')).toBeDisplayed();
+    await clickWithRetry("sendMoneyConfirmation-confirmButton");
+
+    await byId("transferSuccess.receiptButton").waitForDisplayed({ timeout: 15000 });
+    await expect($('//*[@text="Transfer successful"]')).toBeDisplayed();
+    await expect(byId("transferSuccess.folio")).toBeDisplayed();
   });
 
   it("el botón de regresar vuelve al Dashboard", async () => {
@@ -39,12 +42,16 @@ describe("Confirmación de envío de dinero (SendMoneyConfirmationView) [backend
     await byId("dashboard-menuButton").waitForDisplayed({ timeout: 10000 });
   });
 
-  it("confirmar de nuevo con el saldo ya reducido muestra 'Insufficient funds.'", async () => {
+  it("'Ver comprobante' abre el comprobante con el mismo folio", async () => {
     await goToSendMoneyConfirmation("2400");
 
     await clickWithRetry("sendMoneyConfirmation-confirmButton");
+    await byId("transferSuccess.receiptButton").waitForDisplayed({ timeout: 15000 });
+    const folio = await byId("transferSuccess.folio").getText();
 
-    await byId("sendMoneyConfirmation-errorMessage").waitForDisplayed({ timeout: 10000 });
-    await expect($('//*[@text="Insufficient funds."]')).toBeDisplayed();
+    await clickWithRetry("transferSuccess.receiptButton");
+
+    await byId("transferReceipt.shareButton").waitForDisplayed({ timeout: 10000 });
+    await expect(byId("transferReceipt.folio")).toHaveText(folio);
   });
 });

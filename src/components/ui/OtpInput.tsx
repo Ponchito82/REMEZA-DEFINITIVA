@@ -7,7 +7,7 @@ import {
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from "react-native";
-import { colors } from "../../theme/colors";
+import { colors, tokens } from "../../theme/colors";
 import { fontFamily, typography } from "../../theme/typography";
 import { spacing } from "../../theme/spacing";
 
@@ -21,6 +21,8 @@ type Props = {
   /** Prefijo de los testID: cada caja queda como `${testID}-<indice>` */
   testID?: string;
   style?: ViewStyle;
+  /** Bordes en rojo: codigo rechazado */
+  error?: boolean;
 };
 
 const BOX_WIDTH = 48;
@@ -43,6 +45,7 @@ export default function OtpInput({
   size = "md",
   testID,
   style,
+  error = false,
 }: Props) {
   const isLarge = size === "lg";
   const inputs = useRef<(TextInput | null)[]>([]);
@@ -95,6 +98,7 @@ export default function OtpInput({
             styles.box,
             isLarge && styles.boxLarge,
             !!value[index] && styles.boxFilled,
+            error && styles.boxError,
           ]}
         />
       ))}
@@ -129,5 +133,8 @@ const styles = StyleSheet.create({
   },
   boxFilled: {
     borderColor: colors.primary,
+  },
+  boxError: {
+    borderColor: tokens.danger,
   },
 });

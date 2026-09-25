@@ -1,11 +1,4 @@
-const {
-  byId,
-  clickWithRetry,
-  hideKeyboard,
-  restartApp,
-  scrollToId,
-  selectFromSearchable,
-} = require("../helpers");
+const { byId, clickWithRetry, restartApp } = require("../helpers");
 
 const TEST_PHONE = "+525538068807";
 const TEST_CODE = "123456";
@@ -24,7 +17,7 @@ const goToPhysicalCard = async () => {
   await byId("physicalCard-backButton").waitForDisplayed({ timeout: 10000 });
 };
 
-describe("Solicitud de tarjeta física (PhysicalCardView) [backend]", () => {
+describe("Confirmación de tarjeta física (PhysicalCardView) [backend]", () => {
   beforeEach(async () => {
     await goToPhysicalCard();
   });
@@ -35,61 +28,32 @@ describe("Solicitud de tarjeta física (PhysicalCardView) [backend]", () => {
     await byId("dashboard-menuButton").waitForDisplayed({ timeout: 10000 });
   });
 
-  it("guardar sin llenar la dirección no avanza y pide el código postal", async () => {
-    await clickWithRetry("physicalCard-saveAddressButton");
+  it("muestra la dirección del KYC sin campos editables", async () => {
+    await expect(byId("physicalCard-addressValue")).toBeDisplayed();
+    await expect(byId("physicalCard-kycNotice")).toBeDisplayed();
+    await expect(byId("physicalCard-zipCodeInput")).not.toBeExisting();
+    await expect(byId("physicalCard-streetInput")).not.toBeExisting();
+  });
 
-    await byId("physicalCard-validationBanner").waitForDisplayed({ timeout: 5000 });
+  it("confirmar la tarjeta abre primero la confirmación de la solicitud", async () => {
+    await clickWithRetry("physicalCard-confirmButton");
+
+    await expect($('//*[@text="Confirm your request"]')).toBeDisplayed();
     await expect($('//*[@text="Delivery in progress"]')).not.toBeDisplayed();
   });
 
-  it("Estado queda bloqueado hasta que el código postal es válido", async () => {
-    await expect(await byId("physicalCard-stateSelect")).toBeDisabled();
+  it("'Go back' regresa a la dirección sin solicitar la tarjeta", async () => {
+    await clickWithRetry("physicalCard-confirmButton");
+    await clickWithRetry("physicalCard-goBackButton");
 
-    await byId("physicalCard-zipCodeInput").setValue("78701");
-    await hideKeyboard();
-
-    await expect(await byId("physicalCard-stateSelect")).toBeEnabled();
+    await expect(byId("physicalCard-confirmButton")).toBeDisplayed();
   });
 
-  it("Ciudad queda bloqueada hasta que hay un Estado seleccionado", async () => {
-    await byId("physicalCard-zipCodeInput").setValue("78701");
-    await hideKeyboard();
-
-    await expect(await byId("physicalCard-citySelect")).toBeDisabled();
-
-    await selectFromSearchable("physicalCard-stateSelect", "TX", "Texas");
-
-    await expect(await byId("physicalCard-citySelect")).toBeEnabled();
-  });
-
-  it("con la dirección llena (ZIP de Estados Unidos), guarda y muestra el resumen", async () => {
-    await byId("physicalCard-zipCodeInput").setValue("78701");
-    await hideKeyboard();
-
-    await selectFromSearchable("physicalCard-countrySelect", "US", "United");
-    await selectFromSearchable("physicalCard-stateSelect", "TX", "Texas");
-    await selectFromSearchable("physicalCard-citySelect", "Austin", "Austin");
-
-    await (await scrollToId("physicalCard-streetInput")).setValue("Congress Ave");
-    await (await scrollToId("physicalCard-exteriorNumberInput")).setValue("1600");
-    await hideKeyboard();
-
-    await clickWithRetry("physicalCard-saveAddressButton");
+  it("aceptar la confirmación muestra la entrega en proceso", async () => {
+    await clickWithRetry("physicalCard-confirmButton");
+    await clickWithRetry("physicalCard-requestButton");
 
     await expect($('//*[@text="Delivery in progress"]')).toBeDisplayed();
-    await expect($('//*[contains(@text,"Congress Ave")]')).toBeDisplayed();
-  });
-
-  it("cambiar de Estado limpia la Ciudad elegida", async () => {
-    await byId("physicalCard-zipCodeInput").setValue("78701");
-    await hideKeyboard();
-
-    await selectFromSearchable("physicalCard-stateSelect", "TX", "Texas");
-    await selectFromSearchable("physicalCard-citySelect", "Austin", "Austin");
-    await expect(await byId("physicalCard-citySelect")).toHaveText("Austin");
-
-    await selectFromSearchable("physicalCard-stateSelect", "CA", "California");
-
-    await expect(await byId("physicalCard-citySelect")).not.toHaveText("Austin");
+    await expect(byId("physicalCard-shippedTo")).toBeDisplayed();
   });
 });

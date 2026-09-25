@@ -23,7 +23,12 @@ type Props = {
   language: Language;
   label?: string;
   country: CountryCode;
-  onCountryChange: (country: CountryCode) => void;
+  onCountryChange?: (country: CountryCode) => void;
+  /**
+   * Fija la lada: el selector deja de abrirse y se ignora la deteccion por
+   * "+". Quien envia es de EE. UU. y quien recibe, de Mexico.
+   */
+  lockCountry?: boolean;
   digits: string;
   onDigitsChange: (digits: string) => void;
   error?: string;
@@ -45,6 +50,7 @@ export default function PhoneField({
   label,
   country,
   onCountryChange,
+  lockCountry = false,
   digits,
   onDigitsChange,
   error,
@@ -56,11 +62,11 @@ export default function PhoneField({
   const [isPickerOpen, setPickerOpen] = useState(false);
 
   const handleChangeText = (text: string) => {
-    const detected = detectCountryFromInput(text);
+    const detected = lockCountry ? null : detectCountryFromInput(text);
     const effectiveCountry = detected ?? country;
 
     if (detected && detected !== country) {
-      onCountryChange(detected);
+      onCountryChange?.(detected);
     }
 
     onDigitsChange(extractNationalDigits(text, effectiveCountry));
@@ -73,13 +79,14 @@ export default function PhoneField({
       <View style={styles.row}>
         <Pressable
           testID={testID ? `${testID}-countryButton` : undefined}
-          accessibilityRole="button"
-          accessibilityLabel={t.selectCountry}
+          accessibilityRole={lockCountry ? undefined : "button"}
+          accessibilityLabel={lockCountry ? dialCodeLabel(country) : t.selectCountry}
+          disabled={lockCountry}
           onPress={() => setPickerOpen(true)}
-          style={({ pressed }) => [styles.selector, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.selector, pressed && !lockCountry && styles.pressed]}
         >
           <Text style={typography.bodyStrong}>{dialCodeLabel(country)}</Text>
-          <ChevronDown size={14} color={colors.text.secondary} />
+          {lockCountry ? null : <ChevronDown size={14} color={colors.text.secondary} />}
         </Pressable>
 
         <TextField
@@ -101,7 +108,7 @@ export default function PhoneField({
       </View>
 
       <OptionSheet
-        visible={isPickerOpen}
+        visible={isPickerOpen && !lockCountry}
         onClose={() => setPickerOpen(false)}
         title={t.selectCountry}
         icon={Globe}
@@ -111,7 +118,7 @@ export default function PhoneField({
         }))}
         value={country}
         onSelect={(next) => {
-          if (isCountryCode(next)) onCountryChange(next);
+          if (isCountryCode(next)) onCountryChange?.(next);
           setPickerOpen(false);
         }}
         testID={testID ? `${testID}-countryPicker` : undefined}

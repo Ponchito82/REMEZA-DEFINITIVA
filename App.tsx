@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Animated, Pressable, Text, StyleSheet } from "react-native";
+import { Animated, Pressable, Share, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
@@ -7,12 +7,10 @@ import { ScreenBackground } from "./src/components/ui";
 import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/colors";
 
 import { translations } from "./src/i18n/translations";
-import { Language, TransactionsFilter, ViewName } from "./src/types/app";
-import { styles } from "./src/theme/styles";
+import { Beneficiary, Language, Transaction, TransactionsFilter, ViewName } from "./src/types/app";
 
 import ComponentsShowcaseScreen from "./src/screens/ComponentsShowcaseScreen";
 import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScreen";
-import DisputeOptionsScreen from "./src/screens/DisputeOptionsScreen";
 import TwoStepVerificationScreen from "./src/screens/TwoStepVerificationScreen";
 import SecurityAlertScreen from "./src/screens/SecurityAlertScreen";
 import WelcomeScreen from "./src/screens/WelcomeScreen";
@@ -24,15 +22,47 @@ import KycView from "./src/screens/KycView";
 
 import DrawerMenu from "./src/components/DrawerMenu";
 import ProfileView from "./src/screens/ProfileView";
+import type { ProfileTarget } from "./src/screens/ProfileView";
+import NotificationSettingsScreen from "./src/screens/NotificationSettingsScreen";
+import DisputeScreen from "./src/screens/DisputeScreen";
+import DisputeTrackingScreen from "./src/screens/DisputeTrackingScreen";
+import TransferHistoryScreen from "./src/screens/TransferHistoryScreen";
+import BeneficiaryListScreen from "./src/screens/beneficiaries/BeneficiaryListScreen";
+import ConfirmBeneficiaryScreen from "./src/screens/beneficiaries/ConfirmBeneficiaryScreen";
+import BeneficiaryAddedScreen from "./src/screens/beneficiaries/BeneficiaryAddedScreen";
+import BeneficiaryDetailScreen from "./src/screens/beneficiaries/BeneficiaryDetailScreen";
+import EditBeneficiaryScreen from "./src/screens/beneficiaries/EditBeneficiaryScreen";
+import DeleteBeneficiaryScreen from "./src/screens/beneficiaries/DeleteBeneficiaryScreen";
+import {
+    TransferFailedScreen,
+    TransferProcessingScreen,
+    TransferReceiptScreen,
+    TransferSuccessScreen,
+} from "./src/screens/transfer/TransferScreens";
+import type { TransferSummary } from "./src/screens/transfer/TransferDetails";
+import SupportFlow from "./src/flows/SupportFlow";
+import type { SupportEntry } from "./src/flows/SupportFlow";
+import BankAccountFlow from "./src/flows/BankAccountFlow";
+import SecurityFlow from "./src/flows/SecurityFlow";
+import RecoveryFlow from "./src/flows/RecoveryFlow";
+import ServicePaymentFlow from "./src/flows/ServicePaymentFlow";
+import CardControlsFlow from "./src/flows/CardControlsFlow";
+import type { CardEntry } from "./src/flows/CardControlsFlow";
+import { MOCK_BENEFICIARIES } from "./src/mocks/remeza";
+import { submitTransfer } from "./src/services/transfers";
+import { bankFromClabe } from "./src/utils/bank";
+import { formatMxPhone } from "./src/utils/beneficiary";
+import { formatDateTime } from "./src/utils/date";
 import TransactionsView from "./src/screens/TransactionsView";
 import PhysicalCardView from "./src/screens/PhysicalCardView";
-import TradingView from "./src/screens/TradingView";
 import BeneficiariesView from "./src/screens/BeneficiariesView";
 import SendMoneyView from "./src/screens/SendMoneyView";
-import RemittanceDetail from "./src/screens/RemittanceDetail";
+import TransactionDetailView from "./src/screens/TransactionDetailView";
+import AppealView from "./src/screens/AppealView";
+import LogoutConfirmScreen from "./src/screens/LogoutConfirmScreen";
 import SendMoneyConfirmationView from "./src/screens/SendMoneyConfirmationView";
 import { AddressDetail, EMPTY_ADDRESS_DETAIL } from "./src/components/AddressFields";
-import { CountryCode } from "./src/services/geo";
+import { CountryCode, stateNameByCode } from "./src/services/geo";
 import {
     UnauthorizedReason,
     clearSession,
@@ -48,8 +78,8 @@ function AppContent() {
 
     const [view, setView] = useState<ViewName>("welcome");
     const [regStep, setRegStep] = useState(1);
-    const [authToken, setAuthToken] = useState<string | null>(null);
-    const [customerId, setCustomerId] = useState<string | null>(null);
+    const [_authToken, setAuthToken] = useState<string | null>(null);
+    const [_customerId, setCustomerId] = useState<string | null>(null);
     const [sessionEndedReason, setSessionEndedReason] = useState<UnauthorizedReason | null>(null);
 
     const handleLoginSuccess = (
@@ -64,6 +94,13 @@ function AppContent() {
     };
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    /** Pantalla a la que vuelve "Cancelar" en la confirmacion de cierre de sesion */
+    const [logoutReturnView, setLogoutReturnView] = useState<ViewName>("dashboard");
+    const requestLogout = () => {
+        setLogoutReturnView(view);
+        setView("logoutConfirm");
+    };
     const [isCardActive, setIsCardActive] = useState(true);
     const [isShowcaseOpen, setIsShowcaseOpen] = useState(false);
 
@@ -91,16 +128,6 @@ function AppContent() {
         setCustomerId(null);
     }, [view]);
 
-    useEffect(() => {
-        if (
-            view === "welcome" ||
-            view === "login" ||
-            view === "register" ||
-            view === "forgotAccessCode"
-        )
-            return;
-        verifySession();
-    }, [view]);
 
     const [registerPhone, setRegisterPhone] = useState("");
     const [registerPhoneCountry, setRegisterPhoneCountry] = useState<CountryCode>("US");
@@ -109,9 +136,6 @@ function AppContent() {
     const patchRegisterAddressDetail = (patch: Partial<AddressDetail>) =>
         setRegisterAddressDetail((prev) => ({ ...prev, ...patch }));
 
-    const [physicalAddressDetail, setPhysicalAddressDetail] = useState<AddressDetail>(EMPTY_ADDRESS_DETAIL);
-    const patchPhysicalAddressDetail = (patch: Partial<AddressDetail>) =>
-        setPhysicalAddressDetail((prev) => ({ ...prev, ...patch }));
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [registerAccessCode, setRegisterAccessCode] = useState("");
 
@@ -136,101 +160,115 @@ function AppContent() {
     const [identificationFrontFile, setIdentificationFrontFile] = useState<string | null>(null);
     const [identificationBackFile, setIdentificationBackFile] = useState<string | null>(null);
 
-    const [profileFullName] = useState("");
-    const [profileEmail, setProfileEmail] = useState("");
-    const [profileAddress, setProfileAddress] = useState("");
-    const [profileSaved, setProfileSaved] = useState(false);
-    const handleProfileSave = () => { setProfileSaved(true); };
+    // El perfil es de solo lectura: se arma con los datos que la persona dio en
+    // el KYC del registro y no hay forma de editarlos desde la app.
+    const profileFullName = [registerFirstName, registerPaternalLastName, registerMaternalLastName]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(" ");
+    const profilePhone = registerPhone.length > 0 ? toE164(registerPhone, registerPhoneCountry) : "";
+    const profileAddress = [
+        [registerAddressDetail.exteriorNumber, registerAddressDetail.street].filter(Boolean).join(" "),
+        registerAddressDetail.interiorNumber ? `Apt ${registerAddressDetail.interiorNumber}` : "",
+        registerCity,
+        [registerState ? stateNameByCode("US", registerState) : "", registerZipCode]
+            .filter(Boolean)
+            .join(" "),
+    ]
+        .filter(Boolean)
+        .join(", ");
 
-    const [physicalAddress1, setPhysicalAddress1] = useState("");
-    const [physicalAddress2, setPhysicalAddress2] = useState("");
-    const [physicalCity, setPhysicalCity] = useState("");
-    const [physicalState, setPhysicalState] = useState("");
-    const [physicalZip, setPhysicalZip] = useState("");
-    const [physicalCountry, setPhysicalCountry] = useState("");
     const [physicalCardRequested, setPhysicalCardRequested] = useState(false);
 
-    const allTransactions = [
+    const [transactionRecords, setTransactionRecords] = useState<Transaction[]>(() => [
         {
             id: "1",
             type: "virtual",
-            label: t.zelleDeposit,
+            labelKey: "zelleDeposit",
+            label: "Zelle Deposit",
             amount: "+$500.00",
+            amountUsd: 500,
             date: "MAR 02, 2026",
-            color: "#16A34A",
+            status: "completed",
+            provider: "blackpay",
+            reference: "RMZ-000001",
         },
         {
             id: "2",
             type: "physical",
             label: "POS Purchase",
             amount: "-$46.20",
+            amountUsd: 46.2,
             date: "MAR 05, 2026",
-            color: "#EF4444",
+            status: "completed",
+            provider: "blackpay",
+            reference: "RMZ-000002",
         },
         {
             id: "3",
             type: "remittance",
-            label: "Mario Diaz / 1500 MXN",
-            amount: "$100.00",
+            label: "Mario Diaz / 1,725.00 MXN",
+            amount: "-$100.00",
+            amountUsd: 100,
             date: "MAR 05, 2026",
-            color: "#EF4444",
+            status: "pending",
+            provider: "remeza",
+            reference: "RMZ-000003",
+            mxnAmount: 1725,
+            exchangeRate: 17.25,
+            beneficiary: "Mario Diaz",
         },
-        {
-            id: "4",
-            type: "trading",
-            label: "Wallet Transfer",
-            amount: "-$120.00",
-            date: "MAR 08, 2026",
-            color: "#EF4444",
-        },
-    ];
+    ]);
+
+    const allTransactions = useMemo(
+        () =>
+            transactionRecords.map((tx) => ({
+                ...tx,
+                label: tx.labelKey ? (t as any)[tx.labelKey] : tx.label,
+            })),
+        [transactionRecords, t]
+    );
 
     const [transactionsFilter, setTransactionsFilter] = useState<TransactionsFilter>("all");
     const filteredTransactions = useMemo(() => {
         return transactionsFilter === "all"
             ? allTransactions
             : allTransactions.filter((item) => item.type === transactionsFilter);
-    }, [transactionsFilter, t]);
+    }, [transactionsFilter, allTransactions]);
 
-    const [tradingKycStarted, setTradingKycStarted] = useState(false);
-    const [tradingKycVerified, setTradingKycVerified] = useState(false);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+    const selectedTransaction = allTransactions.find((tx) => tx.id === selectedTransactionId);
 
-    const [walletId] = useState("WLT-9X7A-32BC-4410");
-    const [walletFunds, setWalletFunds] = useState(3250.75);
+    const openTransaction = (id: string) => {
+        setSelectedTransactionId(id);
+        setView("transactionDetail");
+    };
 
-    const [destinationWalletId, setDestinationWalletId] = useState("");
-    const [transferAmount, setTransferAmount] = useState("");
+    // Apelaciones enviadas, por id de movimiento: motivo elegido.
+    const [appeals, setAppeals] = useState<Record<string, string>>({});
 
-    const [transferSubmitted, setTransferSubmitted] = useState(false);
+    const handleSubmitAppeal = (id: string, reason: string) => {
+        setAppeals((prev) => ({ ...prev, [id]: reason }));
+    };
 
-    const handleTradingTransfer = () => {
-        const amount = Number(transferAmount);
+    const handleCancelTransaction = (id: string) => {
+        const target = transactionRecords.find((tx) => tx.id === id);
+        if (!target || target.status !== "pending") return;
 
-        if (!amount || amount <= 0 || amount > walletFunds || !destinationWalletId.trim()) {
-            return;
-        }
-
-        setWalletFunds((prev) => Number((prev - amount).toFixed(2)));
-        setTransferSubmitted(true);
-
-        setTransferAmount("");
-        setDestinationWalletId("");
+        setTransactionRecords((prev) =>
+            prev.map((tx) => (tx.id === id ? { ...tx, status: "cancelled" } : tx))
+        );
+        setAvailableUsdBalance((prev) => Number((prev + target.amountUsd).toFixed(2)));
     };
 
     const [beneficiaryFirstName, setBeneficiaryFirstName] = useState("");
     const [beneficiaryPaternalLastName, setBeneficiaryPaternalLastName] = useState("");
     const [beneficiaryMaternalLastName, setBeneficiaryMaternalLastName] = useState("");
     const [beneficiaryPhone, setBeneficiaryPhone] = useState("");
-    const [beneficiaryPhoneCountry, setBeneficiaryPhoneCountry] = useState<CountryCode>("MX");
     const [beneficiaryResidenceState, setBeneficiaryResidenceState] = useState("");
     const [beneficiaryResidenceCity, setBeneficiaryResidenceCity] = useState("");
     const [beneficiaryEmail, setBeneficiaryEmail] = useState("");
     const [beneficiaryClabe, setBeneficiaryClabe] = useState("");
-    const [beneficiarySaved, setBeneficiarySaved] = useState(false);
-
-    const handleBeneficiarySave = () => {
-        setBeneficiarySaved(true);
-    };
 
     const [availableUsdBalance, setAvailableUsdBalance] = useState(2450);
     const [sendAmountUsd, setSendAmountUsd] = useState("");
@@ -239,48 +277,92 @@ function AppContent() {
     const [sendMoneySuccess, setSendMoneySuccess] = useState(false);
     const [sendMoneyError, setSendMoneyError] = useState("");
 
-    type TransactionItem = {
-        id: string;
-        type: string;
-        label: string;
-        amount: string;
-        mxnAmount: string;
-        exchangeRate: string;
-        beneficiary: string;
-        date: string;
-        color: string;
-    };
-    const [item, setItem] = useState<TransactionItem | undefined>();
+    /** Beneficiarios del cliente. Mock hasta que exista el endpoint. */
+    const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(MOCK_BENEFICIARIES);
+    /** Beneficiario abierto en detalle, edicion, borrado o recien agregado */
+    const [activeBeneficiaryId, setActiveBeneficiaryId] = useState<string | null>(null);
+    const activeBeneficiary = beneficiaries.find((b) => b.id === activeBeneficiaryId);
 
-    const beneficiaries = [
-        {
-            id: "1",
-            fullName: "Juan Pérez",
-            phone: "+52 55 1234 5678",
-            city: "CDMX",
-            state: "CDMX",
-        },
-        {
-            id: "2",
-            fullName: "María López",
-            phone: "+52 81 5555 2222",
-            city: "Monterrey",
-            state: "Nuevo León",
-        },
-    ];
-
-    type Beneficiary = {
-        id: string;
-        fullName: string;
-        phone: string;
-        city: string;
-        state: string;
+    const clearBeneficiaryForm = () => {
+        setBeneficiaryFirstName("");
+        setBeneficiaryPaternalLastName("");
+        setBeneficiaryMaternalLastName("");
+        setBeneficiaryPhone("");
+        setBeneficiaryResidenceState("");
+        setBeneficiaryResidenceCity("");
+        setBeneficiaryEmail("");
+        setBeneficiaryClabe("");
     };
 
-    const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
+    /** Borrador del alta, para "Confirmar datos del beneficiario" (34) */
+    const beneficiaryDraft = {
+        fullName: [beneficiaryFirstName, beneficiaryPaternalLastName, beneficiaryMaternalLastName]
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .join(" "),
+        phone: formatMxPhone(beneficiaryPhone),
+        city: beneficiaryResidenceCity.trim(),
+        state: beneficiaryResidenceState.trim(),
+        email: beneficiaryEmail.trim() || undefined,
+        clabe: beneficiaryClabe,
+    };
+
+    /** El formulario (33) ya valido: pasa a confirmar (34). */
+    const handleBeneficiarySave = () => {
+        setView("beneficiaryConfirm");
+    };
+
+    // TODO API: alta del beneficiario.
+    const handleConfirmBeneficiary = () => {
+        const created: Beneficiary = {
+            id: `b-${Date.now()}`,
+            firstName: beneficiaryFirstName.trim(),
+            paternalLastName: beneficiaryPaternalLastName.trim(),
+            maternalLastName: beneficiaryMaternalLastName.trim() || undefined,
+            ...beneficiaryDraft,
+            favorite: false,
+            createdAt: Date.now(),
+        };
+        setBeneficiaries((prev) => [...prev, created]);
+        setActiveBeneficiaryId(created.id);
+        clearBeneficiaryForm();
+        setView("beneficiaryAdded");
+    };
+
+    // TODO API: actualizar el beneficiario.
+    const updateBeneficiary = (updated: Beneficiary) => {
+        setBeneficiaries((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    };
+
+    const toggleFavorite = (id: string, value?: boolean) => {
+        setBeneficiaries((prev) =>
+            prev.map((b) => (b.id === id ? { ...b, favorite: value ?? !b.favorite } : b))
+        );
+    };
+
+    // TODO API: borrar el beneficiario.
+    const deleteBeneficiary = (id: string) => {
+        setBeneficiaries((prev) => prev.filter((b) => b.id !== id));
+        if (selectedBeneficiaryId === id) setSelectedBeneficiaryId("");
+        setActiveBeneficiaryId(null);
+        setView("beneficiaries");
+    };
+
+    const sendToBeneficiary = (id: string) => {
+        setSelectedBeneficiaryId(id);
+        setView("sendMoney");
+    };
+
+    /** Envio en curso o recien hecho: lo muestran las pantallas 40 a 44 */
+    const [transferSummary, setTransferSummary] = useState<TransferSummary | null>(null);
+    const [transferFailReason, setTransferFailReason] = useState("");
 
     const amountToReceiveMxn = Number(sendAmountUsd || 0) * exchangeRate;
 
+    /**
+     * "Enviar" en la pantalla 13: valida y pasa a revisar (40). Todavia no se
+     * cobra nada; el cobro ocurre al confirmar.
+     */
     const handleSendMoney = () => {
         const amount = Number(sendAmountUsd);
 
@@ -296,10 +378,161 @@ function AppContent() {
             return;
         }
 
-        setAvailableUsdBalance((prev) => Number((prev - amount).toFixed(2)));
-        setSendMoneySuccess(true);
-
+        const beneficiary = beneficiaries.find((b) => b.id === selectedBeneficiaryId);
+        setTransferSummary({
+            beneficiaryName: beneficiary?.fullName ?? "",
+            bankName: bankFromClabe(beneficiary?.clabe),
+            clabe: beneficiary?.clabe,
+            amountUsd: amount,
+            mxnAmount: Number((amount * exchangeRate).toFixed(2)),
+            exchangeRate,
+            at: Date.now(),
+        });
         setView("sendMoneyConfirmation");
+    };
+
+    /** "Confirmar transferencia" (40): procesa (41) y termina en 42 o 44. */
+    const handleConfirmTransfer = async () => {
+        if (!transferSummary) return;
+        const amount = transferSummary.amountUsd;
+        setView("transferProcessing");
+
+        if (amount > availableUsdBalance) {
+            setTransferFailReason(t.insufficientFunds);
+            setView("transferFailed");
+            return;
+        }
+
+        const result = await submitTransfer(amount);
+        if (!result.ok) {
+            setTransferFailReason(t.transferErrorGeneric);
+            setView("transferFailed");
+            return;
+        }
+
+        const createdAt = Date.now();
+        const reference = `RMZ-${String(createdAt).slice(-6)}`;
+        const { mxnAmount, beneficiaryName } = transferSummary;
+
+        setAvailableUsdBalance((prev) => Number((prev - amount).toFixed(2)));
+        setTransactionRecords((prev) => [
+            {
+                id: `tx-${createdAt}`,
+                type: "remittance",
+                label: `${beneficiaryName} / ${mxnAmount.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })} MXN`,
+                amount: `-$${amount.toFixed(2)}`,
+                amountUsd: amount,
+                date: new Date(createdAt)
+                    .toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+                    .toUpperCase(),
+                status: "pending",
+                provider: "remeza",
+                reference,
+                createdAt,
+                mxnAmount,
+                exchangeRate: transferSummary.exchangeRate,
+                beneficiary: beneficiaryName,
+            },
+            ...prev,
+        ]);
+        setTransferSummary({ ...transferSummary, at: createdAt, reference });
+        setSendAmountUsd("");
+        setSendMoneySuccess(true);
+        setView("transferSuccess");
+    };
+
+    const shareTransferReceipt = () => {
+        if (!transferSummary) return;
+        const lines = [
+            t.receiptTitle,
+            `${t.beneficiary}: ${transferSummary.beneficiaryName}`,
+            transferSummary.bankName ? `${t.commonBank}: ${transferSummary.bankName}` : "",
+            `${t.amountSent}: $${transferSummary.amountUsd.toFixed(2)} USD`,
+            `${t.amountToReceiveMxn}: $${transferSummary.mxnAmount.toFixed(2)} MXN`,
+            `${t.dateTimeLabel}: ${formatDateTime(transferSummary.at, language)}`,
+            transferSummary.reference ? `${t.transactionFolio}: ${transferSummary.reference}` : "",
+        ];
+        Share.share({ message: lines.filter(Boolean).join("\n") });
+    };
+
+    /** Pago de servicios hecho (54): descuenta el saldo y lo registra. */
+    const handleServicePaid = (amount: number, concept: string, folio: string) => {
+        const paidAt = Date.now();
+        setAvailableUsdBalance((prev) => Number((prev - amount).toFixed(2)));
+        setTransactionRecords((prev) => [
+            {
+                id: `sp-${paidAt}`,
+                type: "virtual",
+                label: concept,
+                amount: `-$${amount.toFixed(2)}`,
+                amountUsd: amount,
+                date: new Date(paidAt)
+                    .toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+                    .toUpperCase(),
+                status: "completed",
+                provider: "remeza",
+                reference: folio,
+            },
+            ...prev,
+        ]);
+    };
+
+    /** Entradas a los flujos que se abren desde el Perfil o el Login */
+    const [supportEntry, setSupportEntry] = useState<SupportEntry>("live");
+    const [supportReturnView, setSupportReturnView] = useState<ViewName>("profile");
+    const [cardEntry, setCardEntry] = useState<CardEntry>("limits");
+    const [profileNotice, setProfileNotice] = useState("");
+
+    const openSupport = (entry: SupportEntry, returnTo: ViewName) => {
+        setSupportEntry(entry);
+        setSupportReturnView(returnTo);
+        setView("support");
+    };
+
+    /**
+     * Vistas que se usan sin sesion. La recuperacion de acceso (21 y la via por
+     * correo) y el soporte abierto desde ella tambien lo son: si se sondeara la
+     * sesion ahi, el 401 devolveria al Login con "Tu sesion expiro".
+     */
+    const isPublicView =
+        view === "welcome" ||
+        view === "login" ||
+        view === "register" ||
+        view === "forgotAccessCode" ||
+        view === "recoverAccess" ||
+        (view === "support" && supportReturnView === "recoverAccess");
+
+    useEffect(() => {
+        if (isPublicView) return;
+        verifySession();
+    }, [view, isPublicView]);
+
+    const handleProfileOpen = (target: ProfileTarget) => {
+        setProfileNotice("");
+        switch (target) {
+            case "security":
+                return setView("security");
+            case "notifications":
+                return setView("notifications");
+            case "paymentMethods":
+                return setView("bankAccounts");
+            case "helpCenter":
+                return openSupport("helpCenter", "profile");
+            case "support":
+                return openSupport("live", "profile");
+            case "cardLimits":
+            case "blockCard":
+            case "deleteCard":
+                setCardEntry(
+                    target === "cardLimits" ? "limits" : target === "blockCard" ? "block" : "delete"
+                );
+                return setView("cardControls");
+            case "logout":
+                return requestLogout();
+        }
     };
 
     const drawerWidth = 288;
@@ -350,7 +583,7 @@ function AppContent() {
                 useNativeDriver: true,
             }),
         ]).start();
-    }, [isMenuOpen]);
+    }, [isMenuOpen, overlayOpacity, drawerTranslateX]);
 
     const transactions = useMemo(
         () => [
@@ -380,8 +613,28 @@ function AppContent() {
         );
     }
 
+    /** Pantallas que en el PDF llevan las lineas de luz de las esquinas (31+) */
+    const hasStreaks =
+        view === "beneficiaries" ||
+        view === "beneficiaryForm" ||
+        view === "beneficiaryConfirm" ||
+        view === "beneficiaryAdded" ||
+        view === "beneficiaryDetail" ||
+        view === "beneficiaryEdit" ||
+        view === "beneficiaryDelete" ||
+        view === "sendMoney" ||
+        view === "sendMoneyConfirmation" ||
+        view === "transferProcessing" ||
+        view === "transferSuccess" ||
+        view === "transferReceipt" ||
+        view === "transferFailed" ||
+        view === "transactionDetail" ||
+        view === "cardControls" ||
+        view === "servicePayments" ||
+        view === "logoutConfirm";
+
     return (
-        <ScreenBackground>
+        <ScreenBackground streaks={hasStreaks}>
             {view === "welcome" && (
                 <WelcomeScreen t={t} language={language} setLanguage={setLanguage} setView={setView} />
             )}
@@ -391,7 +644,9 @@ function AppContent() {
                     t={t}
                     language={language}
                     setLanguage={setLanguage}
-                    setView={setView}
+                    setView={(next) =>
+                        setView(next === "forgotAccessCode" ? "recoverAccess" : next)
+                    }
                     setRegStep={setRegStep}
                     onLoginSuccess={handleLoginSuccess}
                     sessionEndedReason={sessionEndedReason}
@@ -506,13 +761,12 @@ function AppContent() {
                 <ProfileView
                     t={t}
                     setView={setView}
-                    profileFullName={profileFullName}
-                    profileEmail={profileEmail}
-                    setProfileEmail={setProfileEmail}
-                    profileAddress={profileAddress}
-                    setProfileAddress={setProfileAddress}
-                    profileSaved={profileSaved}
-                    handleProfileSave={handleProfileSave}
+                    fullName={profileFullName}
+                    email={registerEmail.trim()}
+                    phone={profilePhone}
+                    address={profileAddress}
+                    onOpen={handleProfileOpen}
+                    notice={profileNotice}
                 />
             )}
 
@@ -523,54 +777,37 @@ function AppContent() {
                     transactionsFilter={transactionsFilter}
                     setTransactionsFilter={setTransactionsFilter}
                     filteredTransactions={filteredTransactions}
+                    onSelectTransaction={openTransaction}
                 />
             )}
 
             {view === "physicalCard" && (
                 <PhysicalCardView
                     t={t}
-                    language={language}
                     setView={setView}
-                    physicalAddress1={physicalAddress1}
-                    setPhysicalAddress1={setPhysicalAddress1}
-                    physicalAddress2={physicalAddress2}
-                    setPhysicalAddress2={setPhysicalAddress2}
-                    physicalCity={physicalCity}
-                    setPhysicalCity={setPhysicalCity}
-                    physicalState={physicalState}
-                    setPhysicalState={setPhysicalState}
-                    physicalZip={physicalZip}
-                    setPhysicalZip={setPhysicalZip}
-                    physicalCountry={physicalCountry}
-                    setPhysicalCountry={setPhysicalCountry}
-                    physicalAddressDetail={physicalAddressDetail}
-                    setPhysicalAddressDetail={patchPhysicalAddressDetail}
+                    deliveryAddress={profileAddress}
                     physicalCardRequested={physicalCardRequested}
                     handlePhysicalCardSubmit={handlePhysicalCardSubmit}
                 />
             )}
 
-            {view === "trading" && (
-                <TradingView
+            {view === "beneficiaries" && (
+                <BeneficiaryListScreen
                     t={t}
-                    language={language}
-                    setView={setView}
-                    tradingKycStarted={tradingKycStarted}
-                    setTradingKycStarted={setTradingKycStarted}
-                    tradingKycVerified={tradingKycVerified}
-                    setTradingKycVerified={setTradingKycVerified}
-                    walletId={walletId}
-                    walletFunds={walletFunds}
-                    destinationWalletId={destinationWalletId}
-                    setDestinationWalletId={setDestinationWalletId}
-                    transferAmount={transferAmount}
-                    setTransferAmount={setTransferAmount}
-                    transferSubmitted={transferSubmitted}
-                    handleTradingTransfer={handleTradingTransfer}
+                    beneficiaries={beneficiaries}
+                    onBack={() => setView("dashboard")}
+                    onAdd={() => {
+                        clearBeneficiaryForm();
+                        setView("beneficiaryForm");
+                    }}
+                    onOpen={(id) => {
+                        setActiveBeneficiaryId(id);
+                        setView("beneficiaryDetail");
+                    }}
                 />
             )}
 
-            {view === "beneficiaries" && (
+            {view === "beneficiaryForm" && (
                 <BeneficiariesView
                     t={t}
                     language={language}
@@ -583,8 +820,6 @@ function AppContent() {
                     setBeneficiaryMaternalLastName={setBeneficiaryMaternalLastName}
                     beneficiaryPhone={beneficiaryPhone}
                     setBeneficiaryPhone={setBeneficiaryPhone}
-                    beneficiaryPhoneCountry={beneficiaryPhoneCountry}
-                    setBeneficiaryPhoneCountry={setBeneficiaryPhoneCountry}
                     beneficiaryResidenceState={beneficiaryResidenceState}
                     setBeneficiaryResidenceState={setBeneficiaryResidenceState}
                     beneficiaryResidenceCity={beneficiaryResidenceCity}
@@ -593,7 +828,6 @@ function AppContent() {
                     setBeneficiaryEmail={setBeneficiaryEmail}
                     beneficiaryClabe={beneficiaryClabe}
                     setBeneficiaryClabe={setBeneficiaryClabe}
-                    beneficiarySaved={beneficiarySaved}
                     handleBeneficiarySave={handleBeneficiarySave}
                 />
             )}
@@ -613,33 +847,22 @@ function AppContent() {
                     sendMoneySuccess={sendMoneySuccess}
                     sendMoneyError={sendMoneyError}
                     handleSendMoney={handleSendMoney}
+                    onOpenHistory={() => setView("transferHistory")}
                 />
             )}
 
-            {view === "sendMoneyConfirmation" && (
+            {view === "sendMoneyConfirmation" && transferSummary && (
                 <SendMoneyConfirmationView
                     t={t}
+                    language={language}
                     setView={setView}
-                    availableUsdBalance={availableUsdBalance}
-                    sendAmountUsd={sendAmountUsd}
-                    setSendAmountUsd={setSendAmountUsd}
-                    exchangeRate={exchangeRate}
-                    amountToReceiveMxn={amountToReceiveMxn}
-                    beneficiaries={beneficiaries}
-                    selectedBeneficiaryId={selectedBeneficiaryId}
-                    setSelectedBeneficiaryId={setSelectedBeneficiaryId}
-                    sendMoneySuccess={sendMoneySuccess}
-                    sendMoneyError={sendMoneyError}
-                    handleSendMoney={handleSendMoney}
+                    summary={transferSummary}
+                    handleSendMoney={handleConfirmTransfer}
                 />
             )}
 
             {view === "multiCurrency" && (
                 <MultiCurrencyAccountsScreen t={t} setView={setView} />
-            )}
-
-            {view === "disputeOptions" && (
-                <DisputeOptionsScreen t={t} setView={setView} />
             )}
 
             {view === "twoStepVerification" && (
@@ -650,22 +873,227 @@ function AppContent() {
                 <SecurityAlertScreen t={t} setView={setView} />
             )}
 
-            {view === "remittanceDetail" && (
-                <RemittanceDetail
+            {view === "transactionDetail" && (
+                <TransactionDetailView
                     t={t}
                     setView={setView}
-                    item={item}
+                    transaction={selectedTransaction}
+                    onCancelTransaction={handleCancelTransaction}
+                    appealed={!!(selectedTransactionId && appeals[selectedTransactionId])}
+                />
+            )}
+
+            {view === "appeal" && (
+                <AppealView
+                    t={t}
+                    setView={setView}
+                    transaction={selectedTransaction}
+                    submittedReason={selectedTransactionId ? appeals[selectedTransactionId] : undefined}
+                    onSubmitAppeal={handleSubmitAppeal}
+                />
+            )}
+
+            {view === "beneficiaryConfirm" && (
+                <ConfirmBeneficiaryScreen
+                    t={t}
+                    draft={beneficiaryDraft}
+                    onBack={() => setView("beneficiaryForm")}
+                    onConfirm={handleConfirmBeneficiary}
+                />
+            )}
+
+            {view === "beneficiaryAdded" && activeBeneficiary && (
+                <BeneficiaryAddedScreen
+                    t={t}
+                    beneficiary={activeBeneficiary}
+                    onSend={() => sendToBeneficiary(activeBeneficiary.id)}
+                    onToggleFavorite={() => toggleFavorite(activeBeneficiary.id)}
+                    onEdit={() => setView("beneficiaryEdit")}
+                    onDelete={() => setView("beneficiaryDelete")}
+                    onDone={() => setView("beneficiaries")}
+                    onAddAnother={() => {
+                        clearBeneficiaryForm();
+                        setView("beneficiaryForm");
+                    }}
+                />
+            )}
+
+            {view === "beneficiaryDetail" && activeBeneficiary && (
+                <BeneficiaryDetailScreen
+                    t={t}
+                    language={language}
+                    beneficiary={activeBeneficiary}
+                    onBack={() => setView("beneficiaries")}
+                    onSend={() => sendToBeneficiary(activeBeneficiary.id)}
+                    onToggleFavorite={(value) => toggleFavorite(activeBeneficiary.id, value)}
+                    onEdit={() => setView("beneficiaryEdit")}
+                    onDelete={() => setView("beneficiaryDelete")}
+                />
+            )}
+
+            {view === "beneficiaryEdit" && activeBeneficiary && (
+                <EditBeneficiaryScreen
+                    t={t}
+                    language={language}
+                    beneficiary={activeBeneficiary}
+                    onCancel={() => setView("beneficiaryDetail")}
+                    onSave={(updated) => {
+                        updateBeneficiary(updated);
+                        setView("beneficiaryDetail");
+                    }}
+                />
+            )}
+
+            {view === "beneficiaryDelete" && activeBeneficiary && (
+                <DeleteBeneficiaryScreen
+                    t={t}
+                    beneficiary={activeBeneficiary}
+                    onConfirm={() => deleteBeneficiary(activeBeneficiary.id)}
+                    onCancel={() => setView("beneficiaryDetail")}
+                />
+            )}
+
+            {view === "transferProcessing" && transferSummary && (
+                <TransferProcessingScreen t={t} language={language} summary={transferSummary} />
+            )}
+
+            {view === "transferSuccess" && transferSummary && (
+                <TransferSuccessScreen
+                    t={t}
+                    language={language}
+                    summary={transferSummary}
+                    onViewReceipt={() => setView("transferReceipt")}
+                    onDone={() => setView("dashboard")}
+                />
+            )}
+
+            {view === "transferReceipt" && transferSummary && (
+                <TransferReceiptScreen
+                    t={t}
+                    language={language}
+                    summary={transferSummary}
+                    onBack={() => setView("transferSuccess")}
+                    onShare={shareTransferReceipt}
+                />
+            )}
+
+            {view === "transferFailed" && transferSummary && (
+                <TransferFailedScreen
+                    t={t}
+                    language={language}
+                    summary={transferSummary}
+                    reason={transferFailReason}
+                    onRetry={() => setView("sendMoneyConfirmation")}
+                    onHome={() => setView("dashboard")}
+                />
+            )}
+
+            {view === "recoverAccess" && (
+                <RecoveryFlow
+                    t={t}
+                    onByPhone={() => setView("forgotAccessCode")}
+                    onSupport={() => openSupport("live", "recoverAccess")}
+                    onSignIn={() => setView("login")}
+                    onHome={() => setView("welcome")}
+                    onExit={() => setView("login")}
+                />
+            )}
+
+            {view === "support" && (
+                <SupportFlow
+                    t={t}
+                    language={language}
+                    entry={supportEntry}
+                    onExit={() => setView(supportReturnView)}
+                    onDispute={() => setView("dispute")}
+                />
+            )}
+
+            {view === "security" && (
+                <SecurityFlow
+                    t={t}
+                    onExit={() => setView("profile")}
+                    onHome={() => setView("dashboard")}
+                />
+            )}
+
+            {view === "notifications" && (
+                <NotificationSettingsScreen t={t} onExit={() => setView("profile")} />
+            )}
+
+            {view === "bankAccounts" && (
+                <BankAccountFlow t={t} language={language} onExit={() => setView("profile")} />
+            )}
+
+            {view === "cardControls" && (
+                <CardControlsFlow
+                    t={t}
+                    entry={cardEntry}
+                    onBlocked={() => setIsCardActive(false)}
+                    onRemoved={() => {
+                        setProfileNotice(t.cardRemoved);
+                        setView("profile");
+                    }}
+                    onExit={() => setView("profile")}
+                />
+            )}
+
+            {view === "servicePayments" && (
+                <ServicePaymentFlow
+                    t={t}
+                    language={language}
+                    availableUsdBalance={availableUsdBalance}
+                    onPaid={handleServicePaid}
+                    onExit={() => setView("dashboard")}
+                />
+            )}
+
+            {view === "dispute" && (
+                <DisputeScreen
+                    t={t}
+                    onBack={() => openSupport("helpCenter", supportReturnView)}
+                    onChoose={(option) => {
+                        if (option === "tracking") return setView("disputeTracking");
+                        setTransactionsFilter(option === "cancel" ? "remittance" : "all");
+                        setView("transactions");
+                    }}
+                />
+            )}
+
+            {view === "disputeTracking" && (
+                <DisputeTrackingScreen
+                    t={t}
+                    appealed={allTransactions.filter((tx) => appeals[tx.id])}
+                    onBack={() => setView("dispute")}
+                    onOpen={openTransaction}
+                />
+            )}
+
+            {view === "transferHistory" && (
+                <TransferHistoryScreen
+                    t={t}
+                    transactions={allTransactions}
+                    onBack={() => setView("sendMoney")}
+                    onOpen={openTransaction}
+                />
+            )}
+
+            {view === "logoutConfirm" && (
+                <LogoutConfirmScreen
+                    t={t}
+                    onConfirm={() => setView("login")}
+                    onCancel={() => setView(logoutReturnView)}
                 />
             )}
 
             <DrawerMenu
                 t={t}
-                language={language}
                 visible={isMenuOpen}
                 overlayOpacity={overlayOpacity}
                 drawerTranslateX={drawerTranslateX}
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
+                onLogout={requestLogout}
             />
 
             {__DEV__ ? (

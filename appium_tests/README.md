@@ -18,16 +18,14 @@ mensajes de error correctos.
 | `specs/beneficiaries.spec.js` | Alta de beneficiario (`handleBeneficiarySave`, sin validación ni fetch). No cubre listado/selección: esa UI vive en `SendMoneyView` (ver `sendMoney.spec.js`). |
 | `specs/forgotAccessCode.spec.js` | Flujo completo de recuperación de código: teléfono inválido, código débil/mismatch, reseteo exitoso y vuelta a Sign In. |
 | `specs/sendMoneyConfirmation.spec.js` | Pantalla de confirmación tras un envío exitoso, botón de regresar, y reenvío con saldo ya reducido (`Insufficient funds.`). |
-| `specs/profile.spec.js` | Edición de email/dirección y guardado (`handleProfileSave`, sin validación ni fetch). |
-| `specs/remittanceDetail.spec.js` | Detalle de una remesa, botón "Cancel operation" (solo `console.log`), y navegación de regreso. |
-| `specs/trading.spec.js` | **Bloqueado.** El item del drawer que navega a `trading` está comentado en `DrawerMenu.tsx` (líneas 53-56); no hay forma de llegar a la pantalla desde la UI. Casos en `it.skip`, mismo patrón que el caso de KYC bloqueado en `register.spec.js`. |
-| `specs/transactions.spec.js` | Listado de las 4 transacciones simuladas y filtro por tipo (virtual/physical/remittance/trading). |
+| `specs/profile.spec.js` | Perfil de solo lectura: muestra los datos del KYC, el aviso, y no expone campos editables ni botón de guardar. |
+| `specs/transactionDetail.spec.js` | Desglose de un movimiento de cualquier tipo, y cancelación de una remesa en proceso (confirmación, estado "Cancelled" y regreso al listado). |
+| `specs/transactions.spec.js` | Listado de las 3 transacciones simuladas, filtro por tipo (virtual/physical/remittance) y apertura del desglose. |
 | `specs/physicalCard.spec.js` | Solicitud de envío de tarjeta física nueva a una dirección (`handlePhysicalCardSubmit`, sin validación ni fetch). No confundir con la activación de tarjeta, que vive en `dashboard.spec.js`. |
 
 ### Notas de estos specs nuevos
 
 - **`forgotAccessCode.spec.js`**: `ForgotAccessCodeView.tsx` es la única pantalla de este batch sin `testID` en sus inputs/botones. Por instrucción del equipo no se tocó código de producción en este ticket, así que el spec selecciona por texto visible o por posición (`UiSelector().className("android.widget.EditText").instance(n)`). Si cambian los campos de esa pantalla, este spec es el primero en romperse.
-- **`remittanceDetail.spec.js`**: `RemittanceDetail.tsx` lee sus datos de `t.item.*` en vez de su propio prop `item` (que `App.tsx` nunca setea). Solo funciona porque `TransactionsView.tsx` muta el mismo objeto `t` compartido al tocar un item. El spec solo llega a esta pantalla pasando por `TransactionsView` — cualquier otro camino truena.
 - **`dashboard.spec.js`**: documenta un bug real (no corregido, solo probado): `handleActivateVirtualCard === handleActivateCard` en `App.tsx`, y ese handler valida `secureCode` (el campo del modal físico) en vez de `virtualSecureCode`. Activar la tarjeta virtual con datos válidos dejará el modal abierto sin activar nada.
 
 ### Casos marcados `[backend]`
@@ -38,7 +36,7 @@ como `10.0.2.2:8700`) y el usuario de prueba **`+525538068807` / `123456`** (Adr
 - `login.spec.js` → describe **"Login — backend real [backend]"** (2 casos)
 - `sendMoney.spec.js` → todos (dependen del login real)
 - `dashboard.spec.js`, `beneficiaries.spec.js`, `sendMoneyConfirmation.spec.js`, `profile.spec.js`,
-  `remittanceDetail.spec.js`, `transactions.spec.js`, `physicalCard.spec.js` → todos (todos navegan
+  `transactionDetail.spec.js`, `transactions.spec.js`, `physicalCard.spec.js` → todos (todos navegan
   primero por un login real para llegar al Dashboard)
 
 El resto de casos de `login.spec.js` y **todos** los de `register.spec.js` validan solo

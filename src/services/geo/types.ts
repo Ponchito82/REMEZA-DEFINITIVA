@@ -17,7 +17,13 @@ export type CountryDetection =
   | { status: "ambiguous"; candidates: CountryCode[] }
   | { status: "unknown" };
 
+export type PostalLookup =
+  | { status: "found"; stateCode: string; cities: string[] }
+  | { status: "notFound" };
+
 export interface GeoProvider {
+  /** Estado y ciudades que corresponden a un codigo postal de 5 digitos */
+  lookupPostalCode(country: CountryCode, postalCode: string): Promise<PostalLookup>;
   getStates(country: CountryCode): Promise<GeoOption[]>;
   getCities(country: CountryCode, stateCode: string): Promise<GeoOption[]>;
   getStateByPostalCode(country: CountryCode, postalCode: string): Promise<GeoOption | null>;

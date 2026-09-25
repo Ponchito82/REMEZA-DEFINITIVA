@@ -1,6 +1,7 @@
 import { MX_STATES } from "./mexico";
 import { US_STATES } from "./unitedStates";
 import { CountryCode, GeoOption, GeoProvider, StateRecord } from "./types";
+import { lookupUsZip } from "./usZipApi";
 
 export * from "./types";
 
@@ -41,6 +42,12 @@ function toOption(state: StateRecord): GeoOption {
 }
 
 export const localGeoProvider: GeoProvider = {
+  async lookupPostalCode(country, postalCode) {
+    const state = findStateRecord(country, postalCode);
+    if (!state) return { status: "notFound" };
+    return { status: "found", stateCode: state.code, cities: state.cities };
+  },
+
   async getStates(country) {
     return DATASETS[country].map(toOption);
   },
@@ -71,7 +78,30 @@ export const localGeoProvider: GeoProvider = {
   },
 };
 
-export const geo: GeoProvider = localGeoProvider;
+/**
+ * Para EE. UU. consulta la API de codigos postales; si no hay red o el
+ * servicio falla, cae al dataset local (estado por rango y ciudades del estado).
+ */
+export const geo: GeoProvider = {
+  ...localGeoProvider,
+
+  async lookupPostalCode(country, postalCode) {
+    const zip5 = postalCode.replace(/\D/g, "").slice(0, 5);
+
+    if (country === "US") {
+      const remote = await lookupUsZip(zip5);
+      if (remote.status === "found") {
+        const known = DATASETS.US.some((state) => state.code === remote.data.stateCode);
+        if (known) {
+          return { status: "found", stateCode: remote.data.stateCode, cities: remote.data.cities };
+        }
+      }
+      if (remote.status === "notFound") return { status: "notFound" };
+    }
+
+    return localGeoProvider.lookupPostalCode(country, zip5);
+  },
+};
 
 export function countryOptions(language: "en" | "es"): GeoOption[] {
   return (Object.keys(COUNTRY_NAMES) as CountryCode[]).map((code) => ({

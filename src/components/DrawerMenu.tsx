@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Modal, Animated, Pressable, View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -7,41 +7,38 @@ import {
   Package,
   UserCheck,
   BanknoteArrowDown,
-  FileText,
-  Globe,
   Coins,
   LogOut,
+  ReceiptText,
 } from "lucide-react-native";
 
-import { CloseButton, OptionSheet } from "./ui";
+import { CloseButton } from "./ui";
 import { DrawerItem } from "./remeza";
 import { colors } from "../theme/colors";
 import { spacing, screenPadding } from "../theme/spacing";
-import { COUNTRY_NAMES, CountryCode, countryOptions } from "../services/geo";
-import { Language, ViewName } from "../types/app";
+import { ViewName } from "../types/app";
 
 type Props = {
   t: any;
-  language: Language;
   visible: boolean;
   overlayOpacity: Animated.Value;
   drawerTranslateX: Animated.Value;
   setIsMenuOpen: (value: boolean) => void;
   setView: (view: ViewName) => void;
+  /** Cierre de sesion. Sin el, el item navega directo al login como antes. */
+  onLogout?: () => void;
 };
 
 export default function DrawerMenu({
   t,
-  language,
   visible,
   overlayOpacity,
   drawerTranslateX,
   setIsMenuOpen,
   setView,
+  onLogout,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const [isNationalityOpen, setNationalityOpen] = useState(false);
-  const [nationality, setNationality] = useState<CountryCode>("MX");
 
   const go = (view: ViewName) => {
     setIsMenuOpen(false);
@@ -54,7 +51,12 @@ export default function DrawerMenu({
     { id: "physicalCard", icon: Package, label: t.requestPhysicalCard, onPress: () => go("physicalCard") },
     { id: "beneficiaries", icon: UserCheck, label: t.beneficiaries, onPress: () => go("beneficiaries") },
     { id: "sendMoney", icon: BanknoteArrowDown, label: t.sendMoney, onPress: () => go("sendMoney") },
-    { id: "dispute", icon: FileText, label: t.disputeTitle, onPress: () => go("disputeOptions") },
+    {
+      id: "servicePayments",
+      icon: ReceiptText,
+      label: t.drawerServicePayments,
+      onPress: () => go("servicePayments"),
+    },
     { id: "multiCurrency", icon: Coins, label: t.multiCurrencyTitle, onPress: () => go("multiCurrency") },
   ];
 
@@ -104,14 +106,6 @@ export default function DrawerMenu({
             />
           ))}
 
-          <DrawerItem
-            testID="drawer-nationalityItem"
-            icon={Globe}
-            label={t.nationality}
-            showChevron
-            onPress={() => setNationalityOpen(true)}
-          />
-
           <View style={styles.spacer} />
 
           <DrawerItem
@@ -120,27 +114,14 @@ export default function DrawerMenu({
             label={t.logout}
             danger
             last
-            onPress={() => go("login")}
+            onPress={() => {
+              if (!onLogout) return go("login");
+              setIsMenuOpen(false);
+              onLogout();
+            }}
           />
         </View>
       </Animated.View>
-
-      <OptionSheet
-        visible={isNationalityOpen}
-        onClose={() => setNationalityOpen(false)}
-        title={t.nationality}
-        icon={Globe}
-        options={countryOptions(language).map((option) => ({
-          label: COUNTRY_NAMES[option.value as CountryCode][language],
-          value: option.value,
-        }))}
-        value={nationality}
-        onSelect={(next) => {
-          setNationality(next as CountryCode);
-          setNationalityOpen(false);
-        }}
-        testID="drawer-nationalitySheet"
-      />
     </Modal>
   );
 }

@@ -7,16 +7,15 @@ import {
   Route,
   Home,
   DoorOpen,
-  Map,
   FileText,
 } from "lucide-react-native";
 import FormInput from "./FormInput";
 import SearchableSelect from "./SearchableSelect";
 import { styles } from "../theme/styles";
 import { Language } from "../types/app";
-import { countryOptions } from "../services/geo";
+import { COUNTRY_NAMES } from "../services/geo";
 import { POSTAL_CODE_EXAMPLES, POSTAL_CODE_MAX_LENGTH } from "../utils/postalCode";
-import { AddressValue, useAddressCascade } from "../hooks/useAddressCascade";
+import { ADDRESS_COUNTRY, AddressValue, useAddressCascade } from "../hooks/useAddressCascade";
 import { useFormFocus } from "../hooks/useFormFocus";
 
 export type AddressDetail = {
@@ -61,26 +60,11 @@ type Props = {
   form: ReturnType<typeof useFormFocus>;
 };
 
-function composeAddressLines(
-  detail: AddressDetail,
-  country: "MX" | "US" | null,
-): { line1: string; line2: string } {
-  const { street, exteriorNumber, interiorNumber, neighborhood, references } = detail;
+function composeAddressLines(detail: AddressDetail): { line1: string; line2: string } {
+  const { street, exteriorNumber, interiorNumber, references } = detail;
 
-  if (country === "US") {
-    const line1 = [exteriorNumber, street].filter(Boolean).join(" ").trim();
-    const line2 = [interiorNumber ? `Apt ${interiorNumber}` : "", references]
-      .filter(Boolean)
-      .join(", ")
-      .trim();
-    return { line1, line2 };
-  }
-
-  const line1 = [street, exteriorNumber, interiorNumber ? `Int. ${interiorNumber}` : ""]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  const line2 = [neighborhood ? `Col. ${neighborhood}` : "", references]
+  const line1 = [exteriorNumber, street].filter(Boolean).join(" ").trim();
+  const line2 = [interiorNumber ? `Apt ${interiorNumber}` : "", references]
     .filter(Boolean)
     .join(", ")
     .trim();
@@ -101,16 +85,13 @@ export default function AddressFields({
 }: Props) {
   const iconFor = (icon: typeof MapPin) => (withIcons ? icon : undefined);
   const cascade = useAddressCascade({ value, onChange });
-  const { country } = cascade;
 
   useEffect(() => {
     if (!onComposedAddressChange) return;
-    const { line1, line2 } = composeAddressLines(detail, country);
+    const { line1, line2 } = composeAddressLines(detail);
     onComposedAddressChange(line1, line2);
-  }, [detail, country, onComposedAddressChange]);
+  }, [detail, onComposedAddressChange]);
 
-  const isMexico = country === "MX";
-  const postalExample = country ? POSTAL_CODE_EXAMPLES[country] : POSTAL_CODE_EXAMPLES.MX;
   const highlighted = (key: string) => form.pendingField === key;
 
   return (
@@ -120,11 +101,11 @@ export default function AddressFields({
           testID={`${testIDPrefix}-zipCodeInput`}
           leftIcon={iconFor(MapPin)}
           label={t.zipCode}
-          placeholder={`${t.exampleShort} ${postalExample}`}
+          placeholder={`${t.exampleShort} ${POSTAL_CODE_EXAMPLES[ADDRESS_COUNTRY]}`}
           value={value.postalCode}
           onChangeText={cascade.setPostalCode}
           keyboardType="number-pad"
-          maxLength={country ? POSTAL_CODE_MAX_LENGTH[country] : 10}
+          maxLength={POSTAL_CODE_MAX_LENGTH[ADDRESS_COUNTRY]}
           inputRef={form.input(ADDRESS_FIELD_KEYS.postalCode)}
           highlighted={highlighted(ADDRESS_FIELD_KEYS.postalCode)}
           error={
@@ -134,11 +115,11 @@ export default function AddressFields({
         {value.postalCode.length > 0 && !cascade.postalCodeValid ? (
           <Text style={styles.fieldHintText}>{t.postalCodeHint}</Text>
         ) : null}
-        {cascade.detection === "ambiguous" ? (
-          <Text style={styles.fieldHintText}>{t.countryAmbiguousHint}</Text>
+        {cascade.lookupStatus === "loading" ? (
+          <Text style={styles.fieldHintText}>{t.postalCodeLookingUp}</Text>
         ) : null}
-        {cascade.detection === "unknown" && cascade.postalCodeValid ? (
-          <Text style={styles.fieldHintText}>{t.countryUnknownHint}</Text>
+        {cascade.lookupStatus === "notFound" ? (
+          <Text style={styles.fieldHintText}>{t.postalCodeNotFound}</Text>
         ) : null}
       </View>
 
@@ -150,11 +131,10 @@ export default function AddressFields({
           placeholder={t.selectCountry}
           searchPlaceholder={t.searchCountry}
           emptyResultsText={t.noResults}
-          value={value.country}
-          options={countryOptions(language)}
-          onSelect={cascade.setCountry}
-          highlighted={highlighted(ADDRESS_FIELD_KEYS.country)}
-          error={highlighted(ADDRESS_FIELD_KEYS.country) ? form.pendingMessage : ""}
+          value={ADDRESS_COUNTRY}
+          options={[{ label: COUNTRY_NAMES[ADDRESS_COUNTRY][language], value: ADDRESS_COUNTRY }]}
+          disabled
+          onSelect={() => {}}
         />
       </View>
 
@@ -199,7 +179,7 @@ export default function AddressFields({
           testID={`${testIDPrefix}-streetInput`}
           leftIcon={iconFor(Route)}
           label={t.street}
-          placeholder={isMexico ? t.streetExampleMx : t.streetExampleUs}
+          placeholder={t.streetExampleUs}
           value={detail.street}
           onChangeText={(text) => onDetailChange({ street: text })}
           maxLength={100}
@@ -215,7 +195,7 @@ export default function AddressFields({
             testID={`${testIDPrefix}-exteriorNumberInput`}
             leftIcon={iconFor(Home)}
             label={t.exteriorNumber}
-            placeholder={isMexico ? "123" : "1600"}
+            placeholder="1600"
             value={detail.exteriorNumber}
             onChangeText={(text) => onDetailChange({ exteriorNumber: text })}
             maxLength={12}
@@ -229,8 +209,8 @@ export default function AddressFields({
           <FormInput
             testID={`${testIDPrefix}-interiorNumberInput`}
             leftIcon={iconFor(DoorOpen)}
-            label={isMexico ? t.interiorNumber : t.aptSuite}
-            placeholder={isMexico ? `${t.optional} · 4B` : `${t.optional} · Apt 4B`}
+            label={t.aptSuite}
+            placeholder={`${t.optional} · Apt 4B`}
             value={detail.interiorNumber}
             onChangeText={(text) => onDetailChange({ interiorNumber: text })}
             maxLength={12}
@@ -238,23 +218,11 @@ export default function AddressFields({
         </View>
       </View>
 
-      {isMexico ? (
-        <FormInput
-          testID={`${testIDPrefix}-neighborhoodInput`}
-          leftIcon={iconFor(Map)}
-          label={t.neighborhood}
-          placeholder={t.neighborhoodExample}
-          value={detail.neighborhood}
-          onChangeText={(text) => onDetailChange({ neighborhood: text })}
-          maxLength={80}
-        />
-      ) : null}
-
       <FormInput
         testID={`${testIDPrefix}-referencesInput`}
         leftIcon={iconFor(FileText)}
         label={t.addressReferences}
-        placeholder={`${t.optional} · ${isMexico ? t.referencesExampleMx : t.referencesExampleUs}`}
+        placeholder={`${t.optional} · ${t.referencesExampleUs}`}
         value={detail.references}
         onChangeText={(text) => onDetailChange({ references: text })}
         maxLength={120}

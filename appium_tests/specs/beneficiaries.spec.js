@@ -17,6 +17,11 @@ const goToBeneficiaries = async () => {
   await byId("beneficiaries-backButton").waitForDisplayed({ timeout: 10000 });
 };
 
+const openBeneficiaryForm = async () => {
+  await clickWithRetry("beneficiaries.addButton");
+  await byId("beneficiaries-firstNameInput").waitForDisplayed({ timeout: 10000 });
+};
+
 describe("Agregar beneficiario (BeneficiariesView) [backend]", () => {
   beforeEach(async () => {
     await goToBeneficiaries();
@@ -29,6 +34,7 @@ describe("Agregar beneficiario (BeneficiariesView) [backend]", () => {
   });
 
   it("guardar sin llenar ningún campo no guarda y pide el nombre", async () => {
+    await openBeneficiaryForm();
     await clickWithRetry("beneficiaries-saveButton");
 
     await byId("beneficiaries-validationBanner").waitForDisplayed({ timeout: 5000 });
@@ -37,6 +43,7 @@ describe("Agregar beneficiario (BeneficiariesView) [backend]", () => {
   });
 
   it("con CLABE incompleta no guarda y pide la CLABE", async () => {
+    await openBeneficiaryForm();
     await byId("beneficiaries-firstNameInput").setValue("Ana");
     await byId("beneficiaries-paternalLastNameInput").setValue("García");
     await byId("beneficiaries-phoneInput").setValue("5512345678");
@@ -49,7 +56,8 @@ describe("Agregar beneficiario (BeneficiariesView) [backend]", () => {
     await expect($('//*[@text="Beneficiary saved successfully."]')).not.toBeDisplayed();
   });
 
-  it("llenar el formulario completo y guardar muestra el mensaje de éxito", async () => {
+  it("llenar el formulario completo, guardar y confirmar muestra el mensaje de éxito", async () => {
+    await openBeneficiaryForm();
     await byId("beneficiaries-firstNameInput").setValue("Ana");
     await byId("beneficiaries-paternalLastNameInput").setValue("García");
     await byId("beneficiaries-maternalLastNameInput").setValue("López");
@@ -61,6 +69,9 @@ describe("Agregar beneficiario (BeneficiariesView) [backend]", () => {
     await hideKeyboard();
 
     await clickWithRetry("beneficiaries-saveButton");
+
+    await byId("beneficiaryConfirm.confirmButton").waitForDisplayed({ timeout: 10000 });
+    await clickWithRetry("beneficiaryConfirm.confirmButton");
 
     await expect($('//*[@text="Beneficiary saved successfully."]')).toBeDisplayed();
   });

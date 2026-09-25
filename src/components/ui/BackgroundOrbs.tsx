@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { StyleSheet, View, PixelRatio, LayoutChangeEvent, useWindowDimensions } from "react-native";
-import Svg, { Circle, Defs, G, Path, Pattern, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  G,
+  LinearGradient,
+  Path,
+  Pattern,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
 import { colors } from "../../theme/colors";
 import { remezaGlyph } from "./remezaGlyph";
 
@@ -75,13 +85,44 @@ const WATERMARK_TOP = 0.3;
 const WATERMARK_SIZE = 0.42;
 
 /**
+ * Lineas de luz de las esquinas inferiores (pantallas 31 en adelante del PDF).
+ * Cada una es una curva suave que entra por el borde de abajo y se apaga hacia
+ * arriba: el degradado va de blanco a violeta y a transparente a lo largo del
+ * trazo, asi que no hace falta ningun desenfoque.
+ */
+function streakPaths(width: number, height: number) {
+  const left = [
+    { from: [-0.04, 0.99], ctrl: [0.1, 0.95], to: [0.24, 0.84] },
+    { from: [-0.04, 0.94], ctrl: [0.05, 0.9], to: [0.15, 0.83] },
+  ];
+  return left.flatMap(({ from, ctrl, to }) => {
+    const d = (mirror: boolean) => {
+      const x = (v: number) => (mirror ? 1 - v : v) * width;
+      const y = (v: number) => v * height;
+      return `M${x(from[0])},${y(from[1])} Q${x(ctrl[0])},${y(ctrl[1])} ${x(to[0])},${y(to[1])}`;
+    };
+    return [
+      { d: d(false), gradient: "streakLeft" },
+      { d: d(true), gradient: "streakRight" },
+    ];
+  });
+}
+
+/**
  * Fondo de las pantallas de entrada: base plana, las cuatro esferas violetas
  * y la "R" de marca de agua, todo en **un solo Svg** por detras del contenido.
  *
  * Nada de imagenes ni de Views apilados: un PNG se pixela al estirarlo y las
  * capas con opacidad dibujan anillos.
  */
-export default function BackgroundOrbs({ watermark = true }: { watermark?: boolean }) {
+export default function BackgroundOrbs({
+  watermark = true,
+  streaks = false,
+}: {
+  watermark?: boolean;
+  /** Lineas de luz diagonales en las esquinas inferiores */
+  streaks?: boolean;
+}) {
   const window = useWindowDimensions();
 
   /**
@@ -122,6 +163,19 @@ export default function BackgroundOrbs({ watermark = true }: { watermark?: boole
             </RadialGradient>
           ))}
 
+          {/* El degradado sigue el trazo: blanco en el borde de la pantalla,
+              violeta a media curva y transparente al final. */}
+          <LinearGradient id="streakLeft" x1="0" y1="1" x2="1" y2="0">
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.55} />
+            <Stop offset="0.45" stopColor="#7417FF" stopOpacity={0.45} />
+            <Stop offset="1" stopColor="#7417FF" stopOpacity={0} />
+          </LinearGradient>
+          <LinearGradient id="streakRight" x1="1" y1="1" x2="0" y2="0">
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.55} />
+            <Stop offset="0.45" stopColor="#7417FF" stopOpacity={0.45} />
+            <Stop offset="1" stopColor="#7417FF" stopOpacity={0} />
+          </LinearGradient>
+
           <Pattern
             id="orbDither"
             x="0"
@@ -155,6 +209,19 @@ export default function BackgroundOrbs({ watermark = true }: { watermark?: boole
             fill={`url(#orb${index})`}
           />
         ))}
+
+        {streaks
+          ? streakPaths(width, height).map((streak, index) => (
+              <Path
+                key={index}
+                d={streak.d}
+                stroke={`url(#${streak.gradient})`}
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                fill="none"
+              />
+            ))
+          : null}
 
         {/* Marca de agua: por encima de la luz y por debajo del contenido. */}
         {watermark ? (

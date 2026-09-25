@@ -1,124 +1,235 @@
 import React from "react";
-import { ScrollView, View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
-import { User, Mail, MapPin } from "lucide-react-native";
-
+import { View, Text, StyleSheet } from "react-native";
 import {
-  Button,
-  CloseButton,
-  GlassBanner,
-  ScreenHeader,
-  TextField,
-} from "../components/ui";
-import { AvatarPicker } from "../components/remeza";
-import { spacing, screenPadding } from "../theme/spacing";
+  Bell,
+  CircleCheck,
+  CircleHelp,
+  CreditCard,
+  Gauge,
+  Headset,
+  Lock,
+  LogOut,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Trash2,
+  User,
+} from "lucide-react-native";
+
+import { Avatar, DetailRow, InfoCard, ListRow, ScreenHeader, ScreenLayout } from "../components/ui";
+import type { IconComponent } from "../components/ui";
+import { textStyles } from "../theme/typography";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 import { ViewName } from "../types/app";
 
 type Props = {
   t: any;
   setView: (view: ViewName) => void;
 
-  profileFullName: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
 
-  profileEmail: string;
-  setProfileEmail: (v: string) => void;
-
-  profileAddress: string;
-  setProfileAddress: (v: string) => void;
-
-  profileSaved: boolean;
-  handleProfileSave: () => void;
+  /** Accesos del perfil (pantalla 19) */
+  onOpen: (target: ProfileTarget) => void;
+  /** Aviso de una accion recien hecha (p. ej. tarjeta eliminada) */
+  notice?: string;
 };
 
+export type ProfileTarget =
+  | "security"
+  | "notifications"
+  | "paymentMethods"
+  | "helpCenter"
+  | "support"
+  | "cardLimits"
+  | "blockCard"
+  | "deleteCard"
+  | "logout";
+
+type ProfileRow = {
+  key: string;
+  label: string;
+  value: string;
+  icon: IconComponent;
+};
+
+/**
+ * Perfil de solo lectura. Los datos vienen del KYC, asi que aqui solo se
+ * consultan: cambiarlos pasa por soporte. Por eso no hay "Editar perfil" y
+ * cada fila lleva candado en lugar de chevron.
+ *
+ * Debajo van los accesos de ajustes del PDF (19), menos "Editar perfil" y
+ * "Preferencias", y una seccion de tarjeta con limites, bloqueo y eliminar.
+ */
 export default function ProfileView({
   t,
   setView,
-  profileFullName,
-  profileEmail,
-  setProfileEmail,
-  profileAddress,
-  setProfileAddress,
-  profileSaved,
-  handleProfileSave,
+  fullName,
+  email,
+  phone,
+  address,
+  onOpen,
+  notice,
 }: Props) {
-  return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <CloseButton testID="profile-backButton" onPress={() => setView("dashboard")} />
+  const rows: ProfileRow[] = [
+    { key: "fullName", label: t.fullName, value: fullName, icon: User },
+    { key: "email", label: t.emailAddress, value: email, icon: Mail },
+    { key: "phone", label: t.phoneNumber, value: phone, icon: Phone },
+    { key: "address", label: t.homeAddress, value: address, icon: MapPin },
+  ];
 
+  const hasName = fullName.trim().length > 0;
+
+  return (
+    <ScreenLayout
+      showBack
+      onBack={() => setView("dashboard")}
+      backTestID="profile-backButton"
+      backAccessibilityLabel={t.back}
+    >
+      {hasName ? (
+        <View style={styles.identity}>
+          <Avatar name={fullName} size={metrics.heroIcon} />
+          <Text style={[textStyles.title, styles.name]}>{fullName}</Text>
+          {email ? <Text style={[textStyles.subtitle, styles.email]}>{email}</Text> : null}
+        </View>
+      ) : (
         <ScreenHeader
+          icon={User}
           title={t.profileTitle}
-          subtitle={t.personalInfoSubtitle}
+          subtitle={email || t.profileSubtitle}
           style={styles.header}
         />
+      )}
 
-        <AvatarPicker style={styles.avatar} />
-
-        <View style={styles.form}>
-          <TextField
-            testID="profile-fullNameInput"
-            label={t.fullName}
-            placeholder={t.fullNamePlaceholder}
-            leftIcon={User}
-            value={profileFullName}
+      <View style={styles.rows}>
+        {rows.map((row) => (
+          <DetailRow
+            key={row.key}
+            icon={row.icon}
+            label={row.label}
+            value={row.value || t.notAvailable}
+            right="lock"
+            valueTestID={`profile-${row.key}Value`}
           />
+        ))}
+      </View>
 
-          <TextField
-            testID="profile-emailInput"
-            label={t.emailAddress}
-            placeholder={t.emailPlaceholder}
-            leftIcon={Mail}
-            value={profileEmail}
-            onChangeText={setProfileEmail}
-            keyboardType="email-address"
-          />
+      <InfoCard
+        testID="profile-readOnlyNotice"
+        icon={Lock}
+        text={t.profileReadOnlyNotice}
+        style={styles.notice}
+      />
 
-          <TextField
-            testID="profile-addressInput"
-            label={t.deliveryAddress}
-            placeholder={t.deliveryAddressPlaceholder}
-            leftIcon={MapPin}
-            value={profileAddress}
-            onChangeText={setProfileAddress}
-          />
+      {notice ? (
+        <InfoCard
+          testID="profile.actionNotice"
+          icon={CircleCheck}
+          tone="success"
+          text={notice}
+          style={styles.notice}
+        />
+      ) : null}
 
-          <Button
-            testID="profile-saveButton"
-            title={t.saveChanges}
-            onPress={handleProfileSave}
-            radius="pill"
-          />
+      <Text style={[textStyles.overline, styles.section]}>{t.profileSettingsSection}</Text>
+      <View style={styles.rows}>
+        <ListRow
+          testID="profile.securityRow"
+          icon={ShieldCheck}
+          title={t.profileSecurity}
+          onPress={() => onOpen("security")}
+        />
+        <ListRow
+          testID="profile.notificationsRow"
+          icon={Bell}
+          title={t.profileNotifications}
+          onPress={() => onOpen("notifications")}
+        />
+        <ListRow
+          testID="profile.paymentMethodsRow"
+          icon={CreditCard}
+          title={t.profilePaymentMethods}
+          onPress={() => onOpen("paymentMethods")}
+        />
+        <ListRow
+          testID="profile.helpCenterRow"
+          icon={CircleHelp}
+          title={t.profileHelpCenter}
+          onPress={() => onOpen("helpCenter")}
+        />
+        <ListRow
+          testID="profile.supportRow"
+          icon={Headset}
+          title={t.profileContactSupport}
+          onPress={() => onOpen("support")}
+        />
+      </View>
 
-          {profileSaved ? <GlassBanner tone="info" message={t.profileUpdated} /> : null}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Text style={[textStyles.overline, styles.section]}>{t.profileCardSection}</Text>
+      <View style={styles.rows}>
+        <ListRow
+          testID="profile.cardLimitsRow"
+          icon={Gauge}
+          title={t.profileCardLimits}
+          onPress={() => onOpen("cardLimits")}
+        />
+        <ListRow
+          testID="profile.blockCardRow"
+          icon={Lock}
+          title={t.profileBlockCard}
+          onPress={() => onOpen("blockCard")}
+        />
+        <ListRow
+          testID="profile.deleteCardRow"
+          icon={Trash2}
+          title={t.profileDeleteCard}
+          onPress={() => onOpen("deleteCard")}
+        />
+      </View>
+
+      <ListRow
+        testID="profile.logoutRow"
+        icon={LogOut}
+        title={t.logout}
+        tone="danger"
+        onPress={() => onOpen("logout")}
+        style={styles.logout}
+      />
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
   header: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
   },
-  avatar: {
+  identity: {
+    alignItems: "center",
+    marginTop: spacing.lg,
     marginBottom: spacing.xxl,
   },
-  form: {
-    gap: spacing.lg,
+  name: {
+    marginTop: 20,
+  },
+  email: {
+    marginTop: spacing.sm,
+  },
+  rows: {
+    gap: metrics.rowGap,
+  },
+  notice: {
+    marginTop: spacing.lg,
+  },
+  section: {
+    marginTop: spacing.xxl,
+    marginBottom: spacing.md,
+  },
+  logout: {
+    marginTop: spacing.xxl,
   },
 });

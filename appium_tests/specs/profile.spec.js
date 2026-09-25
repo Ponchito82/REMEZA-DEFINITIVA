@@ -1,4 +1,4 @@
-const { byId, clickWithRetry, hideKeyboard, restartApp } = require("../helpers");
+const { byId, restartApp } = require("../helpers");
 
 const TEST_PHONE = "+525538068807";
 const TEST_CODE = "123456";
@@ -17,7 +17,7 @@ const goToProfile = async () => {
   await byId("profile-backButton").waitForDisplayed({ timeout: 10000 });
 };
 
-describe("Edición de perfil (ProfileView) [backend]", () => {
+describe("Perfil de solo lectura (ProfileView) [backend]", () => {
   beforeEach(async () => {
     await goToProfile();
   });
@@ -28,13 +28,18 @@ describe("Edición de perfil (ProfileView) [backend]", () => {
     await byId("dashboard-menuButton").waitForDisplayed({ timeout: 10000 });
   });
 
-  it("edita email y dirección y guarda: muestra el mensaje de éxito (handleProfileSave = setState puro)", async () => {
-    await byId("profile-emailInput").setValue("adrian.morfin@example.com");
-    await byId("profile-addressInput").setValue("456 Elm Street");
-    await hideKeyboard();
+  it("muestra los datos del KYC y el aviso de que no se pueden editar", async () => {
+    await expect(byId("profile-fullNameValue")).toBeDisplayed();
+    await expect(byId("profile-emailValue")).toBeDisplayed();
+    await expect(byId("profile-phoneValue")).toBeDisplayed();
+    await expect(byId("profile-addressValue")).toBeDisplayed();
+    await expect(byId("profile-readOnlyNotice")).toBeDisplayed();
+  });
 
-    await clickWithRetry("profile-saveButton");
-
-    await expect($('//*[@text="Your profile was updated successfully."]')).toBeDisplayed();
+  it("no hay campos editables ni botón de guardar", async () => {
+    await expect(byId("profile-fullNameInput")).not.toBeExisting();
+    await expect(byId("profile-emailInput")).not.toBeExisting();
+    await expect(byId("profile-addressInput")).not.toBeExisting();
+    await expect(byId("profile-saveButton")).not.toBeExisting();
   });
 });

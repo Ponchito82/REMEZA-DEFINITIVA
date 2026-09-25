@@ -1,12 +1,11 @@
 import React from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
-import { Globe, Plus } from "lucide-react-native";
+import { View, StyleSheet } from "react-native";
+import { Globe } from "lucide-react-native";
 
-import { Button, CloseButton, IconCircle, ScreenHeader } from "../components/ui";
-import { CurrencyAccountCard } from "../components/remeza";
+import { FlagIcon, ListRow, ScreenHeader, ScreenLayout } from "../components/ui";
 import type { FlagCountry } from "../components/ui";
-import { sizes } from "../theme/radius";
-import { spacing, screenPadding } from "../theme/spacing";
+import { metrics } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 import { ViewName } from "../types/app";
 
 type Account = {
@@ -24,77 +23,58 @@ const ACCOUNTS: Account[] = [
   { id: "mxn", country: "MX", code: "MXN", nameKey: "currencyMxnName", balance: 25300 },
 ];
 
+const formatBalance = (value: number) =>
+  `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 type Props = {
   t: any;
   setView: (view: ViewName) => void;
 };
 
+/**
+ * "Mis cuentas", con lo visual de la pantalla 1. Sin "Agregar moneda": esa
+ * accion (30) y el tipo de cambio (8) quedan fuera por posible trading.
+ */
 export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <CloseButton
-        testID="multiCurrency.backButton"
-        accessibilityLabel={t.back}
-        icon="chevron"
-        onPress={() => setView("dashboard")}
-      />
-
-      <IconCircle icon={Globe} size={sizes.hero} hero glow style={styles.hero} />
-
+    <ScreenLayout
+      showBack
+      onBack={() => setView("dashboard")}
+      backTestID="multiCurrency.backButton"
+      backAccessibilityLabel={t.back}
+    >
       <ScreenHeader
+        icon={Globe}
         title={t.multiCurrencyTitle}
         subtitle={t.multiCurrencySubtitle}
-        align="center"
-        size="hero"
         testID="multiCurrency.header"
+        style={styles.header}
       />
 
       <View style={styles.accounts}>
         {ACCOUNTS.map((account) => (
-          <CurrencyAccountCard
+          <ListRow
             key={account.id}
             testID={`multiCurrency.account.${account.id}`}
-            country={account.country}
-            code={account.code}
-            name={t[account.nameKey]}
-            balance={account.balance}
+            accessibilityLabel={`${account.code} ${formatBalance(account.balance)}`}
+            leading={<FlagIcon country={account.country} size={metrics.rowIconCircle} />}
+            title={account.code}
+            subtitle={t[account.nameKey]}
+            value={formatBalance(account.balance)}
+            right="chevron"
             onPress={() => console.log(`[multiCurrency] abrir ${account.code}`)}
           />
         ))}
       </View>
-
-      <Button
-        testID="multiCurrency.addCurrencyButton"
-        title={t.addCurrency}
-        onPress={() => console.log("[multiCurrency] agregar moneda")}
-        variant="gradient"
-        deepGradient
-        size="lg"
-        radius="md"
-        leftIcon={Plus}
-        rightAdornment="none"
-        style={styles.cta}
-      />
-    </ScrollView>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  /** Sin `flexGrow`: el diseno deja el resto de la pantalla vacio. */
-  content: {
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  hero: {
-    marginTop: spacing.xxxl,
-    marginBottom: spacing.xxl,
+  header: {
+    marginTop: spacing.lg,
   },
   accounts: {
-    marginTop: spacing.xxl,
-    gap: spacing.md,
-  },
-  cta: {
-    marginTop: spacing.lg,
+    gap: metrics.rowGap,
   },
 });
