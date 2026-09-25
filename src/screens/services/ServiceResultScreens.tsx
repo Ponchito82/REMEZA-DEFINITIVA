@@ -41,7 +41,12 @@ export function ServicePaidScreen({
       title={t.servicePaidTitle}
       subtitle={t.servicePaidSubtitle}
       primary={{ testID: "servicePaid.doneButton", title: t.commonDone, onPress: onDone }}
-      link={{ testID: "servicePaid.receiptLink", title: t.viewReceipt, onPress: onViewReceipt }}
+      secondary={{
+        testID: "servicePaid.receiptButton",
+        title: t.viewReceipt,
+        onPress: onViewReceipt,
+        filled: true,
+      }}
     >
       <KeyValueCard items={summary} />
     </StatusScreen>
