@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import {
-  BookOpen,
-  CircleHelp,
-  FileText,
-  Headset,
-  Info,
-  ShieldCheck,
-} from "lucide-react-native";
+import { BookOpen, CircleHelp, Headset, Info, ShieldCheck } from "lucide-react-native";
 
 import { InfoCard, ListRow, StatusScreen } from "../../components/ui";
 import type { IconComponent } from "../../components/ui";
@@ -17,11 +10,13 @@ type Props = {
   t: any;
   onBack: () => void;
   onContactSupport: () => void;
-  /** Cancelar o disputar (2) */
-  onDispute: () => void;
+  /** Abre la pantalla de Preguntas frecuentes */
+  onOpenFaq: () => void;
 };
 
-const TOPIC_ICONS: Record<(typeof MOCK_HELP_TOPICS)[number], IconComponent> = {
+type Topic = (typeof MOCK_HELP_TOPICS)[number];
+
+const TOPIC_ICONS: Record<Topic, IconComponent> = {
   faq: CircleHelp,
   guides: BookOpen,
   limits: Info,
@@ -29,11 +24,11 @@ const TOPIC_ICONS: Record<(typeof MOCK_HELP_TOPICS)[number], IconComponent> = {
 };
 
 /**
- * Centro de ayuda (pantalla 18). El PDF no trae pantallas para cada tema,
- * asi que cada fila despliega su respuesta debajo.
+ * Centro de ayuda (pantalla 18). "Preguntas frecuentes" abre su propia
+ * pantalla; el resto de temas despliega su respuesta debajo.
  */
-export default function HelpCenterScreen({ t, onBack, onContactSupport, onDispute }: Props) {
-  const [open, setOpen] = useState<string | null>(null);
+export default function HelpCenterScreen({ t, onBack, onContactSupport, onOpenFaq }: Props) {
+  const [open, setOpen] = useState<Topic | null>(null);
 
   return (
     <StatusScreen
@@ -52,10 +47,14 @@ export default function HelpCenterScreen({ t, onBack, onContactSupport, onDisput
             testID={`helpCenter.topic.${topic}`}
             icon={TOPIC_ICONS[topic]}
             title={t[`help_${topic}`]}
-            selected={open === topic}
-            onPress={() => setOpen((prev) => (prev === topic ? null : topic))}
+            selected={topic !== "faq" && open === topic}
+            onPress={
+              topic === "faq"
+                ? onOpenFaq
+                : () => setOpen((prev) => (prev === topic ? null : topic))
+            }
           />
-          {open === topic ? (
+          {topic !== "faq" && open === topic ? (
             <InfoCard
               testID={`helpCenter.answer.${topic}`}
               text={t[`help_${topic}_answer`]}
@@ -64,13 +63,6 @@ export default function HelpCenterScreen({ t, onBack, onContactSupport, onDisput
           ) : null}
         </View>
       ))}
-
-      <ListRow
-        testID="helpCenter.disputeRow"
-        icon={FileText}
-        title={t.help_dispute}
-        onPress={onDispute}
-      />
 
       <ListRow
         testID="helpCenter.contactRow"

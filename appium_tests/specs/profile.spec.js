@@ -28,12 +28,13 @@ describe("Perfil de solo lectura (ProfileView) [backend]", () => {
     await byId("dashboard-menuButton").waitForDisplayed({ timeout: 10000 });
   });
 
-  it("muestra los datos del KYC y el aviso de que no se pueden editar", async () => {
+  it("muestra los datos del cliente y el aviso de que están protegidos", async () => {
     await expect(byId("profile-fullNameValue")).toBeDisplayed();
     await expect(byId("profile-emailValue")).toBeDisplayed();
     await expect(byId("profile-phoneValue")).toBeDisplayed();
     await expect(byId("profile-addressValue")).toBeDisplayed();
     await expect(byId("profile-readOnlyNotice")).toBeDisplayed();
+    await expect($('//*[@text="Your information is protected"]')).toBeDisplayed();
   });
 
   it("no hay campos editables ni botón de guardar", async () => {

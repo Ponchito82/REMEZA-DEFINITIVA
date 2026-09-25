@@ -1,8 +1,9 @@
 import React from "react";
-import { Check, CircleX, Download, FileText, LoaderCircle, Share2 } from "lucide-react-native";
+import { Check, CircleX, FileText, LoaderCircle, Share2 } from "lucide-react-native";
 
-import { InfoCard, KeyValueCard, StatusScreen } from "../../components/ui";
-import type { KeyValueItem } from "../../components/ui";
+import { InfoCard, KeyValueCard, ReceiptCard, StatusScreen } from "../../components/ui";
+import type { KeyValueItem, ReceiptData } from "../../components/ui";
+import { useReceiptShare } from "../../utils/shareReceipt";
 
 /** Procesando pago de servicio (pantalla 53). */
 export function ServiceProcessingScreen({ t }: { t: any }) {
@@ -11,6 +12,7 @@ export function ServiceProcessingScreen({ t }: { t: any }) {
       testID="serviceProcessing"
       icon={LoaderCircle}
       iconSpinning
+      iconSpinInner
       title={t.servicePayingTitle}
       subtitle={t.servicePayingSubtitle}
     >
@@ -46,18 +48,18 @@ export function ServicePaidScreen({
   );
 }
 
-/** Comprobante de pago (pantalla 55). */
+/** Comprobante de pago (pantalla 55): imagen del comprobante y boton para compartirla. */
 export function ServiceReceiptScreen({
   t,
-  summary,
+  data,
   onBack,
-  onShare,
 }: {
   t: any;
-  summary: KeyValueItem[];
+  data: ReceiptData;
   onBack: () => void;
-  onShare: () => void;
 }) {
+  const { ref, share } = useReceiptShare("remeza-comprobante-pago");
+
   return (
     <StatusScreen
       testID="serviceReceipt"
@@ -69,19 +71,20 @@ export function ServiceReceiptScreen({
       title={t.serviceReceiptTitle}
       subtitle={t.servicePaidSubtitle}
       primary={{
-        testID: "serviceReceipt.downloadButton",
-        title: t.downloadReceipt,
-        iconLeft: Download,
-        onPress: onShare,
-      }}
-      secondary={{
         testID: "serviceReceipt.shareButton",
         title: t.commonShare,
         iconLeft: Share2,
-        onPress: onShare,
+        onPress: share,
       }}
     >
-      <KeyValueCard items={summary} />
+      <ReceiptCard
+        ref={ref}
+        testID="serviceReceipt.card"
+        data={data}
+        title={t.receiptCardTitle}
+        statusLabel={t.receiptSuccess}
+        footer={t.receiptFooter}
+      />
     </StatusScreen>
   );
 }

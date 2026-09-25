@@ -34,8 +34,6 @@ export type ViewName =
   | "transferSuccess"
   | "transferFailed"
   | "transferReceipt"
-  | "dispute"
-  | "disputeTracking"
   | "transferHistory";
 
 export type Language = "en" | "es";

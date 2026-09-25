@@ -1058,10 +1058,14 @@ secureCodeInput: {
   borderColor: GLASS_BORDER,
   borderRadius: 12,
   paddingHorizontal: 16,
-  fontSize: 16,
+  fontSize: 18,
+  fontWeight: "700",
   letterSpacing: 6,
   textAlign: "center",
   marginBottom: 16,
+  // Sin color propio, el texto salia negro sobre el fondo oscuro y no se leia.
+  color: TEXT_PRIMARY,
+  backgroundColor: "#0B0A2B",
 },
 
 activateButton: {

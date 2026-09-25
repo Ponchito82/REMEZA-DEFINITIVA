@@ -28,9 +28,10 @@ describe("Confirmación de tarjeta física (PhysicalCardView) [backend]", () => 
     await byId("dashboard-menuButton").waitForDisplayed({ timeout: 10000 });
   });
 
-  it("muestra la dirección del KYC sin campos editables", async () => {
+  it("muestra la dirección de entrega sin campos editables ni avisos de KYC", async () => {
     await expect(byId("physicalCard-addressValue")).toBeDisplayed();
-    await expect(byId("physicalCard-kycNotice")).toBeDisplayed();
+    await expect($('//*[@text="This is the address where your card will be shipped."]')).toBeDisplayed();
+    await expect(byId("physicalCard-kycNotice")).not.toBeExisting();
     await expect(byId("physicalCard-zipCodeInput")).not.toBeExisting();
     await expect(byId("physicalCard-streetInput")).not.toBeExisting();
   });

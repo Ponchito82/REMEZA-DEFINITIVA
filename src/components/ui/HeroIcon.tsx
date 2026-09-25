@@ -18,6 +18,8 @@ type Props = {
   badge?: "check" | "x";
   /** Arco girando alrededor, para estados "procesando" */
   spinning?: boolean;
+  /** Con `spinning`, el icono de dentro gira tambien (un loader, no un icono fijo) */
+  spinInner?: boolean;
   size?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -44,6 +46,7 @@ export default function HeroIcon({
   tone = "default",
   badge,
   spinning = false,
+  spinInner = false,
   size = metrics.heroIcon,
   style,
   testID,
@@ -130,7 +133,13 @@ export default function HeroIcon({
         </Animated.View>
       ) : null}
 
-      <Icon size={size * 0.46} color={iconColor} strokeWidth={1.75} />
+      {spinning && spinInner ? (
+        <Animated.View style={{ transform: [{ rotate: spin }] }}>
+          <Icon size={size * 0.46} color={iconColor} strokeWidth={1.75} />
+        </Animated.View>
+      ) : (
+        <Icon size={size * 0.46} color={iconColor} strokeWidth={1.75} />
+      )}
 
       {badge ? (
         <View

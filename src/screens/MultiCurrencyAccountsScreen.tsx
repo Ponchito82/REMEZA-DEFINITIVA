@@ -12,15 +12,15 @@ type Account = {
   id: string;
   country: FlagCountry;
   code: string;
-  /** Clave de i18n con el nombre de la moneda */
+  /** Clave de i18n con el nombre de la cuenta */
   nameKey: string;
   balance: number;
 };
 
-/** Mock: de aqui saldran las monedas cuando haya backend. */
+/** Mock: de aqui saldran las cuentas cuando haya backend. */
 const ACCOUNTS: Account[] = [
-  { id: "usd", country: "US", code: "USD", nameKey: "currencyUsdName", balance: 12480 },
-  { id: "mxn", country: "MX", code: "MXN", nameKey: "currencyMxnName", balance: 25300 },
+  { id: "usd", country: "US", code: "USD", nameKey: "accountUsdName", balance: 12480 },
+  { id: "mxn", country: "MX", code: "MXN", nameKey: "accountMxnName", balance: 25300 },
 ];
 
 const formatBalance = (value: number) =>
@@ -58,8 +58,7 @@ export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
             testID={`multiCurrency.account.${account.id}`}
             accessibilityLabel={`${account.code} ${formatBalance(account.balance)}`}
             leading={<FlagIcon country={account.country} size={metrics.rowIconCircle} />}
-            title={account.code}
-            subtitle={t[account.nameKey]}
+            title={t[account.nameKey]}
             value={formatBalance(account.balance)}
             right="chevron"
             onPress={() => console.log(`[multiCurrency] abrir ${account.code}`)}

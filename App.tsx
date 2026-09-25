@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, Share, Text, StyleSheet } from "react-native";
+import { Animated, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
@@ -10,6 +10,7 @@ import { translations } from "./src/i18n/translations";
 import { Beneficiary, Language, Transaction, TransactionsFilter, ViewName } from "./src/types/app";
 
 import ComponentsShowcaseScreen from "./src/screens/ComponentsShowcaseScreen";
+import { useViewHistory } from "./src/hooks/useViewHistory";
 import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScreen";
 import TwoStepVerificationScreen from "./src/screens/TwoStepVerificationScreen";
 import SecurityAlertScreen from "./src/screens/SecurityAlertScreen";
@@ -24,8 +25,6 @@ import DrawerMenu from "./src/components/DrawerMenu";
 import ProfileView from "./src/screens/ProfileView";
 import type { ProfileTarget } from "./src/screens/ProfileView";
 import NotificationSettingsScreen from "./src/screens/NotificationSettingsScreen";
-import DisputeScreen from "./src/screens/DisputeScreen";
-import DisputeTrackingScreen from "./src/screens/DisputeTrackingScreen";
 import TransferHistoryScreen from "./src/screens/TransferHistoryScreen";
 import BeneficiaryListScreen from "./src/screens/beneficiaries/BeneficiaryListScreen";
 import ConfirmBeneficiaryScreen from "./src/screens/beneficiaries/ConfirmBeneficiaryScreen";
@@ -76,7 +75,7 @@ function AppContent() {
     const [language, setLanguage] = useState<Language>("en");
     const t = translations[language];
 
-    const [view, setView] = useState<ViewName>("welcome");
+    const [view, setView] = useViewHistory("welcome");
     const [regStep, setRegStep] = useState(1);
     const [_authToken, setAuthToken] = useState<string | null>(null);
     const [_customerId, setCustomerId] = useState<string | null>(null);
@@ -444,20 +443,6 @@ function AppContent() {
         setView("transferSuccess");
     };
 
-    const shareTransferReceipt = () => {
-        if (!transferSummary) return;
-        const lines = [
-            t.receiptTitle,
-            `${t.beneficiary}: ${transferSummary.beneficiaryName}`,
-            transferSummary.bankName ? `${t.commonBank}: ${transferSummary.bankName}` : "",
-            `${t.amountSent}: $${transferSummary.amountUsd.toFixed(2)} USD`,
-            `${t.amountToReceiveMxn}: $${transferSummary.mxnAmount.toFixed(2)} MXN`,
-            `${t.dateTimeLabel}: ${formatDateTime(transferSummary.at, language)}`,
-            transferSummary.reference ? `${t.transactionFolio}: ${transferSummary.reference}` : "",
-        ];
-        Share.share({ message: lines.filter(Boolean).join("\n") });
-    };
-
     /** Pago de servicios hecho (54): descuenta el saldo y lo registra. */
     const handleServicePaid = (amount: number, concept: string, folio: string) => {
         const paidAt = Date.now();
@@ -524,11 +509,8 @@ function AppContent() {
             case "support":
                 return openSupport("live", "profile");
             case "cardLimits":
-            case "blockCard":
             case "deleteCard":
-                setCardEntry(
-                    target === "cardLimits" ? "limits" : target === "blockCard" ? "block" : "delete"
-                );
+                setCardEntry(target === "cardLimits" ? "limits" : "delete");
                 return setView("cardControls");
             case "logout":
                 return requestLogout();
@@ -973,7 +955,6 @@ function AppContent() {
                     language={language}
                     summary={transferSummary}
                     onBack={() => setView("transferSuccess")}
-                    onShare={shareTransferReceipt}
                 />
             )}
 
@@ -1005,7 +986,6 @@ function AppContent() {
                     language={language}
                     entry={supportEntry}
                     onExit={() => setView(supportReturnView)}
-                    onDispute={() => setView("dispute")}
                 />
             )}
 
@@ -1029,7 +1009,6 @@ function AppContent() {
                 <CardControlsFlow
                     t={t}
                     entry={cardEntry}
-                    onBlocked={() => setIsCardActive(false)}
                     onRemoved={() => {
                         setProfileNotice(t.cardRemoved);
                         setView("profile");
@@ -1048,26 +1027,7 @@ function AppContent() {
                 />
             )}
 
-            {view === "dispute" && (
-                <DisputeScreen
-                    t={t}
-                    onBack={() => openSupport("helpCenter", supportReturnView)}
-                    onChoose={(option) => {
-                        if (option === "tracking") return setView("disputeTracking");
-                        setTransactionsFilter(option === "cancel" ? "remittance" : "all");
-                        setView("transactions");
-                    }}
-                />
-            )}
 
-            {view === "disputeTracking" && (
-                <DisputeTrackingScreen
-                    t={t}
-                    appealed={allTransactions.filter((tx) => appeals[tx.id])}
-                    onBack={() => setView("dispute")}
-                    onOpen={openTransaction}
-                />
-            )}
 
             {view === "transferHistory" && (
                 <TransferHistoryScreen

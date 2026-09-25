@@ -26,6 +26,8 @@ type Props = {
   iconTone?: HeroTone;
   iconBadge?: "check" | "x";
   iconSpinning?: boolean;
+  /** Con `iconSpinning`, gira tambien el icono de dentro */
+  iconSpinInner?: boolean;
   title: string;
   subtitle?: string;
   /** Contenido entre el encabezado y los botones: filas, avisos, campos */
@@ -53,6 +55,7 @@ export default function StatusScreen({
   iconTone,
   iconBadge,
   iconSpinning,
+  iconSpinInner,
   title,
   subtitle,
   children,
@@ -81,6 +84,7 @@ export default function StatusScreen({
         iconTone={iconTone}
         iconBadge={iconBadge}
         iconSpinning={iconSpinning}
+        iconSpinInner={iconSpinInner}
         title={title}
         subtitle={subtitle}
         testID={testID}

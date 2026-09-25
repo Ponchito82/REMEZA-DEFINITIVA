@@ -74,12 +74,12 @@ describe("Desglose de movimientos (TransactionDetailView) [backend]", () => {
     await expect(byId("transactionDetail-provider")).toHaveText("BlackPay");
   });
 
-  it("'Appeal' abre su propia pantalla, exige un motivo y deja la apelación en revisión", async () => {
+  it("'Dispute' abre su propia pantalla, exige un motivo y deja la disputa en revisión", async () => {
     await goToTransactionDetail(2);
 
     await clickWithRetry("transactionDetail-appealButton");
     await byId("appeal-backButton").waitForDisplayed({ timeout: 10000 });
-    await expect($('//*[@text="Appeal transaction"]')).toBeDisplayed();
+    await expect($('//*[@text="Dispute transaction"]')).toBeDisplayed();
     await expect(byId("appeal-submitButton")).toBeDisabled();
 
     await clickWithRetry("appeal-reasonSelect");
