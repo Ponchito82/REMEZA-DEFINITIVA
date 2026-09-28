@@ -38,7 +38,6 @@ export default function RecoveryFlow({ t, onByPhone, onSupport, onSignIn, onHome
 
   const handleChoose = (method: RecoveryMethod) => {
     if (method === "phone") return onByPhone();
-    if (method === "support") return onSupport();
     push("email");
   };
 

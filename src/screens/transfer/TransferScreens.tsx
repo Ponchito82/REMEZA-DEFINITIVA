@@ -96,6 +96,7 @@ export function TransferReceiptScreen({
       ],
       [
         { label: t.exchangeRate, value: `1 USD = $${summary.exchangeRate.toFixed(2)} MXN` },
+        { label: t.commission, value: t.commissionDetail },
         { label: t.amountToReceiveMxn, value: `$${money(summary.mxnAmount)} MXN` },
         { label: t.receiptDate, value: formatReceiptDate(summary.at, language) },
         ...(summary.reference ? [{ label: t.transactionFolio, value: summary.reference }] : []),

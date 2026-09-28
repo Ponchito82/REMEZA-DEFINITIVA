@@ -2,29 +2,11 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Globe } from "lucide-react-native";
 
-import { FlagIcon, ListRow, ScreenHeader, ScreenLayout } from "../components/ui";
-import type { FlagCountry } from "../components/ui";
+import { CurrencyAccountCard } from "../components/remeza";
+import { ScreenHeader, ScreenLayout } from "../components/ui";
 import { metrics } from "../theme/radius";
 import { spacing } from "../theme/spacing";
 import { ViewName } from "../types/app";
-
-type Account = {
-  id: string;
-  country: FlagCountry;
-  code: string;
-  /** Clave de i18n con el nombre de la cuenta */
-  nameKey: string;
-  balance: number;
-};
-
-/** Mock: de aqui saldran las cuentas cuando haya backend. */
-const ACCOUNTS: Account[] = [
-  { id: "usd", country: "US", code: "USD", nameKey: "accountUsdName", balance: 12480 },
-  { id: "mxn", country: "MX", code: "MXN", nameKey: "accountMxnName", balance: 25300 },
-];
-
-const formatBalance = (value: number) =>
-  `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 type Props = {
   t: any;
@@ -32,10 +14,15 @@ type Props = {
 };
 
 /**
- * "Mis cuentas", con lo visual de la pantalla 1. Sin "Agregar moneda": esa
- * accion (30) y el tipo de cambio (8) quedan fuera por posible trading.
+ * "Mis cuentas": no es un sistema de multidivisa expandible, son dos cuentas
+ * fijas segun las reglas de negocio (remitente en EE.UU./USD, beneficiario en
+ * Mexico/MXN). Sin "Agregar moneda": esa accion (30) y el tipo de cambio (8)
+ * quedan fuera por posible trading.
  */
 export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
+  const usdAccount = { country: "US" as const, code: "USD", balance: 12480 };
+  const mxnAccount = { country: "MX" as const, code: "MXN", balance: 25300 };
+
   return (
     <ScreenLayout
       showBack
@@ -52,18 +39,22 @@ export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
       />
 
       <View style={styles.accounts}>
-        {ACCOUNTS.map((account) => (
-          <ListRow
-            key={account.id}
-            testID={`multiCurrency.account.${account.id}`}
-            accessibilityLabel={`${account.code} ${formatBalance(account.balance)}`}
-            leading={<FlagIcon country={account.country} size={metrics.rowIconCircle} />}
-            title={t[account.nameKey]}
-            value={formatBalance(account.balance)}
-            right="chevron"
-            onPress={() => console.log(`[multiCurrency] abrir ${account.code}`)}
-          />
-        ))}
+        <CurrencyAccountCard
+          testID="multiCurrency.account.usd"
+          country={usdAccount.country}
+          code={usdAccount.code}
+          name={t.accountUsdName}
+          balance={usdAccount.balance}
+          onPress={() => console.log(`[multiCurrency] abrir ${usdAccount.code}`)}
+        />
+        <CurrencyAccountCard
+          testID="multiCurrency.account.mxn"
+          country={mxnAccount.country}
+          code={mxnAccount.code}
+          name={t.accountMxnName}
+          balance={mxnAccount.balance}
+          onPress={() => console.log(`[multiCurrency] abrir ${mxnAccount.code}`)}
+        />
       </View>
     </ScreenLayout>
   );

@@ -26,39 +26,42 @@ type Props = {
   setView: (view: ViewName) => void;
 };
 
+type Step = "phone" | "code" | "newCode" | "success";
+
 /**
- * Recuperacion del codigo de acceso.
+ * Restablecer codigo de acceso, por telefono.
  *
- * El orden de los campos es parte del contrato de prueba: `forgotAccessCode.spec.js`
- * los localiza por **indice de `EditText`** (telefono 0, codigo 1, nuevo 2,
- * confirmacion 3), asi que no se pueden reordenar ni intercalar otro input.
- *
- * Toma lo visual de las pantallas 21 a 25 sin cambiar el mecanismo (telefono,
- * codigo por SMS y nuevo codigo de acceso de 6 digitos). El icono protagonista
- * solo acompana al primer paso y al de exito: con los cuatro campos a la vista,
- * empujaria el ultimo fuera de pantalla y UiAutomator dejaria de encontrarlo.
+ * Cuatro pasos, cada uno con sus propios campos (nada de campos de un paso
+ * conviviendo con los de otro): telefono, codigo de recuperacion, el nuevo
+ * codigo con su confirmacion, y el mensaje de exito con "Continuar" hacia el
+ * login. `forgotAccessCode.spec.js` ubica los inputs por **indice de
+ * `EditText` dentro de cada paso**, asi que el orden de los campos de cada
+ * pantalla no se puede alterar.
  */
 export default function ForgotAccessCodeView({ t, setView }: Props) {
+  const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState("");
   const [newAccessCode, setNewAccessCode] = useState("");
   const [confirmAccessCode, setConfirmAccessCode] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   const handleSendCode = () => {
     if (phone.replace(/\D/g, "").length < 7) return;
-    setCodeSent(true);
+    setStep("code");
   };
 
-  const handleReset = () => {
+  const handleContinueFromCode = () => {
     setError("");
-
     if (recoveryCode.length !== 6) {
       setError(t.accessCodeMismatch);
       return;
     }
+    setStep("newCode");
+  };
+
+  const handleReset = () => {
+    setError("");
 
     if (isWeakPasscode(newAccessCode)) {
       setError(t.weakAccessCode);
@@ -70,10 +73,8 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
       return;
     }
 
-    setSuccess(true);
+    setStep("success");
   };
-
-  const showHero = !codeSent || success;
 
   return (
     <ScreenLayout keyboard>
@@ -83,93 +84,133 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
         onPress={() => setView("login")}
       />
 
-      <ScreenHeader
-        icon={showHero ? (success ? CircleCheck : SearchCheck) : undefined}
-        iconVariant={success ? "ring" : "filled"}
-        iconTone={success ? "success" : "default"}
-        title={t.forgotAccessCodeTitle}
-        subtitle={t.forgotAccessCodeSubtitle}
-        style={styles.header}
-      />
-
-      {success ? (
-        <View style={styles.stack}>
-          <InfoCard icon={CircleCheck} tone="success" text={t.accessCodeResetSuccess} />
-          <PrimaryButton title={t.backToLogin} onPress={() => setView("login")} />
-        </View>
-      ) : (
-        <View style={styles.stack}>
-          <TextField
-            testID="forgot-phoneInput"
-            label={t.phoneNumber}
-            leftIcon={Phone}
-            placeholder={t.phoneExample}
-            value={formatUsPhoneDisplay(phone)}
-            onChangeText={(text) => setPhone(text.replace(/\D/g, "").slice(0, 10))}
-            keyboardType="phone-pad"
+      {step === "phone" ? (
+        <>
+          <ScreenHeader
+            icon={SearchCheck}
+            title={t.forgotAccessCodeTitle}
+            subtitle={t.forgotAccessCodeSubtitle}
+            style={styles.header}
           />
 
-          {!codeSent ? (
+          <View style={styles.stack}>
+            <TextField
+              testID="forgot-phoneInput"
+              label={t.phoneNumber}
+              leftIcon={Phone}
+              placeholder={t.phoneExample}
+              value={formatUsPhoneDisplay(phone)}
+              onChangeText={(text) => setPhone(text.replace(/\D/g, "").slice(0, 10))}
+              keyboardType="phone-pad"
+            />
+
             <PrimaryButton
               testID="forgot-sendCodeButton"
               title={t.sendRecoveryCode}
               showArrow
               onPress={handleSendCode}
             />
-          ) : (
-            <>
-              <InfoCard icon={MessageSquareText} text={t.recoveryCodeSentInfo} />
+          </View>
+        </>
+      ) : null}
 
-              <TextField
-                testID="forgot-recoveryCodeInput"
-                label={t.recoveryCodeLabel}
-                leftIcon={KeyRound}
-                value={recoveryCode}
-                onChangeText={(text) => setRecoveryCode(text.replace(/\D/g, "").slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
+      {step === "code" ? (
+        <>
+          <ScreenHeader
+            icon={SearchCheck}
+            title={t.forgotAccessCodeTitle}
+            subtitle={t.forgotAccessCodeSubtitle}
+            style={styles.header}
+          />
 
-              <TextField
-                testID="forgot-newAccessCodeInput"
-                label={t.newAccessCode}
-                leftIcon={Lock}
-                value={newAccessCode}
-                onChangeText={(text) => setNewAccessCode(text.replace(/\D/g, "").slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-                secureTextEntry
-              />
+          <View style={styles.stack}>
+            <InfoCard icon={MessageSquareText} text={t.recoveryCodeSentInfo} />
 
-              <TextField
-                testID="forgot-confirmAccessCodeInput"
-                label={t.confirmNewAccessCode}
-                leftIcon={Lock}
-                value={confirmAccessCode}
-                onChangeText={(text) => setConfirmAccessCode(text.replace(/\D/g, "").slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-                secureTextEntry
-              />
+            <TextField
+              testID="forgot-recoveryCodeInput"
+              label={t.recoveryCodeLabel}
+              leftIcon={KeyRound}
+              value={recoveryCode}
+              onChangeText={(text) => setRecoveryCode(text.replace(/\D/g, "").slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
 
-              {error ? (
-                <InfoCard
-                  testID="forgot.errorCard"
-                  icon={CircleAlert}
-                  tone="danger"
-                  text={error}
-                />
-              ) : null}
+            {error ? (
+              <InfoCard testID="forgot.errorCard" icon={CircleAlert} tone="danger" text={error} />
+            ) : null}
 
-              <PrimaryButton
-                testID="forgot-resetButton"
-                title={t.resetAccessCode}
-                onPress={handleReset}
-              />
-            </>
-          )}
-        </View>
-      )}
+            <PrimaryButton
+              testID="forgot-codeContinueButton"
+              title={t.commonContinue}
+              showArrow
+              onPress={handleContinueFromCode}
+            />
+          </View>
+        </>
+      ) : null}
+
+      {step === "newCode" ? (
+        <>
+          <ScreenHeader
+            icon={Lock}
+            title={t.newCodeTitle}
+            subtitle={t.newCodeSubtitle}
+            style={styles.header}
+          />
+
+          <View style={styles.stack}>
+            <TextField
+              testID="forgot-newAccessCodeInput"
+              label={t.newAccessCode}
+              leftIcon={Lock}
+              value={newAccessCode}
+              onChangeText={(text) => setNewAccessCode(text.replace(/\D/g, "").slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+              secureTextEntry
+            />
+
+            <TextField
+              testID="forgot-confirmAccessCodeInput"
+              label={t.confirmNewAccessCode}
+              leftIcon={Lock}
+              value={confirmAccessCode}
+              onChangeText={(text) => setConfirmAccessCode(text.replace(/\D/g, "").slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+              secureTextEntry
+            />
+
+            {error ? (
+              <InfoCard testID="forgot.errorCard" icon={CircleAlert} tone="danger" text={error} />
+            ) : null}
+
+            <PrimaryButton testID="forgot-resetButton" title={t.resetAccessCode} onPress={handleReset} />
+          </View>
+        </>
+      ) : null}
+
+      {step === "success" ? (
+        <>
+          <ScreenHeader
+            icon={CircleCheck}
+            iconVariant="ring"
+            iconTone="success"
+            title={t.forgotAccessCodeTitle}
+            style={styles.header}
+          />
+
+          <View style={styles.stack}>
+            <InfoCard icon={CircleCheck} tone="success" text={t.accessCodeResetSuccess} />
+            <PrimaryButton
+              testID="forgot-continueButton"
+              title={t.commonContinue}
+              onPress={() => setView("login")}
+            />
+          </View>
+        </>
+      ) : null}
     </ScreenLayout>
   );
 }

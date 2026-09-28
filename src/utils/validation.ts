@@ -122,51 +122,10 @@ export const FOREIGN_ID_TYPE_OPTIONS_ES = [
   { label: "Otro", value: "other" },
 ];
 
-export const NATIONALITY_OPTIONS = [
-  "Mexico",
-  "United States",
-  "Guatemala",
-  "Honduras",
-  "El Salvador",
-  "Colombia",
-  "Venezuela",
-  "Peru",
-  "Ecuador",
-  "Dominican Republic",
-  "Cuba",
-  "Argentina",
-  "Chile",
-  "Nicaragua",
-  "Costa Rica",
-  "Panama",
-  "Bolivia",
-  "Paraguay",
-  "Uruguay",
-  "Other",
-].map((label) => ({ label, value: label }));
+/** Solo EE. UU.: las reglas de negocio limitan el registro a remitentes estadounidenses. */
+export const NATIONALITY_OPTIONS = ["United States"].map((label) => ({ label, value: label }));
 
-export const NATIONALITY_OPTIONS_ES = [
-  "México",
-  "Estados Unidos",
-  "Guatemala",
-  "Honduras",
-  "El Salvador",
-  "Colombia",
-  "Venezuela",
-  "Perú",
-  "Ecuador",
-  "República Dominicana",
-  "Cuba",
-  "Argentina",
-  "Chile",
-  "Nicaragua",
-  "Costa Rica",
-  "Panamá",
-  "Bolivia",
-  "Paraguay",
-  "Uruguay",
-  "Otro",
-].map((label) => ({ label, value: label }));
+export const NATIONALITY_OPTIONS_ES = ["Estados Unidos"].map((label) => ({ label, value: label }));
 
 /**
  * Reglas visibles de un codigo de acceso de 6 digitos, las mismas que aplica

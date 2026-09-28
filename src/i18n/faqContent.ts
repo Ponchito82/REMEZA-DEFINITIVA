@@ -42,11 +42,8 @@ export const FAQ_CONTACT = {
   website: "remeza.app",
 } as const;
 
-/**
- * A donde lleva el enlace de Terminos y Condiciones. Es el sitio de Remeza:
- * cambiar por la direccion exacta de la pagina cuando exista.
- */
-export const TERMS_URL = "https://remeza.app";
+/** A donde lleva el enlace de Terminos y Condiciones. */
+export const TERMS_URL = "https://remeza.app/index.php/terms-and-conditions/";
 
 const es: FaqContent = {
   title: "Preguntas frecuentes",

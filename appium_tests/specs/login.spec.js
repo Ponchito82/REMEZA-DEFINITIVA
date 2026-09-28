@@ -1,4 +1,4 @@
-const { hideKeyboard, openLogin } = require("../helpers");
+const { hideKeyboard, openLogin, waitForDashboard } = require("../helpers");
 
 const APP_ID = "com.remezaapp";
 
@@ -82,7 +82,7 @@ describe("Login — backend real [backend]", () => {
     await $('android=new UiSelector().resourceId("login-accessCodeInput")').setValue(TEST_CODE);
     await $('android=new UiSelector().resourceId("login-signInButton")').click();
 
-    await $('android=new UiSelector().resourceId("dashboard-menuButton")').waitForDisplayed({ timeout: 20000 });
+    await waitForDashboard();
   });
 
   it("código incorrecto muestra error y NO navega", async () => {

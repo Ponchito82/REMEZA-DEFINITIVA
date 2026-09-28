@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Lock, Mail, Phone, Search } from "lucide-react-native";
+import { Mail, Phone, Search } from "lucide-react-native";
 
 import { ListRow, StatusScreen } from "../../components/ui";
 
-export type RecoveryMethod = "email" | "phone" | "support";
+export type RecoveryMethod = "email" | "phone";
 
 type Props = {
   t: any;
@@ -23,7 +23,6 @@ export default function RecoverAccessScreen({ t, onBack, onChoose }: Props) {
   const options: { key: RecoveryMethod; icon: typeof Mail; title: string; subtitle: string }[] = [
     { key: "email", icon: Mail, title: t.recoverByEmail, subtitle: t.recoverByEmailDesc },
     { key: "phone", icon: Phone, title: t.recoverByPhone, subtitle: t.recoverByPhoneDesc },
-    { key: "support", icon: Lock, title: t.recoverBySupport, subtitle: t.recoverBySupportDesc },
   ];
 
   return (

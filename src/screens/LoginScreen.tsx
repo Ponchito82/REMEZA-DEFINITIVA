@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
   Pressable,
@@ -17,6 +16,7 @@ import {
   LinkText,
   LogoTile,
   TextField,
+  KeyboardAwareScrollView,
 } from "../components/ui";
 import { Language, ViewName } from "../types/app";
 import { colors } from "../theme/colors";
@@ -33,7 +33,7 @@ type Props = {
   setLanguage: (language: Language) => void;
   setView: (view: ViewName) => void;
   setRegStep: (step: number) => void;
-  onLoginSuccess: (customerId: string, token: string, expiresInMs?: number) => void;
+  onLoginSuccess: (customerId: string, token: string, expiresInMs: number | undefined, phone: string) => void;
   sessionEndedReason?: UnauthorizedReason | null;
   onSessionNoticeDismissed?: () => void;
   prefilledPhone?: string;
@@ -91,7 +91,7 @@ export default function LoginScreen({
     setIsSubmitting(true);
     try {
       const auth = await login(phone, loginAccessCode);
-      onLoginSuccess(auth.customerId, auth.token, auth.expiresInMs);
+      onLoginSuccess(auth.customerId, auth.token, auth.expiresInMs, phone);
       setView(postLoginView);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -110,7 +110,7 @@ export default function LoginScreen({
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -205,7 +205,7 @@ export default function LoginScreen({
               ) : null}
             </Text>
           </Pressable>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </View>
   );

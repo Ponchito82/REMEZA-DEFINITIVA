@@ -33,6 +33,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Remeza uses Face ID so you can sign in and confirm actions quickly and securely.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need access to your camera to capture your identification document.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

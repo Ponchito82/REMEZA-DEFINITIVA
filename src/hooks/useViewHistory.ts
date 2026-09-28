@@ -1,8 +1,20 @@
 import { useCallback, useRef, useState } from "react";
-import { BackHandler } from "react-native";
+import { BackHandler, LayoutAnimation } from "react-native";
 
 import { useMountEffect } from "./useMountEffect";
 import { ViewName } from "../types/app";
+
+/**
+ * Transicion suave entre pantallas: opacidad + un leve escalado, mas rapida
+ * que los presets de fabrica. Se dispara antes de cada `setView`, asi que
+ * cubre toda la app desde un solo lugar sin tocar cada pantalla.
+ */
+const VIEW_TRANSITION = {
+  duration: 220,
+  create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  update: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+};
 
 /** Raices de la navegacion: sin pantalla anterior, el atras cierra la app. */
 const ROOT_VIEWS = new Set<ViewName>(["welcome", "login", "dashboard"]);
@@ -68,6 +80,7 @@ export function useViewHistory(initial: ViewName) {
       }
     }
 
+    LayoutAnimation.configureNext(VIEW_TRANSITION);
     viewRef.current = next;
     setViewState(next);
   }, []);

@@ -24,7 +24,6 @@ import KycView from "./src/screens/KycView";
 import DrawerMenu from "./src/components/DrawerMenu";
 import ProfileView from "./src/screens/ProfileView";
 import type { ProfileTarget } from "./src/screens/ProfileView";
-import NotificationSettingsScreen from "./src/screens/NotificationSettingsScreen";
 import TransferHistoryScreen from "./src/screens/TransferHistoryScreen";
 import BeneficiaryListScreen from "./src/screens/beneficiaries/BeneficiaryListScreen";
 import ConfirmBeneficiaryScreen from "./src/screens/beneficiaries/ConfirmBeneficiaryScreen";
@@ -70,6 +69,15 @@ import {
 } from "./src/api/session";
 import { verifySession } from "./src/api/sessionProbe";
 import { toE164 } from "./src/utils/phone";
+import { isBiometricsEnabled } from "./src/services/securitySettings";
+
+/**
+ * Unico cliente de la base de pruebas (E.164 completo). No paso por el
+ * registro de la app, asi que no trae nombre propio; se le asigna uno fijo
+ * al iniciar sesion para que el perfil y la tarjeta no se vean vacios.
+ */
+const TEST_ACCOUNT_PHONE = "+525538068807";
+const TEST_ACCOUNT_NAME = { first: "Mario", paternal: "Alcántara" };
 
 function AppContent() {
     const [language, setLanguage] = useState<Language>("en");
@@ -84,12 +92,59 @@ function AppContent() {
     const handleLoginSuccess = (
         loggedInCustomerId: string,
         token: string,
-        expiresInMs?: number,
+        expiresInMs: number | undefined,
+        loginPhone: string,
     ) => {
         setCustomerId(loggedInCustomerId);
         setAuthToken(token);
         setSessionEndedReason(null);
         startSession(loggedInCustomerId, token, expiresInMs);
+
+        // Cuenta de pruebas (unico cliente de la base, sin registro propio en la
+        // app): sin nombre no hay como armarlo, asi que se inyecta uno fijo para
+        // que perfil y tarjeta no queden en blanco.
+        if (loginPhone.trim() === TEST_ACCOUNT_PHONE && !registerFirstName) {
+            setRegisterFirstName(TEST_ACCOUNT_NAME.first);
+            setRegisterPaternalLastName(TEST_ACCOUNT_NAME.paternal);
+        }
+    };
+
+    /**
+     * Aviso de biometria: la primera vez en la sesion que se entra al
+     * dashboard redirige a su pantalla (`biometricPrompt`, ver mas abajo). Si
+     * no se activa ahi, se recuerda una vez al dia con un aviso pasivo en el
+     * dashboard (no vuelve a redirigir por su cuenta).
+     */
+    const [biometricPromptShown, setBiometricPromptShown] = useState(false);
+    const [biometricReminderDay, setBiometricReminderDay] = useState<string | null>(null);
+    const [biometricReminderVisible, setBiometricReminderVisible] = useState(false);
+
+    useEffect(() => {
+        if (view !== "dashboard" || isBiometricsEnabled()) return;
+
+        const today = new Date().toDateString();
+
+        if (!biometricPromptShown) {
+            setBiometricPromptShown(true);
+            setBiometricReminderDay(today);
+            setView("biometricPrompt");
+            return;
+        }
+
+        if (biometricReminderDay !== today) {
+            setBiometricReminderDay(today);
+            setBiometricReminderVisible(true);
+        }
+    }, [view]);
+
+    const handleBiometricPromptResolved = () => {
+        setBiometricReminderVisible(false);
+        setView("dashboard");
+    };
+
+    const handleBiometricReminderPress = () => {
+        setBiometricReminderVisible(false);
+        setView("biometricPrompt");
     };
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -500,8 +555,6 @@ function AppContent() {
         switch (target) {
             case "security":
                 return setView("security");
-            case "notifications":
-                return setView("notifications");
             case "paymentMethods":
                 return setView("bankAccounts");
             case "helpCenter":
@@ -707,6 +760,7 @@ function AppContent() {
             {view === "dashboard" && (
                 <DashboardView
                     t={t}
+                    holderName={profileFullName}
                     isFactoryInactive={isFactoryInactive}
                     isCardActive={isCardActive}
                     setIsCardActive={setIsCardActive}
@@ -736,6 +790,8 @@ function AppContent() {
                     setShowCardData={setShowCardData}
                     handleActivateCard={handleActivateCard}
                     handleActivateVirtualCard={handleActivateCard}
+                    biometricReminderVisible={biometricReminderVisible}
+                    onBiometricReminderPress={handleBiometricReminderPress}
                 />
             )}
 
@@ -994,11 +1050,21 @@ function AppContent() {
                     t={t}
                     onExit={() => setView("profile")}
                     onHome={() => setView("dashboard")}
+                    phone={profilePhone}
+                    email={registerEmail.trim()}
                 />
             )}
 
-            {view === "notifications" && (
-                <NotificationSettingsScreen t={t} onExit={() => setView("profile")} />
+            {view === "biometricPrompt" && (
+                <SecurityFlow
+                    t={t}
+                    initialStep="biometrics"
+                    onExit={handleBiometricPromptResolved}
+                    onHome={handleBiometricPromptResolved}
+                    onBiometricsResolved={handleBiometricPromptResolved}
+                    phone={profilePhone}
+                    email={registerEmail.trim()}
+                />
             )}
 
             {view === "bankAccounts" && (

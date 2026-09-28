@@ -1,4 +1,4 @@
-const { byId, clickWithRetry, restartApp } = require("../helpers");
+const { byId, clickWithRetry, restartApp, waitForDashboard } = require("../helpers");
 
 const TEST_PHONE = "+525538068807";
 const TEST_CODE = "123456";
@@ -10,7 +10,7 @@ const goToPhysicalCard = async () => {
   await byId("login-accessCodeInput").setValue(TEST_CODE);
   await byId("login-signInButton").click();
 
-  await byId("dashboard-menuButton").waitForDisplayed({ timeout: 20000 });
+  await waitForDashboard();
   await byId("dashboard-menuButton").click();
   await byId("drawer-physicalCardItem").click();
 
