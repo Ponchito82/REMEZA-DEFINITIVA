@@ -1,6 +1,7 @@
 export { default as BalanceHeader } from "./BalanceHeader";
 export { default as BankCard } from "./BankCard";
 export { default as CardCarousel } from "./CardCarousel";
+export { default as RemezaCardBack } from "./RemezaCardBack";
 export { default as ToggleRow } from "./ToggleRow";
 export { default as ActivityItem } from "./ActivityItem";
 export { default as TransactionItem } from "./TransactionItem";

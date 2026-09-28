@@ -19,7 +19,7 @@ export type ViewName =
   | "logoutConfirm"
   | "recoverAccess"
   | "security"
-  | "notifications"
+  | "biometricPrompt"
   | "bankAccounts"
   | "support"
   | "servicePayments"

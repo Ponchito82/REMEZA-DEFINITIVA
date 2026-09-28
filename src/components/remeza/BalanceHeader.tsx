@@ -1,9 +1,12 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, ViewStyle } from "react-native";
-import { Menu } from "lucide-react-native";
+import { Menu, Eye, EyeOff } from "lucide-react-native";
 import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
 import { spacing } from "../../theme/spacing";
+
+/** Mascara del monto cuando el saldo esta oculto. */
+const HIDDEN_AMOUNT = "••••••";
 
 type Props = {
   label: string;
@@ -11,6 +14,11 @@ type Props = {
   onMenuPress: () => void;
   /** Sin este prop el saldo no es pulsable, como hasta ahora. */
   onBalancePress?: () => void;
+  /** Sin `onToggleHidden` el boton de ocultar saldo no se dibuja. */
+  hidden?: boolean;
+  onToggleHidden?: () => void;
+  hideBalanceAccessibilityLabel?: string;
+  showBalanceAccessibilityLabel?: string;
   style?: ViewStyle;
   testID?: string;
   menuTestID?: string;
@@ -18,6 +26,7 @@ type Props = {
 };
 
 const MENU_SIZE = 48;
+const HIDE_BUTTON_SIZE = 36;
 
 /** Encabezado del Home: saldo a la izquierda y acceso al menu a la derecha. */
 export default function BalanceHeader({
@@ -25,29 +34,54 @@ export default function BalanceHeader({
   amount,
   onMenuPress,
   onBalancePress,
+  hidden = false,
+  onToggleHidden,
+  hideBalanceAccessibilityLabel = "Hide balance",
+  showBalanceAccessibilityLabel = "Show balance",
   style,
   testID,
   menuTestID,
   menuAccessibilityLabel = "Menu",
 }: Props) {
+  const displayAmount = hidden ? HIDDEN_AMOUNT : amount;
+
   return (
     <View style={style}>
       <View style={styles.row}>
-        <Pressable
-          testID={testID ? `${testID}-balancePressable` : undefined}
-          accessibilityRole={onBalancePress ? "button" : undefined}
-          accessibilityLabel={`${label} ${amount}`}
-          onPress={onBalancePress}
-          disabled={!onBalancePress}
-          style={styles.balance}
-        >
-          <Text testID={testID ? `${testID}-label` : undefined} style={typography.label}>
-            {label}
-          </Text>
-          <Text testID={testID ? `${testID}-amount` : undefined} style={styles.amount}>
-            {amount}
-          </Text>
-        </Pressable>
+        <View style={styles.balanceGroup}>
+          <Pressable
+            testID={testID ? `${testID}-balancePressable` : undefined}
+            accessibilityRole={onBalancePress ? "button" : undefined}
+            accessibilityLabel={`${label} ${displayAmount}`}
+            onPress={onBalancePress}
+            disabled={!onBalancePress}
+            style={styles.balance}
+          >
+            <Text testID={testID ? `${testID}-label` : undefined} style={typography.label}>
+              {label}
+            </Text>
+            <Text testID={testID ? `${testID}-amount` : undefined} style={styles.amount}>
+              {displayAmount}
+            </Text>
+          </Pressable>
+
+          {onToggleHidden ? (
+            <Pressable
+              testID={testID ? `${testID}-hideToggle` : undefined}
+              accessibilityRole="button"
+              accessibilityLabel={hidden ? showBalanceAccessibilityLabel : hideBalanceAccessibilityLabel}
+              onPress={onToggleHidden}
+              hitSlop={10}
+              style={({ pressed }) => [styles.hideButton, pressed && styles.pressed]}
+            >
+              {hidden ? (
+                <EyeOff size={18} color={colors.text.secondary} strokeWidth={2} />
+              ) : (
+                <Eye size={18} color={colors.primaryLight} strokeWidth={2} />
+              )}
+            </Pressable>
+          ) : null}
+        </View>
 
         <Pressable
           testID={menuTestID}
@@ -72,12 +106,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.lg,
   },
+  balanceGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    gap: spacing.sm,
+  },
   balance: {
     flexShrink: 1,
   },
   amount: {
     ...typography.amount,
     marginTop: spacing.xs,
+  },
+  hideButton: {
+    width: HIDE_BUTTON_SIZE,
+    height: HIDE_BUTTON_SIZE,
+    borderRadius: HIDE_BUTTON_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   menu: {
     width: MENU_SIZE,

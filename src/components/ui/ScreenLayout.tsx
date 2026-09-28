@@ -12,6 +12,7 @@ import { colors } from "../../theme/colors";
 import { metrics } from "../../theme/radius";
 import { spacing } from "../../theme/spacing";
 import BackButton from "./BackButton";
+import KeyboardAwareScrollView from "./KeyboardAwareScrollView";
 
 type Props = {
   children: React.ReactNode;
@@ -65,7 +66,7 @@ export default function ScreenLayout({
         enabled={keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           ref={scrollRef}
           contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
@@ -80,7 +81,7 @@ export default function ScreenLayout({
           ) : null}
 
           {children}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {footer ? <View style={styles.footer}>{footer}</View> : null}
       </KeyboardAvoidingView>

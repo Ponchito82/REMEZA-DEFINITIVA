@@ -65,6 +65,25 @@ const clickWithRetry = async (id) => {
   });
 };
 
+/**
+ * Tras iniciar sesion, la primera vez en la sesion el dashboard redirige a la
+ * pantalla de biometria (aviso opcional). La prueba la omite con "Maybe
+ * later" para seguir su flujo normal ya en el dashboard.
+ */
+const waitForDashboard = async (timeout = 20000) => {
+  const menuButton = byId("dashboard-menuButton");
+  const laterLink = byId("enableBiometrics.laterLink");
+
+  const alreadyOnDashboard = await menuButton
+    .waitForDisplayed({ timeout: 3000 })
+    .catch(() => false);
+  if (alreadyOnDashboard) return;
+
+  await laterLink.waitForDisplayed({ timeout });
+  await laterLink.click();
+  await menuButton.waitForDisplayed({ timeout });
+};
+
 const WELCOME_CTA = "welcome-getStartedButton";
 
 /**
@@ -113,4 +132,5 @@ module.exports = {
   restartApp,
   hideKeyboard,
   selectFromSearchable,
+  waitForDashboard,
 };

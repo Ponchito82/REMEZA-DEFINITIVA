@@ -3,13 +3,12 @@ import {
   View,
   Text,
   Pressable,
-  ScrollView,
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Check, Lock, Calendar, Globe, CreditCard, User, Images } from "lucide-react-native";
+import { Check, Lock, Calendar, Globe, CreditCard, User, Images, Gift } from "lucide-react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import Clipboard from "@react-native-clipboard/clipboard";
 import MainButton from "../components/MainButton";
@@ -28,6 +27,8 @@ import {
   PinDotsInput,
   ScreenHeader,
   StepProgress,
+  TextField,
+  KeyboardAwareScrollView,
 } from "../components/ui";
 import { CredentialsSummaryCard } from "../components/remeza";
 import { colors } from "../theme/colors";
@@ -351,6 +352,9 @@ export default function RegisterSteps(props: Props) {
   const [phoneTouched, setPhoneTouched] = useState(false);
   const isRegisterPhoneValid = isValidNationalPhone(registerPhone, registerPhoneCountry);
 
+  // Codigo referido: opcional, se captura aqui y no bloquea el alta.
+  const [referralCode, setReferralCode] = useState("");
+
   const phoneE164 = toE164(registerPhone, registerPhoneCountry);
 
   const [onboardingId, setOnboardingId] = useState<string | null>(null);
@@ -608,7 +612,7 @@ export default function RegisterSteps(props: Props) {
       style={styles.registerScreen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={form.scrollRef}
         contentContainerStyle={styles.registerContent}
         keyboardShouldPersistTaps="handled"
@@ -650,6 +654,18 @@ export default function RegisterSteps(props: Props) {
                 {phoneStepError}
               </Text>
             ) : null}
+
+            <TextField
+              testID="register-referralInput"
+              label={`${t.referralCodeButton} (${t.optional})`}
+              placeholder={t.referralCodePlaceholder}
+              value={referralCode}
+              onChangeText={(text) => setReferralCode(text.toUpperCase().slice(0, 12))}
+              leftIcon={Gift}
+              autoCapitalize="characters"
+              helperText={referralCode ? t.referralCodeApplied : undefined}
+              style={stepStyles.referralField}
+            />
 
             <MainButton
               testID="register-nextButton"
@@ -1145,7 +1161,7 @@ export default function RegisterSteps(props: Props) {
           </View>
         )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <OptionSheet
         visible={imageSourceSide !== null}
@@ -1205,5 +1221,8 @@ const stepStyles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.xl,
+  },
+  referralField: {
+    marginTop: spacing.lg,
   },
 });

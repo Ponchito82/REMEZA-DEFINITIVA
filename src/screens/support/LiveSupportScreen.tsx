@@ -48,7 +48,7 @@ export default function LiveSupportScreen({ t, onBack, onOpenChat }: Props) {
         testID="liveSupport.callRow"
         icon={Phone}
         title={t.callSupport}
-        subtitle={contact.phone}
+        subtitle={t.callSupportDesc}
         onPress={() => openLink(`tel:${contact.phone.replace(/[^\d+]/g, "")}`)}
       />
     </StatusScreen>

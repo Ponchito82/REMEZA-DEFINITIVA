@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   View,
-  ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import {
   IconCircle,
   OtpInput,
   ScreenHeader,
+  KeyboardAwareScrollView,
 } from "../components/ui";
 import { ListItemCard } from "../components/remeza";
 import { sizes } from "../theme/radius";
@@ -49,7 +49,7 @@ export default function TwoStepVerificationScreen({
       style={styles.root}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -109,7 +109,7 @@ export default function TwoStepVerificationScreen({
             />
           ))}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
 }

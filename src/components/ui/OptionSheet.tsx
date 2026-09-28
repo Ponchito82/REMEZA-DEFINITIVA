@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, Pressable, Modal, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
+import KeyboardAwareScrollView from "./KeyboardAwareScrollView";
 import { X, Check } from "lucide-react-native";
 import { colors } from "../../theme/colors";
 import { fontFamily } from "../../theme/typography";
@@ -72,7 +73,7 @@ export default function OptionSheet({
 
           {children}
 
-          <ScrollView
+          <KeyboardAwareScrollView
             style={styles.list}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -104,7 +105,7 @@ export default function OptionSheet({
                 );
               })
             )}
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </Pressable>
       </Pressable>
     </Modal>

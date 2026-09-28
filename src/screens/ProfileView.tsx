@@ -1,11 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import {
-  Bell,
   CircleCheck,
   CircleHelp,
   CreditCard,
-  Gauge,
   Headset,
   Lock,
   LogOut,
@@ -41,7 +39,6 @@ type Props = {
 
 export type ProfileTarget =
   | "security"
-  | "notifications"
   | "paymentMethods"
   | "helpCenter"
   | "support"
@@ -143,12 +140,6 @@ export default function ProfileView({
           onPress={() => onOpen("security")}
         />
         <ListRow
-          testID="profile.notificationsRow"
-          icon={Bell}
-          title={t.profileNotifications}
-          onPress={() => onOpen("notifications")}
-        />
-        <ListRow
           testID="profile.paymentMethodsRow"
           icon={CreditCard}
           title={t.profilePaymentMethods}
@@ -170,12 +161,7 @@ export default function ProfileView({
 
       <Text style={[textStyles.overline, styles.section]}>{t.profileCardSection}</Text>
       <View style={styles.rows}>
-        <ListRow
-          testID="profile.cardLimitsRow"
-          icon={Gauge}
-          title={t.profileCardLimits}
-          onPress={() => onOpen("cardLimits")}
-        />
+        {/* Oculto por ahora: la pantalla de limites sigue disponible via `onOpen("cardLimits")`. */}
         <ListRow
           testID="profile.deleteCardRow"
           icon={Trash2}

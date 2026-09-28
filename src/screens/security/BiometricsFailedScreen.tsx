@@ -1,25 +1,30 @@
 import React from "react";
-import { Fingerprint, ShieldCheck } from "lucide-react-native";
+import { ShieldCheck } from "lucide-react-native";
 
 import { InfoCard, StatusScreen } from "../../components/ui";
+import type { BiometryKind } from "../../services/biometrics";
+import { bioText, biometryIcon } from "./biometryKind";
 
 type Props = {
   t: any;
+  kind: BiometryKind;
+  /** El equipo no tiene el sensor o no hay rostro/huella registrados */
+  unavailable: boolean;
   retrying: boolean;
   onRetry: () => void;
   onUseAccessCode: () => void;
   onHome: () => void;
 };
 
-/** No se pudo reconocer tu huella (pantalla 26). */
-export default function BiometricsFailedScreen({ t, retrying, onRetry, onUseAccessCode, onHome }: Props) {
+/** No se pudo reconocer tu rostro o tu huella (pantalla 26). */
+export default function BiometricsFailedScreen({ t, kind, unavailable, retrying, onRetry, onUseAccessCode, onHome }: Props) {
   return (
     <StatusScreen
       testID="biometricsFailed"
-      icon={Fingerprint}
+      icon={biometryIcon(kind)}
       iconBadge="x"
-      title={t.bioFailedTitle}
-      subtitle={t.bioFailedSubtitle}
+      title={bioText(t, unavailable ? "bioUnavailableTitle" : "bioFailedTitle", kind)}
+      subtitle={bioText(t, unavailable ? "bioUnavailableSubtitle" : "bioFailedSubtitle", kind)}
       primary={{
         testID: "biometricsFailed.retryButton",
         title: t.commonRetry,

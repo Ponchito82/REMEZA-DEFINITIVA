@@ -2,9 +2,14 @@ import {
   MOCK_NOTIFICATION_PREFERENCES,
   NotificationPreferences,
 } from "../mocks/remeza";
+import { MOCK_EMAIL_CODE } from "../mocks/remeza";
 import { mockDelay } from "./mockDelay";
+import { authenticateWithBiometrics, BiometricsResult } from "./biometrics";
+
+export type TwoFactorMethod = "sms" | "email";
 
 let twoFactorEnabled = true;
+let twoFactorMethods: Record<TwoFactorMethod, boolean> = { sms: true, email: false };
 let biometricsEnabled = false;
 let notificationPreferences: NotificationPreferences = { ...MOCK_NOTIFICATION_PREFERENCES };
 
@@ -21,6 +26,41 @@ export async function setTwoFactorEnabled(value: boolean): Promise<boolean> {
   return twoFactorEnabled;
 }
 
+// TODO API: metodos activos de la verificacion en dos pasos.
+export async function getTwoFactorMethods(): Promise<Record<TwoFactorMethod, boolean>> {
+  await mockDelay(150);
+  return { ...twoFactorMethods };
+}
+
+// TODO API: enviar el codigo de verificacion al telefono (SMS) o al correo.
+export async function sendTwoFactorCode(
+  _method: TwoFactorMethod,
+  _destination: string,
+): Promise<{ ok: boolean }> {
+  await mockDelay(800);
+  return { ok: true };
+}
+
+// TODO API: validar el codigo recibido. El mock acepta MOCK_EMAIL_CODE.
+export async function verifyTwoFactorCode(
+  _method: TwoFactorMethod,
+  _destination: string,
+  code: string,
+): Promise<{ ok: boolean }> {
+  await mockDelay(700);
+  return { ok: code === MOCK_EMAIL_CODE };
+}
+
+// TODO API: activar o desactivar un metodo de la verificacion en dos pasos.
+export async function setTwoFactorMethod(
+  method: TwoFactorMethod,
+  enabled: boolean,
+): Promise<Record<TwoFactorMethod, boolean>> {
+  await mockDelay(300);
+  twoFactorMethods = { ...twoFactorMethods, [method]: enabled };
+  return { ...twoFactorMethods };
+}
+
 // TODO API: cambiar el codigo de acceso con sesion iniciada.
 export async function changeAccessCode(
   _currentCode: string,
@@ -31,14 +71,17 @@ export async function changeAccessCode(
 }
 
 /**
- * TODO API: la app no trae aun libreria biometrica (react-native-biometrics o
- * similar). El mock responde exito; la pantalla de fallo (26) se muestra con
- * `ok: false`.
+ * Activa la biometria pidiendo la verificacion real al sistema: Face ID en
+ * iOS y huella digital en Android. Solo se marca activa si el usuario la pasa.
+ * TODO API: registrar en el backend que el dispositivo tiene biometria activa.
  */
-export async function enableBiometrics(): Promise<{ ok: boolean }> {
-  await mockDelay(900);
-  biometricsEnabled = true;
-  return { ok: true };
+export async function enableBiometrics(
+  promptMessage: string,
+  cancelButtonText: string,
+): Promise<BiometricsResult> {
+  const result = await authenticateWithBiometrics(promptMessage, cancelButtonText);
+  if (result.ok) biometricsEnabled = true;
+  return result;
 }
 
 export function isBiometricsEnabled(): boolean {

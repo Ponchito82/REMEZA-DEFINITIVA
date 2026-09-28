@@ -1,15 +1,16 @@
-import React from "react";
+import KeyboardAwareScrollView from "../components/ui/KeyboardAwareScrollView";
+import React, { useState } from "react";
 import {
   View,
   Text,
   Pressable,
   ScrollView,
+  Switch,
   Modal,
   TextInput,
   StyleSheet,
 } from "react-native";
 import {
-  CreditCard,
   ShieldOff,
   Eye,
   EyeOff,
@@ -17,14 +18,25 @@ import {
   LockOpen,
 } from "lucide-react-native";
 import Clipboard from "@react-native-clipboard/clipboard";
-import { Clipboard as ClipboardIcon } from "lucide-react-native";
 import { styles } from "../theme/styles";
 import { GLASS_BORDER, PURPLE, colors } from "../theme/colors";
-import { ActivityItem, BalanceHeader } from "../components/remeza";
+import { GlassBanner } from "../components/ui";
+import { ActivityItem, BalanceHeader, RemezaCardBack } from "../components/remeza";
 import { spacing, screenPadding } from "../theme/spacing";
+
+/** Datos de la tarjeta de muestra: los mismos valores que antes iban en linea. */
+const CARD_DEMO = {
+  number: "1234 5678 9012 4590",
+  last4: "4590",
+  expiry: "12/28",
+  cvv: "123",
+};
 
 type Props = {
   t: any;
+
+  /** Nombre completo con el que se registro; se pinta en el reverso de las tarjetas. */
+  holderName: string;
 
   isFactoryInactive: boolean;
   isCardActive: boolean;
@@ -70,10 +82,15 @@ type Props = {
 
   handleActivateCard: () => void;
   handleActivateVirtualCard: () => void;
+
+  /** Recordatorio de biometria (una vez al dia, si no se activo). Toca para ir a activarla. */
+  biometricReminderVisible?: boolean;
+  onBiometricReminderPress?: () => void;
 };
 
 export default function DashboardView({
   t,
+  holderName,
   isFactoryInactive,
   isCardActive,
   setIsCardActive,
@@ -103,7 +120,11 @@ export default function DashboardView({
   setShowCardData,
   handleActivateCard,
   handleActivateVirtualCard,
+  biometricReminderVisible = false,
+  onBiometricReminderPress = () => {},
 }: Props) {
+  const [hideBalance, setHideBalance] = useState(false);
+
   const isPhysicalFormValid =
     secureCode.length === 6 &&
     cardNumber.replace(/\s/g, "").length === 16 &&
@@ -112,6 +133,13 @@ export default function DashboardView({
 
   const isVirtualFormValid =
     birthDate.length === 10 && virtualSecureCode.length === 6;
+
+  // Tras activar, las dos tarjetas muestran los datos capturados en la activacion.
+  const enteredNumber = cardNumber.replace(/\s/g, "");
+  const cardData =
+    !isFactoryInactive && enteredNumber.length === 16
+      ? { number: cardNumber, last4: enteredNumber.slice(-4), expiry: expiryDate, cvv }
+      : CARD_DEMO;
 
   return (
     <View style={styles.dashboardScreen}>
@@ -123,6 +151,10 @@ export default function DashboardView({
           onMenuPress={() => setIsMenuOpen(true)}
           onBalancePress={onBalancePress}
           menuTestID="dashboard-menuButton"
+          hidden={hideBalance}
+          onToggleHidden={() => setHideBalance((prev) => !prev)}
+          hideBalanceAccessibilityLabel={t.hideBalance}
+          showBalanceAccessibilityLabel={t.showBalance}
         />
       </View>
 
@@ -133,7 +165,7 @@ export default function DashboardView({
         onRequestClose={() => setShowSecureCodeModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <ScrollView
+          <KeyboardAwareScrollView
             style={dashboardStyles.modalScroll}
             contentContainerStyle={dashboardStyles.modalScrollContent}
             keyboardShouldPersistTaps="handled"
@@ -240,7 +272,7 @@ export default function DashboardView({
               <Text style={styles.cancelText}>{t.cancel}</Text>
             </Pressable>
           </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 
@@ -251,7 +283,7 @@ export default function DashboardView({
         onRequestClose={() => setShowVirtualCardModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <ScrollView
+          <KeyboardAwareScrollView
             style={dashboardStyles.modalScroll}
             contentContainerStyle={dashboardStyles.modalScrollContent}
             keyboardShouldPersistTaps="handled"
@@ -329,7 +361,7 @@ export default function DashboardView({
               <Text style={styles.cancelText}>{t.cancel}</Text>
             </Pressable>
           </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 
@@ -337,6 +369,20 @@ export default function DashboardView({
         contentContainerStyle={styles.dashboardContent}
         showsVerticalScrollIndicator={false}
       >
+        {biometricReminderVisible ? (
+          <Pressable
+            testID="dashboard-biometricReminder"
+            accessibilityRole="button"
+            onPress={onBiometricReminderPress}
+          >
+            <GlassBanner
+              tone="info"
+              message={t.dashboardBioReminderNote}
+              style={dashboardStyles.bioReminderNotice}
+            />
+          </Pressable>
+        ) : null}
+
         {isFactoryInactive && !showSuccessMessage && (
           <View style={styles.inactiveCardMessage}>
             <Pressable
@@ -399,13 +445,21 @@ export default function DashboardView({
                 }
               }}
             >
-              <View
-                style={[
-                  styles.virtualCard,
-                  isCardActive && !isFactoryInactive
-                    ? styles.virtualCardOn
-                    : styles.virtualCardOff,
-                ]}
+              <RemezaCardBack
+                testID="dashboard-physicalCard"
+                t={t}
+                holderName={holderName}
+                number={cardData.number}
+                last4={cardData.last4}
+                expiry={cardData.expiry}
+                cvv={cardData.cvv}
+                showData={showCardData}
+                dimmed={!(isCardActive && !isFactoryInactive)}
+                onCopyNumber={() => Clipboard.setString(cardNumber.replace(/\s/g, ""))}
+                copyTestID="dashboard-copyPhysicalCardNumberButton"
+                onCopyCvv={() => Clipboard.setString(cardData.cvv)}
+                copyCvvTestID="dashboard-copyPhysicalCvvButton"
+                style={dashboardStyles.card}
               >
                 {!isFactoryInactive && !isCardActive && (
                   <View style={styles.virtualCardOverlay}>
@@ -415,93 +469,7 @@ export default function DashboardView({
                     </Text>
                   </View>
                 )}
-
-                <View style={styles.virtualCardInner}>
-                  <CreditCard size={28} color="#fff" />
-                  <View>
-                    <Text style={styles.virtualCardNumber}>
-                      {showCardData ? "1234 5678 9012 4590" : "•••• 4590"}
-                    </Text>
-
-                    {showCardData && (
-                      <View
-                        style={{
-                          marginTop: 6,
-                          flexDirection: "row",
-                          justifyContent: "flex-end",
-                        }}
-                      >
-                        <Pressable
-                          testID="dashboard-copyPhysicalCardNumberButton"
-                          onPress={() => Clipboard.setString(cardNumber.replace(/\s/g, ""))}
-                          style={{
-                            paddingHorizontal: 8,
-                            paddingVertical: 6,
-                            borderRadius: 8,
-                            backgroundColor: "rgba(255,255,255,0.15)",
-                          }}
-                        >
-                          <ClipboardIcon size={16} color="#FFF" />
-                        </Pressable>
-                      </View>
-                    )}
-
-                    <Text style={styles.virtualCardName}>JOHN PEREZ</Text>
-
-                    {showCardData && (
-                      <View
-                        style={{
-                          marginTop: 8,
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <View>
-                          <Text
-                            style={{
-                              color: "rgba(255,255,255,0.7)",
-                              fontSize: 10,
-                            }}
-                          >
-                            EXP
-                          </Text>
-
-                          <Text
-                            style={{
-                              color: "#FFF",
-                              fontSize: 13,
-                              fontWeight: "600",
-                            }}
-                          >
-                            12/28
-                          </Text>
-                        </View>
-
-                        <View>
-                          <Text
-                            style={{
-                              color: "rgba(255,255,255,0.7)",
-                              fontSize: 10,
-                            }}
-                          >
-                            CCV
-                          </Text>
-
-                          <Text
-                            style={{
-                              color: "#FFF",
-                              fontSize: 13,
-                              fontWeight: "600",
-                            }}
-                          >
-                            123
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
+              </RemezaCardBack>
             </Pressable>
           </View>
 
@@ -516,13 +484,21 @@ export default function DashboardView({
                 }
               }}
             >
-              <View
-                style={[
-                  styles.virtualCard,
-                  isCardActive && !isFactoryInactive
-                    ? styles.virtualCardOn
-                    : styles.virtualCardOff,
-                ]}
+              <RemezaCardBack
+                testID="dashboard-virtualCard"
+                t={t}
+                holderName={holderName}
+                number={cardData.number}
+                last4={cardData.last4}
+                expiry={cardData.expiry}
+                cvv={cardData.cvv}
+                showData={showCardData}
+                dimmed={!(isCardActive && !isFactoryInactive)}
+                onCopyNumber={() => Clipboard.setString(cardNumber.replace(/\s/g, ""))}
+                copyTestID="dashboard-copyVirtualCardNumberButton"
+                onCopyCvv={() => Clipboard.setString(cardData.cvv)}
+                copyCvvTestID="dashboard-copyVirtualCvvButton"
+                style={dashboardStyles.card}
               >
                 {!isFactoryInactive && !isCardActive && (
                   <View style={styles.virtualCardOverlay}>
@@ -532,93 +508,7 @@ export default function DashboardView({
                     </Text>
                   </View>
                 )}
-
-                <View style={styles.virtualCardInner}>
-                  <CreditCard size={28} color="#fff" />
-                  <View>
-                    <Text style={styles.virtualCardNumber}>
-                      {showCardData ? "1234 5678 9012 4590" : "•••• 4590"}
-                    </Text>
-
-                    {showCardData && (
-                      <View
-                        style={{
-                          marginTop: 6,
-                          flexDirection: "row",
-                          justifyContent: "flex-end",
-                        }}
-                      >
-                        <Pressable
-                          testID="dashboard-copyVirtualCardNumberButton"
-                          onPress={() => Clipboard.setString(cardNumber.replace(/\s/g, ""))}
-                          style={{
-                            paddingHorizontal: 8,
-                            paddingVertical: 6,
-                            borderRadius: 8,
-                            backgroundColor: "rgba(255,255,255,0.15)",
-                          }}
-                        >
-                          <ClipboardIcon size={16} color="#FFF" />
-                        </Pressable>
-                      </View>
-                    )}
-
-                    <Text style={styles.virtualCardName}>JOHN PEREZ</Text>
-
-                    {showCardData && (
-                      <View
-                        style={{
-                          marginTop: 8,
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <View>
-                          <Text
-                            style={{
-                              color: "rgba(255,255,255,0.7)",
-                              fontSize: 10,
-                            }}
-                          >
-                            EXP
-                          </Text>
-
-                          <Text
-                            style={{
-                              color: "#FFF",
-                              fontSize: 13,
-                              fontWeight: "600",
-                            }}
-                          >
-                            12/28
-                          </Text>
-                        </View>
-
-                        <View>
-                          <Text
-                            style={{
-                              color: "rgba(255,255,255,0.7)",
-                              fontSize: 10,
-                            }}
-                          >
-                            CCV
-                          </Text>
-
-                          <Text
-                            style={{
-                              color: "#FFF",
-                              fontSize: 13,
-                              fontWeight: "600",
-                            }}
-                          >
-                            123
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
+              </RemezaCardBack>
             </Pressable>
           </View>
         </ScrollView>
@@ -657,11 +547,8 @@ export default function DashboardView({
           </Pressable>
 
           {!isFactoryInactive ? (
-            <Pressable
-              testID="dashboard-blockCardButton"
-              accessibilityRole="button"
-              accessibilityLabel={isCardActive ? t.blockCardButton : t.unblockCardButton}
-              onPress={() => setIsCardActive(!isCardActive)}
+            <View
+              testID="dashboard-blockCardSwitchRow"
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -669,15 +556,24 @@ export default function DashboardView({
               }}
             >
               {isCardActive ? (
-                <Lock size={22} color="#6B7280" />
-              ) : (
                 <LockOpen size={22} color={PURPLE} />
+              ) : (
+                <Lock size={22} color="#6B7280" />
               )}
 
               <Text style={styles.cardToggleText}>
-                {isCardActive ? t.blockCardButton : t.unblockCardButton}
+                {isCardActive ? t.cardActiveLabel : t.cardBlockedLabel}
               </Text>
-            </Pressable>
+
+              <Switch
+                testID="dashboard-blockCardSwitch"
+                accessibilityLabel={isCardActive ? t.blockCardButton : t.unblockCardButton}
+                value={isCardActive}
+                onValueChange={setIsCardActive}
+                trackColor={{ false: "#3B3B55", true: PURPLE }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
           ) : null}
         </View>
 
@@ -700,6 +596,10 @@ export default function DashboardView({
 }
 
 const dashboardStyles = StyleSheet.create({
+  card: {
+    width: "95%",
+    marginBottom: 16,
+  },
   /** Con el teclado abierto el modal deja de caber: se desplaza en lugar de recortarse */
   modalScroll: {
     flex: 1,
@@ -713,5 +613,8 @@ const dashboardStyles = StyleSheet.create({
     paddingHorizontal: screenPadding,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
+  },
+  bioReminderNotice: {
+    marginBottom: spacing.lg,
   },
 });

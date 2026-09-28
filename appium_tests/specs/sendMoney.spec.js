@@ -1,4 +1,4 @@
-const { byId, clickWithRetry, restartApp, hideKeyboard } = require("../helpers");
+const { byId, clickWithRetry, restartApp, hideKeyboard, waitForDashboard } = require("../helpers");
 
 const goToSendMoney = async () => {
   await restartApp();
@@ -6,6 +6,7 @@ const goToSendMoney = async () => {
   await byId("login-accessCodeInput").setValue("123456");
   await byId("login-signInButton").click();
 
+  await waitForDashboard();
   await byId("dashboard-menuButton").click();
   await byId("drawer-sendMoneyItem").click();
 };

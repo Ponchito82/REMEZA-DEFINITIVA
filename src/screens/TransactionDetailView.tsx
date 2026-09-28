@@ -149,6 +149,8 @@ export default function TransactionDetailView({
   const isRemittance = transaction.type === "remittance";
   const cancellable = canCancelTransaction(transaction, now);
   const cancelled = transaction.status === "cancelled";
+  // Si opera Remeza solo se puede cancelar; si opera otro banco, solo disputar.
+  const operatedByRemeza = transaction.provider === "remeza";
 
   const remainingMs =
     hasWindow && transaction.createdAt !== undefined
@@ -298,7 +300,7 @@ export default function TransactionDetailView({
         />
       ) : null}
 
-      {!confirming && appealed ? (
+      {!confirming && !operatedByRemeza && appealed ? (
         <InfoCard
           testID="transactionDetail-appealedBanner"
           icon={Clock}
@@ -308,12 +310,12 @@ export default function TransactionDetailView({
         />
       ) : null}
 
-      {!confirming && !appealed ? (
+      {!confirming && !operatedByRemeza && !appealed ? (
         <SecondaryButton
           testID="transactionDetail-appealButton"
           title={t.appealOperation}
           onPress={() => setView("appeal")}
-          style={cancellable ? styles.actionNext : styles.action}
+          style={styles.action}
         />
       ) : null}
 
@@ -383,9 +385,6 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: spacing.xl,
-  },
-  actionNext: {
-    marginTop: spacing.md,
   },
   confirm: {
     marginTop: spacing.xl,
