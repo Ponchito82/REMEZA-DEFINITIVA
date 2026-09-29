@@ -316,7 +316,7 @@ const en: FaqContent = {
         {
           question: "Are there purchases the card doesn't allow?",
           answer:
-            "Yes. By program policy, the card cannot be used for betting and gambling or for adult services.",
+            "Yes. By program cy, the card cannot be used for betting and gambling or for adult services.",
         },
         {
           question: "How long does my card last and what if I lose it?",
