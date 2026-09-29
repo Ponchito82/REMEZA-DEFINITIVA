@@ -394,7 +394,7 @@ export const screenTranslations = {
     help_limits: "Límites y comisiones",
     help_security: "Seguridad",
     help_terms: "Términos y condiciones",
-    help_privacy: "Política de seguridad",
+    help_privacy: "Política de privacidad",
     help_contact: "Contactar soporte",
     // TODO: confirmar el contenido de ayuda con el cliente.
     help_faq_answer:
@@ -482,7 +482,7 @@ export const screenTranslations = {
     notif_reminders: "Recordatorios",
     notif_remindersDesc: "Pagos y fechas importantes.",
 
-    twoFactorSettingsTitle: "Métodos de verificación",
+    twoFactorSettingsTitle: "Verificación en dos pasos",
     twoFactorSettingsSubtitle: "Administra cómo confirmas tu identidad.",
     authApp: "Aplicación de autenticación",
     authAppDesc: "Configura una app como Google Authenticator o Authy.",

@@ -9,6 +9,7 @@ import { primaryGradient } from "../theme/gradients";
 import { GlassBanner, RemezaLogo } from "../components/ui";
 import { ActivityItem, CardSummaryTile } from "../components/remeza";
 import { spacing, screenPadding } from "../theme/spacing";
+import { tourRef } from "../onboarding/tourTargets";
 
 type Props = {
   t: any;
@@ -62,6 +63,8 @@ export default function DashboardView({
         </View>
 
         <Pressable
+          ref={tourRef("menu")}
+          collapsable={false}
           testID="dashboard-menuButton"
           accessibilityRole="button"
           accessibilityLabel="Menu"
@@ -105,6 +108,8 @@ export default function DashboardView({
               </Text>
 
               <Pressable
+                ref={tourRef("hideToggle")}
+                collapsable={false}
                 testID="dashboard-balance-hideToggle"
                 accessibilityRole="button"
                 accessibilityLabel={hideBalance ? t.showBalance : t.hideBalance}
@@ -121,12 +126,20 @@ export default function DashboardView({
             </View>
 
             <Pressable
+              ref={tourRef("balance")}
+              collapsable={false}
               testID="dashboard-balance-balancePressable"
               accessibilityRole={onBalancePress ? "button" : undefined}
               onPress={onBalancePress}
               disabled={!onBalancePress}
             >
-              <Text testID="dashboard-balance-amount" style={dashboardStyles.amount}>
+              <Text
+                testID="dashboard-balance-amount"
+                style={dashboardStyles.amount}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
                 {displayBalance}
               </Text>
             </Pressable>
@@ -134,6 +147,8 @@ export default function DashboardView({
 
           {onSendMoneyPress ? (
             <Pressable
+              ref={tourRef("send")}
+              collapsable={false}
               testID="dashboard-sendMoneyButtonTop"
               accessibilityRole="button"
               accessibilityLabel={t.sendMoney}
@@ -161,6 +176,7 @@ export default function DashboardView({
         </View>
 
         <View style={dashboardStyles.cardsRow}>
+          <View ref={tourRef("cardPhysical")} collapsable={false} style={dashboardStyles.cardSlot}>
           <CardSummaryTile
             testID="dashboard-physicalCardRow"
             variant="physical"
@@ -169,6 +185,8 @@ export default function DashboardView({
             last4={SUMMARY_LAST4.physical}
             onPress={() => onOpenCard("physical")}
           />
+          </View>
+          <View ref={tourRef("cardVirtual")} collapsable={false} style={dashboardStyles.cardSlot}>
           <CardSummaryTile
             testID="dashboard-virtualCardRow"
             variant="virtual"
@@ -177,9 +195,10 @@ export default function DashboardView({
             last4={SUMMARY_LAST4.virtual}
             onPress={() => onOpenCard("virtual")}
           />
+          </View>
         </View>
 
-        <View style={dashboardStyles.sectionHeaderRow}>
+        <View ref={tourRef("activity")} collapsable={false} style={dashboardStyles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{t.activity}</Text>
 
           {onViewAllActivity ? (
@@ -279,8 +298,8 @@ const dashboardStyles = StyleSheet.create({
   },
   amount: {
     ...typography.amount,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 24,
+    lineHeight: 30,
   },
   sendMoneyCompact: {
     flexShrink: 0,
@@ -307,6 +326,9 @@ const dashboardStyles = StyleSheet.create({
   seeAll: {
     ...typography.link,
     color: PURPLE,
+  },
+  cardSlot: {
+    flex: 1,
   },
   cardsRow: {
     flexDirection: "row",
