@@ -3,7 +3,8 @@ import { Animated, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
-import { ScreenBackground } from "./src/components/ui";
+import { ScreenBackground, TourOverlay, TourPromptModal } from "./src/components/ui";
+import { TOUR_STEPS } from "./src/onboarding/tourSteps";
 import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/colors";
 
 import { translations } from "./src/i18n/translations";
@@ -19,6 +20,7 @@ import LoginScreen from "./src/screens/LoginScreen";
 import ForgotAccessCodeView from "./src/screens/ForgotAccessCodeView";
 import RegisterSteps from "./src/screens/RegisterSteps";
 import DashboardView from "./src/screens/DashboardView";
+import CardDetailScreen from "./src/screens/CardDetailScreen";
 import KycView from "./src/screens/KycView";
 
 import DrawerMenu from "./src/components/DrawerMenu";
@@ -147,7 +149,63 @@ function AppContent() {
         setView("biometricPrompt");
     };
 
+    /**
+     * Guia paso a paso: la primera vez que se entra al dashboard en esta
+     * sesion se lanza sola; en logins siguientes se pregunta si se quiere ver
+     * de nuevo, salvo que el usuario haya pedido no volver a preguntar.
+     * `tourPromptCheckedThisSession` se resetea al pasar por welcome/login
+     * (ver mas abajo), asi que decide una sola vez por cada inicio de sesion.
+     */
+    const [hasSeenOnboardingTour, setHasSeenOnboardingTour] = useState(false);
+    const [dontShowTourPrompt, setDontShowTourPrompt] = useState(false);
+    const [tourPromptCheckedThisSession, setTourPromptCheckedThisSession] = useState(false);
+    const [showTourPrompt, setShowTourPrompt] = useState(false);
+    const [tourActive, setTourActive] = useState(false);
+    const [tourStepIndex, setTourStepIndex] = useState(0);
+
+    const startTour = () => {
+        setTourStepIndex(0);
+        setTourActive(true);
+    };
+
+    const handleTourNext = () => {
+        if (tourStepIndex >= TOUR_STEPS.length - 1) {
+            setTourActive(false);
+            return;
+        }
+        setTourStepIndex((prev) => prev + 1);
+    };
+
+    const handleTourSkip = () => {
+        setTourActive(false);
+    };
+
+    useEffect(() => {
+        if (view !== "dashboard" || tourPromptCheckedThisSession) return;
+        // La primera vez, el dashboard redirige a `biometricPrompt` en este
+        // mismo tick (ver el efecto de arriba): hay que esperar a que ese
+        // ida-y-vuelta termine y `view` vuelva a quedarse en "dashboard" de
+        // verdad, si no la guia se lanza sobre la pantalla equivocada.
+        if (!isBiometricsEnabled() && !biometricPromptShown) return;
+
+        setTourPromptCheckedThisSession(true);
+
+        if (!hasSeenOnboardingTour) {
+            setHasSeenOnboardingTour(true);
+            startTour();
+        } else if (!dontShowTourPrompt) {
+            setShowTourPrompt(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [view, tourPromptCheckedThisSession, biometricPromptShown]);
+
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const handleStartGuideFromHelp = () => {
+        setIsMenuOpen(false);
+        setView("dashboard");
+        startTour();
+    };
 
     /** Pantalla a la que vuelve "Cancelar" en la confirmacion de cierre de sesion */
     const [logoutReturnView, setLogoutReturnView] = useState<ViewName>("dashboard");
@@ -180,6 +238,7 @@ function AppContent() {
         clearSession();
         setAuthToken(null);
         setCustomerId(null);
+        setTourPromptCheckedThisSession(false);
     }, [view]);
 
 
@@ -624,6 +683,7 @@ function AppContent() {
         () => [
             {
                 label: t.zelleDeposit,
+                time: t.zelleDepositTime,
                 amount: "+$500.00",
                 color: SUCCESS,
                 bg: SUCCESS_SURFACE,
@@ -631,7 +691,16 @@ function AppContent() {
             },
             {
                 label: t.servicePayment,
+                time: t.servicePaymentTime,
                 amount: "-$80.00",
+                color: DANGER,
+                bg: DANGER_SURFACE,
+                icon: <ArrowUpRight size={18} color={DANGER} />,
+            },
+            {
+                label: t.sendToBeneficiary,
+                time: t.sendToBeneficiaryTime,
+                amount: "-$150.00",
                 color: DANGER,
                 bg: DANGER_SURFACE,
                 icon: <ArrowUpRight size={18} color={DANGER} />,
@@ -761,12 +830,30 @@ function AppContent() {
                 <DashboardView
                     t={t}
                     holderName={profileFullName}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onBalancePress={() => setView("multiCurrency")}
+                    onSendMoneyPress={() => setView("sendMoney")}
+                    onViewAllActivity={() => setView("transactions")}
+                    onOpenCard={(variant) => {
+                        setActiveCardIndex(variant === "physical" ? 0 : 1);
+                        setView("cardDetail");
+                    }}
+                    transactions={transactions}
+                    biometricReminderVisible={biometricReminderVisible}
+                    onBiometricReminderPress={handleBiometricReminderPress}
+                />
+            )}
+
+            {view === "cardDetail" && (
+                <CardDetailScreen
+                    t={t}
+                    holderName={profileFullName}
                     isFactoryInactive={isFactoryInactive}
                     isCardActive={isCardActive}
                     setIsCardActive={setIsCardActive}
                     setIsMenuOpen={setIsMenuOpen}
-                    onBalancePress={() => setView("multiCurrency")}
-                    transactions={transactions}
+                    onSendMoneyPress={() => setView("sendMoney")}
+                    onBack={() => setView("dashboard")}
                     activeCardIndex={activeCardIndex}
                     setActiveCardIndex={setActiveCardIndex}
                     showSuccessMessage={showSuccessMessage}
@@ -790,8 +877,7 @@ function AppContent() {
                     setShowCardData={setShowCardData}
                     handleActivateCard={handleActivateCard}
                     handleActivateVirtualCard={handleActivateCard}
-                    biometricReminderVisible={biometricReminderVisible}
-                    onBiometricReminderPress={handleBiometricReminderPress}
+                    transactions={transactions.slice(0, 2)}
                 />
             )}
 
@@ -1042,6 +1128,7 @@ function AppContent() {
                     language={language}
                     entry={supportEntry}
                     onExit={() => setView(supportReturnView)}
+                    onStartGuide={handleStartGuideFromHelp}
                 />
             )}
 
@@ -1120,6 +1207,30 @@ function AppContent() {
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
                 onLogout={requestLogout}
+                physicalCardActive={!isFactoryInactive}
+            />
+
+            {tourActive && (
+                <TourOverlay
+                    t={t}
+                    stepIndex={tourStepIndex}
+                    onNext={handleTourNext}
+                    onSkip={handleTourSkip}
+                />
+            )}
+
+            <TourPromptModal
+                t={t}
+                visible={showTourPrompt}
+                onShowAgain={() => {
+                    setShowTourPrompt(false);
+                    startTour();
+                }}
+                onNotNow={() => setShowTourPrompt(false)}
+                onDontAskAgain={() => {
+                    setShowTourPrompt(false);
+                    setDontShowTourPrompt(true);
+                }}
             />
 
             {__DEV__ ? (

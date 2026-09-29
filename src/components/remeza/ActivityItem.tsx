@@ -8,6 +8,8 @@ import { GlassCard } from "../ui";
 
 type Props = {
   label: string;
+  /** Fecha/hora del movimiento, p. ej. "Hoy · 9:12 a.m." */
+  subtitle?: string;
   amount: string;
   /** `in` para ingresos (verde), `out` para egresos (rosa) */
   direction: "in" | "out";
@@ -18,7 +20,7 @@ type Props = {
 const ICON_SIZE = 48;
 
 /** Fila de actividad reciente del Home. */
-export default function ActivityItem({ label, amount, direction, style, testID }: Props) {
+export default function ActivityItem({ label, subtitle, amount, direction, style, testID }: Props) {
   const isIncome = direction === "in";
   const tone = isIncome ? colors.success : colors.danger;
   const Icon = isIncome ? ArrowDownLeft : ArrowUpRight;
@@ -29,9 +31,16 @@ export default function ActivityItem({ label, amount, direction, style, testID }
         <Icon size={20} color={tone} strokeWidth={2} />
       </View>
 
-      <Text style={styles.label} numberOfLines={1}>
-        {label}
-      </Text>
+      <View style={styles.text}>
+        <Text style={typography.bodyStrong} numberOfLines={1}>
+          {label}
+        </Text>
+        {subtitle ? (
+          <Text style={typography.caption} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
 
       <Text
         testID={testID ? `${testID}-amount` : undefined}
@@ -45,10 +54,11 @@ export default function ActivityItem({ label, amount, direction, style, testID }
 
 const styles = StyleSheet.create({
   root: {
-    height: 72,
+    minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.md,
     borderColor: colors.borderSubtle,
   },
@@ -59,8 +69,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  label: {
-    ...typography.bodyStrong,
+  text: {
     flex: 1,
+    gap: 2,
   },
 });

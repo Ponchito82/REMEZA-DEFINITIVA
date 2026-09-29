@@ -14,14 +14,12 @@ type Props = {
 };
 
 /**
- * "Mis cuentas": no es un sistema de multidivisa expandible, son dos cuentas
- * fijas segun las reglas de negocio (remitente en EE.UU./USD, beneficiario en
- * Mexico/MXN). Sin "Agregar moneda": esa accion (30) y el tipo de cambio (8)
- * quedan fuera por posible trading.
+ * "Mis cuentas": no es un sistema de multidivisa expandible, es la cuenta
+ * fija del remitente en EE.UU./USD. Sin "Agregar moneda": esa accion (30) y
+ * el tipo de cambio (8) quedan fuera por posible trading.
  */
 export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
   const usdAccount = { country: "US" as const, code: "USD", balance: 12480 };
-  const mxnAccount = { country: "MX" as const, code: "MXN", balance: 25300 };
 
   return (
     <ScreenLayout
@@ -46,14 +44,6 @@ export default function MultiCurrencyAccountsScreen({ t, setView }: Props) {
           name={t.accountUsdName}
           balance={usdAccount.balance}
           onPress={() => console.log(`[multiCurrency] abrir ${usdAccount.code}`)}
-        />
-        <CurrencyAccountCard
-          testID="multiCurrency.account.mxn"
-          country={mxnAccount.country}
-          code={mxnAccount.code}
-          name={t.accountMxnName}
-          balance={mxnAccount.balance}
-          onPress={() => console.log(`[multiCurrency] abrir ${mxnAccount.code}`)}
         />
       </View>
     </ScreenLayout>

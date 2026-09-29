@@ -48,40 +48,9 @@ export default function BalanceHeader({
   return (
     <View style={style}>
       <View style={styles.row}>
-        <View style={styles.balanceGroup}>
-          <Pressable
-            testID={testID ? `${testID}-balancePressable` : undefined}
-            accessibilityRole={onBalancePress ? "button" : undefined}
-            accessibilityLabel={`${label} ${displayAmount}`}
-            onPress={onBalancePress}
-            disabled={!onBalancePress}
-            style={styles.balance}
-          >
-            <Text testID={testID ? `${testID}-label` : undefined} style={typography.label}>
-              {label}
-            </Text>
-            <Text testID={testID ? `${testID}-amount` : undefined} style={styles.amount}>
-              {displayAmount}
-            </Text>
-          </Pressable>
-
-          {onToggleHidden ? (
-            <Pressable
-              testID={testID ? `${testID}-hideToggle` : undefined}
-              accessibilityRole="button"
-              accessibilityLabel={hidden ? showBalanceAccessibilityLabel : hideBalanceAccessibilityLabel}
-              onPress={onToggleHidden}
-              hitSlop={10}
-              style={({ pressed }) => [styles.hideButton, pressed && styles.pressed]}
-            >
-              {hidden ? (
-                <EyeOff size={18} color={colors.text.secondary} strokeWidth={2} />
-              ) : (
-                <Eye size={18} color={colors.primaryLight} strokeWidth={2} />
-              )}
-            </Pressable>
-          ) : null}
-        </View>
+        <Text testID={testID ? `${testID}-label` : undefined} style={typography.label}>
+          {label}
+        </Text>
 
         <Pressable
           testID={menuTestID}
@@ -94,6 +63,38 @@ export default function BalanceHeader({
         </Pressable>
       </View>
 
+      <View style={styles.balanceRow}>
+        <Pressable
+          testID={testID ? `${testID}-balancePressable` : undefined}
+          accessibilityRole={onBalancePress ? "button" : undefined}
+          accessibilityLabel={`${label} ${displayAmount}`}
+          onPress={onBalancePress}
+          disabled={!onBalancePress}
+          style={styles.balance}
+        >
+          <Text testID={testID ? `${testID}-amount` : undefined} style={styles.amount}>
+            {displayAmount}
+          </Text>
+        </Pressable>
+
+        {onToggleHidden ? (
+          <Pressable
+            testID={testID ? `${testID}-hideToggle` : undefined}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? showBalanceAccessibilityLabel : hideBalanceAccessibilityLabel}
+            onPress={onToggleHidden}
+            hitSlop={10}
+            style={({ pressed }) => [styles.hideButton, pressed && styles.pressed]}
+          >
+            {hidden ? (
+              <EyeOff size={18} color={colors.text.secondary} strokeWidth={2} />
+            ) : (
+              <Eye size={18} color={colors.primaryLight} strokeWidth={2} />
+            )}
+          </Pressable>
+        ) : null}
+      </View>
+
       <View style={styles.divider} />
     </View>
   );
@@ -104,20 +105,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: spacing.lg,
   },
-  balanceGroup: {
+  balanceRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexShrink: 1,
-    gap: spacing.sm,
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
   },
   balance: {
     flexShrink: 1,
   },
   amount: {
     ...typography.amount,
-    marginTop: spacing.xs,
+    fontSize: 34,
+    lineHeight: 40,
   },
   hideButton: {
     width: HIDE_BUTTON_SIZE,

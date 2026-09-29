@@ -963,13 +963,6 @@ export const styles = StyleSheet.create({
   marginRight: 0,
 },
 
-cardTypeLabel: {
-  fontSize: 14,
-  fontWeight: "600",
-  marginBottom: 8,
-  color: TEXT_PRIMARY,
-},
-
 dotsRow: {
   flexDirection: "row",
   justifyContent: "center",

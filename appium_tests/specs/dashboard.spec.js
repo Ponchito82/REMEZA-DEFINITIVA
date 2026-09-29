@@ -76,6 +76,8 @@ describe("Dashboard — saldo y navegación [backend]", () => {
 describe("Dashboard — activación de tarjeta física [backend]", () => {
   beforeEach(async () => {
     await goToDashboard();
+    await byId("dashboard-physicalCardRow").click();
+    await byId("dashboard-inactiveCardTitle").waitForDisplayed({ timeout: 10000 });
   });
 
   it("'Activate Card' deshabilitado hasta llenar los 4 campos del modal físico", async () => {
@@ -113,6 +115,8 @@ describe("Dashboard — activación de tarjeta física [backend]", () => {
 describe("Dashboard — activación de tarjeta virtual [backend]", () => {
   beforeEach(async () => {
     await goToDashboard();
+    await byId("dashboard-virtualCardRow").click();
+    await byId("dashboard-inactiveCardTitle").waitForDisplayed({ timeout: 10000 });
   });
 
   it("cancelar el modal virtual no activa la tarjeta", async () => {

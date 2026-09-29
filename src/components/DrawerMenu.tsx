@@ -26,6 +26,8 @@ type Props = {
   setView: (view: ViewName) => void;
   /** Cierre de sesion. Sin el, el item navega directo al login como antes. */
   onLogout?: () => void;
+  /** Con la tarjeta fisica ya activada, "Solicitar tarjeta" deja de tener sentido y se oculta. */
+  physicalCardActive?: boolean;
 };
 
 export default function DrawerMenu({
@@ -36,6 +38,7 @@ export default function DrawerMenu({
   setIsMenuOpen,
   setView,
   onLogout,
+  physicalCardActive = false,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -47,7 +50,9 @@ export default function DrawerMenu({
   const items = [
     { id: "profile", icon: User, label: t.profile, onPress: () => go("profile") },
     { id: "transactions", icon: History, label: t.transactions, onPress: () => go("transactions") },
-    { id: "physicalCard", icon: Package, label: t.requestPhysicalCard, onPress: () => go("physicalCard") },
+    ...(physicalCardActive
+      ? []
+      : [{ id: "physicalCard", icon: Package, label: t.requestPhysicalCard, onPress: () => go("physicalCard") }]),
     { id: "beneficiaries", icon: UserCheck, label: t.beneficiaries, onPress: () => go("beneficiaries") },
     { id: "sendMoney", icon: BanknoteArrowDown, label: t.sendMoney, onPress: () => go("sendMoney") },
     // Pagos de servicio: oculto por ahora. La ruta `servicePayments` sigue en App.

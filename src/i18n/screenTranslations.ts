@@ -56,15 +56,15 @@ export const screenTranslations = {
     helpCenterTitle: "Help center",
     helpCenterSubtitle: "Find quick answers.",
     help_faq: "Frequently asked questions",
-    help_guides: "Guides and tutorials",
+    help_guides: "Step-by-step guide",
     help_limits: "Limits and fees",
     help_security: "Security",
+    help_terms: "Terms and conditions",
+    help_privacy: "Security policy",
     help_contact: "Contact support",
     // TODO: confirmar el contenido de ayuda con el cliente.
     help_faq_answer:
       "Transfers usually arrive within minutes. You can cancel a remittance in process during its first 30 minutes.",
-    help_guides_answer:
-      "From the menu you can send money, add beneficiaries, check your transactions and request your physical card.",
     help_limits_answer:
       "You'll see the exchange rate and fee of each transfer before confirming it. Your limits depend on your account verification.",
     help_security_answer:
@@ -152,10 +152,8 @@ export const screenTranslations = {
     notif_remindersDesc: "Payments and important dates.",
 
     /* Seguridad (57, 58) */
-    twoFactorSettingsTitle: "Two-step verification",
-    twoFactorSettingsSubtitle: "Add an extra layer of security to your account.",
-    twoFactorToggle: "Two-step verification",
-    twoFactorToggleDesc: "Protect your account with a second step",
+    twoFactorSettingsTitle: "Verification methods",
+    twoFactorSettingsSubtitle: "Manage how you confirm your identity.",
     authApp: "Authenticator app",
     authAppDesc: "Set up an app like Google Authenticator or Authy.",
     twoFactorSms: "SMS code",
@@ -168,13 +166,6 @@ export const screenTranslations = {
     twoFactorCodeSubtitleEmail: "We sent a verification code to your email",
     twoFactorMethodEnabledNote: "Verification method turned on.",
     twoFactorMethodDisabledNote: "Verification method turned off.",
-    twoFactorMethodAutoSwitchedNote:
-      "This method was turned off and the other one was turned on automatically, to keep two-step verification active.",
-    twoFactorDisableAllTitle: "Turn off two-step verification?",
-    twoFactorDisableAllMessage:
-      "For your security, you must keep at least one verification method active.",
-    twoFactorDisableAllConfirm: "Yes, turn off",
-    twoFactorDisableAllCancel: "No, keep it",
     backupCodes: "Backup codes",
     backupCodesDesc: "Generate and manage your backup codes.",
     changeAccessCodeRow: "Change access code",
@@ -399,15 +390,15 @@ export const screenTranslations = {
     helpCenterTitle: "Centro de ayuda",
     helpCenterSubtitle: "Encuentra respuestas rápidas.",
     help_faq: "Preguntas frecuentes",
-    help_guides: "Guías y tutoriales",
+    help_guides: "Guía paso a paso",
     help_limits: "Límites y comisiones",
     help_security: "Seguridad",
+    help_terms: "Términos y condiciones",
+    help_privacy: "Política de seguridad",
     help_contact: "Contactar soporte",
     // TODO: confirmar el contenido de ayuda con el cliente.
     help_faq_answer:
       "Los envíos suelen llegar en minutos. Puedes cancelar una remesa en proceso durante sus primeros 30 minutos.",
-    help_guides_answer:
-      "Desde el menú puedes enviar dinero, agregar beneficiarios, consultar tus movimientos y solicitar tu tarjeta física.",
     help_limits_answer:
       "Antes de confirmar cada envío verás el tipo de cambio y la comisión. Tus límites dependen de la verificación de tu cuenta.",
     help_security_answer:
@@ -491,10 +482,8 @@ export const screenTranslations = {
     notif_reminders: "Recordatorios",
     notif_remindersDesc: "Pagos y fechas importantes.",
 
-    twoFactorSettingsTitle: "Verificación en dos pasos",
-    twoFactorSettingsSubtitle: "Añade una capa extra de seguridad a tu cuenta.",
-    twoFactorToggle: "Verificación en dos pasos",
-    twoFactorToggleDesc: "Protege tu cuenta con un segundo paso",
+    twoFactorSettingsTitle: "Métodos de verificación",
+    twoFactorSettingsSubtitle: "Administra cómo confirmas tu identidad.",
     authApp: "Aplicación de autenticación",
     authAppDesc: "Configura una app como Google Authenticator o Authy.",
     twoFactorSms: "Código por SMS",
@@ -507,13 +496,6 @@ export const screenTranslations = {
     twoFactorCodeSubtitleEmail: "Te enviamos un código de verificación a tu correo electrónico",
     twoFactorMethodEnabledNote: "Método de verificación activado.",
     twoFactorMethodDisabledNote: "Método de verificación desactivado.",
-    twoFactorMethodAutoSwitchedNote:
-      "Se desactivó este método y se activó el otro automáticamente, para mantener activa la verificación en dos pasos.",
-    twoFactorDisableAllTitle: "¿Desactivar la verificación en dos pasos?",
-    twoFactorDisableAllMessage:
-      "Por seguridad, debes mantener activa al menos una verificación.",
-    twoFactorDisableAllConfirm: "Sí, desactivar",
-    twoFactorDisableAllCancel: "No, mantener",
     backupCodes: "Códigos de respaldo",
     backupCodesDesc: "Genera y administra tus códigos de respaldo.",
     changeAccessCodeRow: "Cambiar código de acceso",

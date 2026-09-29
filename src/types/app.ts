@@ -5,6 +5,7 @@ export type ViewName =
   | "register"
   | "kyc"
   | "dashboard"
+  | "cardDetail"
   | "physicalCard"
   | "transactions"
   | "profile"

@@ -22,6 +22,10 @@ const ART_H = 999;
 /** Colores muestreados de la referencia; no son tokens de la app. */
 const CARD_BG = "#3636B0";
 const CARD_BORDER = "#07074A";
+/** Version mas oscura para distinguir la tarjeta virtual de la fisica a simple vista. */
+const CARD_BG_VIRTUAL = "#1B1B4D";
+/** Contorno/resplandor blanco: refuerza que la virtual es la tarjeta distinta. */
+const CARD_GLOW_VIRTUAL = "#FFFFFF";
 const INK = "#FFFFFF";
 const LABEL_INK = "rgba(255,255,255,0.62)";
 
@@ -51,6 +55,8 @@ type Props = {
   showData?: boolean;
   /** Tarjeta sin activar o bloqueada: se atenua encima del arte */
   dimmed?: boolean;
+  /** Fisica (por defecto) o virtual: cambia el color de fondo y la etiqueta sobre el isotipo */
+  variant?: "physical" | "virtual";
   onCopyNumber?: () => void;
   copyTestID?: string;
   onCopyCvv?: () => void;
@@ -79,6 +85,7 @@ export default function RemezaCardBack({
   cvv,
   showData = false,
   dimmed = false,
+  variant = "physical",
   onCopyNumber,
   copyTestID,
   onCopyCvv,
@@ -106,6 +113,11 @@ export default function RemezaCardBack({
   const displayExpiry = showData ? expiry : "••/••";
   const displayCvv = showData ? cvv : "•••";
   const trimmedName = (holderName ?? "").trim();
+  const isVirtual = variant === "virtual";
+  const bg = isVirtual ? CARD_BG_VIRTUAL : CARD_BG;
+  const border = isVirtual ? CARD_GLOW_VIRTUAL : CARD_BORDER;
+  const glow = isVirtual ? CARD_GLOW_VIRTUAL : bg;
+  const variantLabel = isVirtual ? t.virtual : t.physical;
 
   return (
     <View
@@ -113,7 +125,13 @@ export default function RemezaCardBack({
       onLayout={handleLayout}
       style={[
         styles.root,
-        { borderRadius: 70 * s, borderWidth: 13 * s },
+        {
+          backgroundColor: bg,
+          borderColor: border,
+          shadowColor: glow,
+          borderRadius: 70 * s,
+          borderWidth: 13 * s,
+        },
         style,
       ]}
     >
@@ -262,6 +280,25 @@ export default function RemezaCardBack({
         ) : null}
       </View>
 
+      {/* Etiqueta fisica/virtual: encima del isotipo, sin tocarlo ni moverlo. */}
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.label,
+          styles.variantLabel,
+          {
+            left: GLYPH_LEFT * s,
+            top: 218 * s,
+            width: glyphWidth,
+            fontSize: 42 * s,
+            lineHeight: 48 * s,
+            letterSpacing: 2 * s,
+          },
+        ]}
+      >
+        {variantLabel}
+      </Text>
+
       {/* Isotipo: no se mueve. */}
       <View style={[styles.glyph, { left: GLYPH_LEFT * s, top: 331 * s }]}>
         <Svg width={glyphWidth} height={glyphHeight}>
@@ -297,11 +334,8 @@ const styles = StyleSheet.create({
   root: {
     width: "100%",
     aspectRatio: ART_W / ART_H,
-    backgroundColor: CARD_BG,
-    borderColor: CARD_BORDER,
     overflow: "hidden",
     elevation: 10,
-    shadowColor: CARD_BG,
     shadowOpacity: 0.4,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 14 },
@@ -318,6 +352,10 @@ const styles = StyleSheet.create({
   },
   absolute: {
     position: "absolute",
+  },
+  variantLabel: {
+    textAlign: "center",
+    textTransform: "uppercase",
   },
   row: {
     position: "absolute",
@@ -344,4 +382,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { ART_W, ART_H };
+export { ART_W, ART_H, CARD_BG, CARD_BG_VIRTUAL, CARD_GLOW_VIRTUAL };
