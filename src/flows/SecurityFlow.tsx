@@ -10,10 +10,8 @@ import TwoFactorCodeScreen from "../screens/security/TwoFactorCodeScreen";
 import {
   changeAccessCode,
   enableBiometrics,
-  getTwoFactorEnabled,
   getTwoFactorMethods,
   sendTwoFactorCode,
-  setTwoFactorEnabled,
   setTwoFactorMethod,
   TwoFactorMethod,
   verifyTwoFactorCode,
@@ -56,7 +54,6 @@ export default function SecurityFlow({
 }: Props) {
   const { step, push, replace, reset, pop } = useStepStack<Step>(initialStep, onExit);
   const finishBiometrics = onBiometricsResolved ?? (() => reset("settings"));
-  const [twoFactor, setTwoFactor] = useState(true);
   const [codeChanged, setCodeChanged] = useState(false);
   const [busy, setBusy] = useState(false);
   /** Face ID en iOS, huella en Android; se afina con lo que reporte el sensor */
@@ -71,19 +68,13 @@ export default function SecurityFlow({
   });
   const [wrongCode, setWrongCode] = useState(false);
   const [methodNotice, setMethodNotice] = useState<
-    { method: TwoFactorMethod; enabled: boolean; switched?: boolean } | null
+    { method: TwoFactorMethod; enabled: boolean } | null
   >(null);
 
   useEffect(() => {
-    getTwoFactorEnabled().then(setTwoFactor);
     getBiometryKind().then(setKind);
     getTwoFactorMethods().then(setMethods);
   }, []);
-
-  const handleToggleTwoFactor = async (value: boolean) => {
-    setTwoFactor(value);
-    setTwoFactor(await setTwoFactorEnabled(value));
-  };
 
   const handleChangeCode = async (current: string, next: string) => {
     setBusy(true);
@@ -96,9 +87,9 @@ export default function SecurityFlow({
   };
 
   /**
-   * Prender el switch de un metodo redirige a su pantalla para enviar y
-   * verificar el codigo antes de dejarlo activo. Apagarlo es directo: nunca
-   * deja los dos inactivos, si el otro ya estaba apagado se enciende solo.
+   * SMS y correo son funciones independientes: prender el switch de una
+   * redirige a su pantalla para enviar y verificar el codigo antes de dejarla
+   * activa; apagarla es directo y no afecta a la otra.
    */
   const handleToggleMethod = (target: TwoFactorMethod, value: boolean) => {
     setCodeChanged(false);
@@ -115,15 +106,10 @@ export default function SecurityFlow({
 
   const handleDisableMethod = async (target: TwoFactorMethod) => {
     setBusy(true);
-    const otherMethod: TwoFactorMethod = target === "sms" ? "email" : "sms";
-    let next = await setTwoFactorMethod(target, false);
-    const switched = !next[otherMethod];
-    if (switched) {
-      next = await setTwoFactorMethod(otherMethod, true);
-    }
+    const next = await setTwoFactorMethod(target, false);
     setMethods(next);
     setBusy(false);
-    setMethodNotice({ method: target, enabled: false, switched });
+    setMethodNotice({ method: target, enabled: false });
   };
 
   const handleSendMethodCode = async (destination: string) => {
@@ -224,8 +210,6 @@ export default function SecurityFlow({
           methods={methods}
           onToggleMethod={handleToggleMethod}
           methodNotice={methodNotice}
-          twoFactorEnabled={twoFactor}
-          onToggleTwoFactor={handleToggleTwoFactor}
           codeChanged={codeChanged}
           onBack={pop}
           onChangeAccessCode={() => {

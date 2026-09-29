@@ -69,19 +69,34 @@ const clickWithRetry = async (id) => {
  * Tras iniciar sesion, la primera vez en la sesion el dashboard redirige a la
  * pantalla de biometria (aviso opcional). La prueba la omite con "Maybe
  * later" para seguir su flujo normal ya en el dashboard.
+ *
+ * Ademas, la primera vez que la app llega al dashboard en cada arranque
+ * (`restartApp`, ya que no se recuerda entre procesos) se lanza sola la guia
+ * paso a paso, que tapa el resto de la pantalla con su overlay. Se salta con
+ * su boton "Saltar" para que el resto de la prueba pueda interactuar con el
+ * dashboard real.
  */
 const waitForDashboard = async (timeout = 20000) => {
   const menuButton = byId("dashboard-menuButton");
   const laterLink = byId("enableBiometrics.laterLink");
+  const tourSkipButton = byId("onboardingTour-skipButton");
 
   const alreadyOnDashboard = await menuButton
     .waitForDisplayed({ timeout: 3000 })
     .catch(() => false);
-  if (alreadyOnDashboard) return;
 
-  await laterLink.waitForDisplayed({ timeout });
-  await laterLink.click();
-  await menuButton.waitForDisplayed({ timeout });
+  if (!alreadyOnDashboard) {
+    await laterLink.waitForDisplayed({ timeout });
+    await laterLink.click();
+    await menuButton.waitForDisplayed({ timeout });
+  }
+
+  const tourVisible = await tourSkipButton
+    .waitForDisplayed({ timeout: 5000 })
+    .catch(() => false);
+  if (tourVisible) {
+    await tourSkipButton.click();
+  }
 };
 
 const WELCOME_CTA = "welcome-getStartedButton";

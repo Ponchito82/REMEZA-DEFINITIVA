@@ -8,25 +8,11 @@ import { authenticateWithBiometrics, BiometricsResult } from "./biometrics";
 
 export type TwoFactorMethod = "sms" | "email";
 
-let twoFactorEnabled = true;
 let twoFactorMethods: Record<TwoFactorMethod, boolean> = { sms: true, email: false };
 let biometricsEnabled = false;
 let notificationPreferences: NotificationPreferences = { ...MOCK_NOTIFICATION_PREFERENCES };
 
-// TODO API: estado de la verificacion en dos pasos.
-export async function getTwoFactorEnabled(): Promise<boolean> {
-  await mockDelay(150);
-  return twoFactorEnabled;
-}
-
-// TODO API: activar o desactivar la verificacion en dos pasos.
-export async function setTwoFactorEnabled(value: boolean): Promise<boolean> {
-  await mockDelay(300);
-  twoFactorEnabled = value;
-  return twoFactorEnabled;
-}
-
-// TODO API: metodos activos de la verificacion en dos pasos.
+// TODO API: metodos activos de verificacion (SMS y correo, independientes entre si).
 export async function getTwoFactorMethods(): Promise<Record<TwoFactorMethod, boolean>> {
   await mockDelay(150);
   return { ...twoFactorMethods };
@@ -51,7 +37,7 @@ export async function verifyTwoFactorCode(
   return { ok: code === MOCK_EMAIL_CODE };
 }
 
-// TODO API: activar o desactivar un metodo de la verificacion en dos pasos.
+// TODO API: activar o desactivar un metodo de verificacion.
 export async function setTwoFactorMethod(
   method: TwoFactorMethod,
   enabled: boolean,

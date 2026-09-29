@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
-import { MapPin, CreditCard, Bitcoin, Check } from "lucide-react-native";
+import { MapPin, CreditCard, Send, Check } from "lucide-react-native";
 
 import { colors } from "../theme/colors";
 import { typography } from "../theme/typography";
@@ -274,7 +274,7 @@ export default function PhysicalCardView({
         <View style={styles.status}>
           <ConfirmingPanel
             testID="physicalCard-deliveryAnimation"
-            icon={Bitcoin}
+            icon={Send}
             title={t.deliveryInProgress}
             subtitle={t.deliveryMessage}
             progress={deliveryProgress}

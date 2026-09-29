@@ -8,15 +8,17 @@ import { getSupportContact } from "../../services/support";
 type Props = {
   t: any;
   onBack: () => void;
-  onOpenChat: () => void;
 };
 
 const openLink = (url: string) => {
   Linking.openURL(url).catch(() => undefined);
 };
 
+/** E.164 del numero de WhatsApp de soporte: +1 (773) 263-1785 */
+const WHATSAPP_URL = "https://wa.me/17732631785";
+
 /** Soporte en vivo (pantalla 5). */
-export default function LiveSupportScreen({ t, onBack, onOpenChat }: Props) {
+export default function LiveSupportScreen({ t, onBack }: Props) {
   const contact = getSupportContact();
 
   return (
@@ -35,7 +37,7 @@ export default function LiveSupportScreen({ t, onBack, onOpenChat }: Props) {
         icon={MessageSquareMore}
         title={t.liveChat}
         subtitle={t.liveChatDesc}
-        onPress={onOpenChat}
+        onPress={() => openLink(WHATSAPP_URL)}
       />
       <ListRow
         testID="liveSupport.ticketRow"
