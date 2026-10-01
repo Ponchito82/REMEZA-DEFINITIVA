@@ -53,6 +53,7 @@ export default function TwoFactorSettingsScreen({
       onBack={onBack}
       backTestID="twoFactorSettings.backButton"
       backAccessibilityLabel={t.back}
+      backTourId="securityBack"
       icon={ShieldCheck}
       title={t.twoFactorSettingsTitle}
       subtitle={t.twoFactorSettingsSubtitle}

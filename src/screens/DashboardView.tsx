@@ -106,23 +106,6 @@ export default function DashboardView({
               >
                 {t.myBalance}
               </Text>
-
-              <Pressable
-                ref={tourRef("hideToggle")}
-                collapsable={false}
-                testID="dashboard-balance-hideToggle"
-                accessibilityRole="button"
-                accessibilityLabel={hideBalance ? t.showBalance : t.hideBalance}
-                onPress={() => setHideBalance((prev) => !prev)}
-                hitSlop={6}
-                style={({ pressed }) => [dashboardStyles.hideToggleButton, pressed && dashboardStyles.pressed]}
-              >
-                {hideBalance ? (
-                  <EyeOff size={21} color={colors.text.secondary} strokeWidth={2} />
-                ) : (
-                  <Eye size={21} color={PURPLE} strokeWidth={2} />
-                )}
-              </Pressable>
             </View>
 
             <Pressable
@@ -144,6 +127,23 @@ export default function DashboardView({
               </Text>
             </Pressable>
           </View>
+
+          <Pressable
+            ref={tourRef("hideToggle")}
+            collapsable={false}
+            testID="dashboard-balance-hideToggle"
+            accessibilityRole="button"
+            accessibilityLabel={hideBalance ? t.showBalance : t.hideBalance}
+            onPress={() => setHideBalance((prev) => !prev)}
+            hitSlop={6}
+            style={({ pressed }) => [dashboardStyles.hideToggleButton, pressed && dashboardStyles.pressed]}
+          >
+            {hideBalance ? (
+              <EyeOff size={21} color={colors.text.secondary} strokeWidth={2} />
+            ) : (
+              <Eye size={21} color={PURPLE} strokeWidth={2} />
+            )}
+          </Pressable>
 
           {onSendMoneyPress ? (
             <Pressable

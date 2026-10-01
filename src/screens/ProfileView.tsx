@@ -21,6 +21,7 @@ import { textStyles } from "../theme/typography";
 import { metrics } from "../theme/radius";
 import { spacing } from "../theme/spacing";
 import { ViewName } from "../types/app";
+import { tourRef } from "../onboarding/tourTargets";
 
 type Props = {
   t: any;
@@ -133,24 +134,28 @@ export default function ProfileView({
 
       <Text style={[textStyles.overline, styles.section]}>{t.profileSettingsSection}</Text>
       <View style={styles.rows}>
-        <ListRow
-          testID="profile.securityRow"
-          icon={ShieldCheck}
-          title={t.profileSecurity}
-          onPress={() => onOpen("security")}
-        />
+        <View ref={tourRef("profileSecurity")} collapsable={false}>
+          <ListRow
+            testID="profile.securityRow"
+            icon={ShieldCheck}
+            title={t.profileSecurity}
+            onPress={() => onOpen("security")}
+          />
+        </View>
         <ListRow
           testID="profile.paymentMethodsRow"
           icon={CreditCard}
           title={t.profilePaymentMethods}
           onPress={() => onOpen("paymentMethods")}
         />
-        <ListRow
-          testID="profile.helpCenterRow"
-          icon={CircleHelp}
-          title={t.profileHelpCenter}
-          onPress={() => onOpen("helpCenter")}
-        />
+        <View ref={tourRef("profileHelpCenter")} collapsable={false}>
+          <ListRow
+            testID="profile.helpCenterRow"
+            icon={CircleHelp}
+            title={t.profileHelpCenter}
+            onPress={() => onOpen("helpCenter")}
+          />
+        </View>
         <ListRow
           testID="profile.supportRow"
           icon={Headset}

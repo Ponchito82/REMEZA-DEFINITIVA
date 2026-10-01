@@ -16,6 +16,7 @@ import { DrawerItem } from "./remeza";
 import { colors } from "../theme/colors";
 import { spacing, screenPadding } from "../theme/spacing";
 import { ViewName } from "../types/app";
+import { tourRef } from "../onboarding/tourTargets";
 
 type Props = {
   t: any;
@@ -28,6 +29,13 @@ type Props = {
   onLogout?: () => void;
   /** Con la tarjeta fisica ya activada, "Solicitar tarjeta" deja de tener sentido y se oculta. */
   physicalCardActive?: boolean;
+  /**
+   * `TourOverlay` de la guia, cuando esta activa y el menu esta abierto. El
+   * Modal del drawer es su propia ventana nativa: un `TourOverlay` suelto en
+   * el arbol normal de la app queda tapado por esta. Pasandolo como hijo
+   * aqui, queda en la misma ventana y se ve por encima del panel.
+   */
+  tourOverlay?: React.ReactNode;
 };
 
 export default function DrawerMenu({
@@ -39,6 +47,7 @@ export default function DrawerMenu({
   setView,
   onLogout,
   physicalCardActive = false,
+  tourOverlay,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -95,15 +104,26 @@ export default function DrawerMenu({
             style={styles.close}
           />
 
-          {items.map((item) => (
-            <DrawerItem
-              key={item.id}
-              testID={`drawer-${item.id}Item`}
-              icon={item.icon}
-              label={item.label}
-              onPress={item.onPress}
-            />
-          ))}
+          {items.map((item) =>
+            item.id === "profile" ? (
+              <View key={item.id} ref={tourRef("drawerProfile")} collapsable={false}>
+                <DrawerItem
+                  testID={`drawer-${item.id}Item`}
+                  icon={item.icon}
+                  label={item.label}
+                  onPress={item.onPress}
+                />
+              </View>
+            ) : (
+              <DrawerItem
+                key={item.id}
+                testID={`drawer-${item.id}Item`}
+                icon={item.icon}
+                label={item.label}
+                onPress={item.onPress}
+              />
+            )
+          )}
 
           <View style={styles.spacer} />
 
@@ -121,6 +141,8 @@ export default function DrawerMenu({
           />
         </View>
       </Animated.View>
+
+      {tourOverlay}
     </Modal>
   );
 }

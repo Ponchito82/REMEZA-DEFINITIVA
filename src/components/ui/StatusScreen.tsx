@@ -41,6 +41,7 @@ type Props = {
   onBack?: () => void;
   backTestID?: string;
   backAccessibilityLabel?: string;
+  backTourId?: string;
   keyboard?: boolean;
   testID?: string;
 };
@@ -67,6 +68,7 @@ export default function StatusScreen({
   onBack,
   backTestID,
   backAccessibilityLabel,
+  backTourId,
   keyboard = false,
   testID,
 }: Props) {
@@ -76,6 +78,7 @@ export default function StatusScreen({
       onBack={onBack}
       backTestID={backTestID}
       backAccessibilityLabel={backAccessibilityLabel}
+      backTourId={backTourId}
       keyboard={keyboard}
       testID={testID}
     >

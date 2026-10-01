@@ -5,6 +5,7 @@ import { BookOpen, CircleHelp, FileText, Headset, Info, Lock, ShieldCheck } from
 import { InfoCard, ListRow, StatusScreen } from "../../components/ui";
 import type { IconComponent } from "../../components/ui";
 import { MOCK_HELP_TOPICS } from "../../mocks/remeza";
+import { tourRef } from "../../onboarding/tourTargets";
 
 type Props = {
   t: any;
@@ -46,12 +47,16 @@ export default function HelpCenterScreen({ t, onBack, onContactSupport, onOpenFa
       onBack={onBack}
       backTestID="helpCenter.backButton"
       backAccessibilityLabel={t.back}
+      backTourId="helpCenterBack"
       icon={CircleHelp}
       title={t.helpCenterTitle}
       subtitle={t.helpCenterSubtitle}
     >
       {MOCK_HELP_TOPICS.map((topic) => (
-        <View key={topic}>
+        <View
+          key={topic}
+          {...(topic === "guides" ? { ref: tourRef("helpCenterGuide"), collapsable: false } : {})}
+        >
           <ListRow
             testID={`helpCenter.topic.${topic}`}
             icon={TOPIC_ICONS[topic]}

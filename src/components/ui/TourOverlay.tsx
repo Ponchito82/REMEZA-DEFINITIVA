@@ -38,9 +38,25 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const step = TOUR_STEPS[stepIndex];
   const isLast = stepIndex === TOUR_STEPS.length - 1;
+  // Pasos con `awaitAction` no tienen boton: avanzan solos cuando App.tsx
+  // detecta la accion real (abrir el menu, navegar a cierta pantalla, etc.).
+  const waitingForAction = !!step.awaitAction;
   const [rect, setRect] = React.useState<TourRect | null>(null);
   const layerRef = React.useRef<View>(null);
   const [layerSize, setLayerSize] = React.useState({ width: 0, height: 0 });
+  // Ancho real del texto del chip, medido con una copia invisible y sin
+  // restricciones (ver mas abajo): el chip visible es un `View` absoluto
+  // dentro de `frame`, y en Android ese `position:absolute` con solo `left`
+  // (sin `right`) termina estirando su ancho al del objetivo que enmarca en
+  // vez de ajustarse al contenido (confirmado en pantalla: truncaba a "O..."
+  // en el paso angosto de ocultar saldo incluso con `alignSelf:"flex-start"`,
+  // que en teoria deberia bastar). Medir y fijar un ancho numerico explicito
+  // es la unica forma que no depende de ese comportamiento de Yoga.
+  const [chipTextWidth, setChipTextWidth] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    setChipTextWidth(null);
+  }, [step.titleKey]);
 
   React.useEffect(() => {
     setRect(null);
@@ -103,6 +119,8 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
     dimPath += ` M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
   }
   const chipAbove = frame ? frame.top - CHIP_HEIGHT - 4 >= insets.top : false;
+  const chipWidth =
+    chipTextWidth !== null ? Math.min(chipTextWidth + CHIP_PAD_H * 2, 220) : null;
 
   return (
     <View
@@ -118,27 +136,42 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
         </Svg>
       ) : null}
       {frame ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.frame,
-            frame,
-            { borderRadius: frameRadius },
-          ]}
-        >
+        <>
+          {/* Copia invisible, fuera de pantalla y sin restricciones de ancho:
+              solo existe para medir cuanto ocupa el texto de verdad. */}
+          <Text
+            style={[styles.chipText, styles.chipMeasure]}
+            numberOfLines={1}
+            onLayout={(e) => setChipTextWidth(e.nativeEvent.layout.width)}
+          >
+            {t[step.titleKey]}
+          </Text>
+
           <View
+            pointerEvents="none"
             style={[
-              styles.chip,
-              chipAbove
-                ? { top: -CHIP_HEIGHT - 4 }
-                : { bottom: -CHIP_HEIGHT - 4 },
+              styles.frame,
+              frame,
+              { borderRadius: frameRadius },
             ]}
           >
-            <Text style={styles.chipText} numberOfLines={1}>
-              {t[step.titleKey]}
-            </Text>
+            {chipWidth !== null ? (
+              <View
+                style={[
+                  styles.chip,
+                  { width: chipWidth },
+                  chipAbove
+                    ? { top: -CHIP_HEIGHT - 4 }
+                    : { bottom: -CHIP_HEIGHT - 4 },
+                ]}
+              >
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {t[step.titleKey]}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        </View>
+        </>
       ) : null}
 
       <View
@@ -174,12 +207,14 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
           <Text style={styles.title}>{t[step.titleKey]}</Text>
           <Text style={styles.description}>{t[step.descriptionKey]}</Text>
 
-          <PrimaryButton
-            testID="onboardingTour-nextButton"
-            title={isLast ? t.tourFinish : t.tourNext}
-            onPress={onNext}
-            showArrow={!isLast}
-          />
+          {waitingForAction ? null : (
+            <PrimaryButton
+              testID="onboardingTour-nextButton"
+              title={isLast ? t.tourFinish : t.tourNext}
+              onPress={onNext}
+              showArrow={!isLast}
+            />
+          )}
         </View>
       </View>
     </View>
@@ -188,6 +223,7 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
 
 const FRAME_PAD = 5;
 const CHIP_HEIGHT = 24;
+const CHIP_PAD_H = 10;
 
 const styles = StyleSheet.create({
   layer: {
@@ -208,8 +244,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: -2,
     height: CHIP_HEIGHT,
-    maxWidth: 220,
-    paddingHorizontal: 10,
+    paddingHorizontal: CHIP_PAD_H,
     borderRadius: radius.pill,
     backgroundColor: PURPLE,
     justifyContent: "center",
@@ -218,6 +253,13 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "800",
+  },
+  /** Fuera de pantalla: solo para medir, nunca se ve. */
+  chipMeasure: {
+    position: "absolute",
+    left: -9999,
+    top: -9999,
+    opacity: 0,
   },
   container: {
     position: "absolute",
