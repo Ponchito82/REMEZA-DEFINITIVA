@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
-import { ScreenBackground, TourOverlay, TourPromptModal } from "./src/components/ui";
+import { ScreenBackground, TourOverlay } from "./src/components/ui";
 import { TOUR_STEPS } from "./src/onboarding/tourSteps";
 import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/colors";
 
@@ -150,16 +150,15 @@ function AppContent() {
     };
 
     /**
-     * Guia paso a paso: la primera vez que se entra al dashboard en esta
-     * sesion se lanza sola; en logins siguientes se pregunta si se quiere ver
-     * de nuevo, salvo que el usuario haya pedido no volver a preguntar.
+     * Guia paso a paso: solo se lanza sola la primera vez que se entra al
+     * dashboard (primer login de la sesion de la app). En logins siguientes
+     * no vuelve a aparecer nada automatico; se puede repetir manualmente
+     * desde Centro de ayuda -> Guia paso a paso (`handleStartGuideFromHelp`).
      * `tourPromptCheckedThisSession` se resetea al pasar por welcome/login
      * (ver mas abajo), asi que decide una sola vez por cada inicio de sesion.
      */
     const [hasSeenOnboardingTour, setHasSeenOnboardingTour] = useState(false);
-    const [dontShowTourPrompt, setDontShowTourPrompt] = useState(false);
     const [tourPromptCheckedThisSession, setTourPromptCheckedThisSession] = useState(false);
-    const [showTourPrompt, setShowTourPrompt] = useState(false);
     const [tourActive, setTourActive] = useState(false);
     const [tourStepIndex, setTourStepIndex] = useState(0);
 
@@ -168,13 +167,15 @@ function AppContent() {
         setTourActive(true);
     };
 
-    const handleTourNext = () => {
-        if (tourStepIndex >= TOUR_STEPS.length - 1) {
-            setTourActive(false);
-            return;
-        }
-        setTourStepIndex((prev) => prev + 1);
-    };
+    const handleTourNext = useCallback(() => {
+        setTourStepIndex((prev) => {
+            if (prev >= TOUR_STEPS.length - 1) {
+                setTourActive(false);
+                return prev;
+            }
+            return prev + 1;
+        });
+    }, []);
 
     const handleTourSkip = () => {
         setTourActive(false);
@@ -193,8 +194,6 @@ function AppContent() {
         if (!hasSeenOnboardingTour) {
             setHasSeenOnboardingTour(true);
             startTour();
-        } else if (!dontShowTourPrompt) {
-            setShowTourPrompt(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, tourPromptCheckedThisSession, biometricPromptShown]);
@@ -204,8 +203,35 @@ function AppContent() {
     const handleStartGuideFromHelp = () => {
         setIsMenuOpen(false);
         setView("dashboard");
+
+        // Si la guia ya esta activa y se llego aqui por su propio paso final
+        // ("Guia paso a paso", ver TOUR_STEPS), solo hay que cerrar ese paso
+        // y mostrar el cierre; reiniciarla la mandaria de vuelta al paso 0.
+        const currentAwait = TOUR_STEPS[tourStepIndex]?.awaitAction;
+        if (tourActive && currentAwait?.type === "guidePress") {
+            handleTourNext();
+            return;
+        }
+
         startTour();
     };
+
+    /**
+     * Tramo final interactivo de la guia (ver TOUR_STEPS): los pasos con
+     * `awaitAction` no tienen boton "Siguiente" (TourOverlay lo oculta) y
+     * avanzan solos cuando la app detecta la accion real correspondiente.
+     * El tipo `guidePress` se resuelve aparte, en `handleStartGuideFromHelp`,
+     * porque ese boton real ya tiene su propio efecto secundario (reiniciar
+     * la guia) que hay que evitar mientras esta en curso.
+     */
+    useEffect(() => {
+        if (!tourActive) return;
+        const awaits = TOUR_STEPS[tourStepIndex]?.awaitAction;
+        if (!awaits || awaits.type === "guidePress") return;
+
+        const satisfied = awaits.type === "menuOpen" ? isMenuOpen : view === awaits.value;
+        if (satisfied) handleTourNext();
+    }, [tourActive, tourStepIndex, isMenuOpen, view, handleTourNext]);
 
     /** Pantalla a la que vuelve "Cancelar" en la confirmacion de cierre de sesion */
     const [logoutReturnView, setLogoutReturnView] = useState<ViewName>("dashboard");
@@ -1208,9 +1234,19 @@ function AppContent() {
                 setView={setView}
                 onLogout={requestLogout}
                 physicalCardActive={!isFactoryInactive}
+                tourOverlay={
+                    tourActive && isMenuOpen ? (
+                        <TourOverlay
+                            t={t}
+                            stepIndex={tourStepIndex}
+                            onNext={handleTourNext}
+                            onSkip={handleTourSkip}
+                        />
+                    ) : null
+                }
             />
 
-            {tourActive && (
+            {tourActive && !isMenuOpen && (
                 <TourOverlay
                     t={t}
                     stepIndex={tourStepIndex}
@@ -1218,20 +1254,6 @@ function AppContent() {
                     onSkip={handleTourSkip}
                 />
             )}
-
-            <TourPromptModal
-                t={t}
-                visible={showTourPrompt}
-                onShowAgain={() => {
-                    setShowTourPrompt(false);
-                    startTour();
-                }}
-                onNotNow={() => setShowTourPrompt(false)}
-                onDontAskAgain={() => {
-                    setShowTourPrompt(false);
-                    setDontShowTourPrompt(true);
-                }}
-            />
 
             {__DEV__ ? (
                 <Pressable

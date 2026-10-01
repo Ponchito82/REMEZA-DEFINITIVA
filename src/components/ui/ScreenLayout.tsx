@@ -13,6 +13,7 @@ import { metrics } from "../../theme/radius";
 import { spacing } from "../../theme/spacing";
 import BackButton from "./BackButton";
 import KeyboardAwareScrollView from "./KeyboardAwareScrollView";
+import { tourRef } from "../../onboarding/tourTargets";
 
 type Props = {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ type Props = {
   onBack?: () => void;
   backTestID?: string;
   backAccessibilityLabel?: string;
+  /** Id de `tourRef` para que la guia enmarque este boton de regresar. */
+  backTourId?: string;
   /** Envuelve en KeyboardAvoidingView: pantallas con inputs */
   keyboard?: boolean;
   /**
@@ -50,6 +53,7 @@ export default function ScreenLayout({
   onBack,
   backTestID,
   backAccessibilityLabel,
+  backTourId,
   keyboard = false,
   plain = false,
   footer,
@@ -73,11 +77,21 @@ export default function ScreenLayout({
           showsVerticalScrollIndicator={false}
         >
           {showBack && onBack ? (
-            <BackButton
-              testID={backTestID}
-              accessibilityLabel={backAccessibilityLabel}
-              onPress={onBack}
-            />
+            backTourId ? (
+              <View ref={tourRef(backTourId)} collapsable={false}>
+                <BackButton
+                  testID={backTestID}
+                  accessibilityLabel={backAccessibilityLabel}
+                  onPress={onBack}
+                />
+              </View>
+            ) : (
+              <BackButton
+                testID={backTestID}
+                accessibilityLabel={backAccessibilityLabel}
+                onPress={onBack}
+              />
+            )
           ) : null}
 
           {children}

@@ -83,4 +83,3 @@ export type { ReceiptData, ReceiptRow } from "./ReceiptCard";
 export type { Requirement } from "./RequirementList";
 export { default as KeyboardAwareScrollView } from "./KeyboardAwareScrollView";
 export { default as TourOverlay } from "./TourOverlay";
-export { default as TourPromptModal } from "./TourPromptModal";
