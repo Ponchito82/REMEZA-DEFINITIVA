@@ -4,6 +4,7 @@ export { default as CardCarousel } from "./CardCarousel";
 export { default as RemezaCardBack } from "./RemezaCardBack";
 export { default as ToggleRow } from "./ToggleRow";
 export { default as ActivityItem } from "./ActivityItem";
+export { default as CardActivityPreview } from "./CardActivityPreview";
 export { default as TransactionItem } from "./TransactionItem";
 export { default as AvailableBalanceCard } from "./AvailableBalanceCard";
 export { default as BeneficiaryItem } from "./BeneficiaryItem";
@@ -16,6 +17,7 @@ export { default as InfoDetailsCard } from "./InfoDetailsCard";
 export { default as DrawerItem } from "./DrawerItem";
 export { default as CardSummaryTile } from "./CardSummaryTile";
 export { default as CardTypeToggle } from "./CardTypeToggle";
+export { default as PhysicalCardArt } from "./PhysicalCardArt";
 
 export type { CarouselCard } from "./CardCarousel";
 export type { InfoDetailItem } from "./InfoDetailsCard";

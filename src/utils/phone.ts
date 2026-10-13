@@ -6,7 +6,7 @@ export const PHONE_NATIONAL_LENGTH: Record<CountryCode, number> = {
 };
 
 export const PHONE_EXAMPLES: Record<CountryCode, string> = {
-  MX: "+52 246 123 4567",
+  MX: "246 123 4567",
   US: "+1 (555) 123-4567",
 };
 

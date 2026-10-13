@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Alert } from "react-native";
 
 import TwoFactorSettingsScreen from "../screens/security/TwoFactorSettingsScreen";
 import ChangeAccessCodeScreen from "../screens/security/ChangeAccessCodeScreen";
@@ -19,6 +20,9 @@ import {
 import { useStepStack } from "../hooks/useStepStack";
 import { defaultBiometryKind, getBiometryKind } from "../services/biometrics";
 import { bioText } from "../screens/security/biometryKind";
+
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Ocurrió un error de conexión.";
 
 type Step =
   | "settings"
@@ -73,16 +77,25 @@ export default function SecurityFlow({
 
   useEffect(() => {
     getBiometryKind().then(setKind);
-    getTwoFactorMethods().then(setMethods);
+    getTwoFactorMethods()
+      .then(setMethods)
+      .catch(() => {});
   }, []);
 
-  const handleChangeCode = async (current: string, next: string) => {
+  /** Devuelve el mensaje del backend si rechazo el cambio, para mostrarlo en la pantalla. */
+  const handleChangeCode = async (current: string, next: string): Promise<string | null> => {
     setBusy(true);
-    const result = await changeAccessCode(current, next);
-    setBusy(false);
-    if (result.ok) {
-      setCodeChanged(true);
-      reset("settings");
+    try {
+      const result = await changeAccessCode(current, next);
+      if (result.ok) {
+        setCodeChanged(true);
+        reset("settings");
+      }
+      return null;
+    } catch (error) {
+      return errorMessage(error);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -106,10 +119,14 @@ export default function SecurityFlow({
 
   const handleDisableMethod = async (target: TwoFactorMethod) => {
     setBusy(true);
-    const next = await setTwoFactorMethod(target, false);
-    setMethods(next);
-    setBusy(false);
-    setMethodNotice({ method: target, enabled: false });
+    try {
+      setMethods(await setTwoFactorMethod(target, false));
+      setMethodNotice({ method: target, enabled: false });
+    } catch (error) {
+      Alert.alert(t.verificationMethodsError ?? "No se pudo actualizar", errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSendMethodCode = async (destination: string) => {
@@ -129,10 +146,16 @@ export default function SecurityFlow({
       setWrongCode(true);
       return;
     }
-    setMethods(await setTwoFactorMethod(method, true));
-    setBusy(false);
-    setMethodNotice({ method, enabled: true });
-    reset("settings");
+    try {
+      setMethods(await setTwoFactorMethod(method, true));
+      setMethodNotice({ method, enabled: true });
+      reset("settings");
+    } catch (error) {
+      Alert.alert(t.verificationMethodsError ?? "No se pudo actualizar", errorMessage(error));
+      reset("settings");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleEnableBiometrics = async () => {

@@ -33,7 +33,7 @@ const LABEL_INK = "rgba(255,255,255,0.62)";
 const COPY_SIZE = 22;
 const COPY_ICON = 13;
 
-/** Donde arranca el isotipo "R": ningun dato debe pasar de aqui. El isotipo no se mueve. */
+/** Donde arranca el isotipo "R": ningun dato debe pasar de aqui. */
 const GLYPH_LEFT = 1145;
 const GLYPH_GAP = 40;
 const LEFT_MARGIN = 96;
@@ -41,6 +41,20 @@ const CONTENT_MAX_WIDTH = GLYPH_LEFT - LEFT_MARGIN - GLYPH_GAP;
 /** Columna derecha del bloque inferior (Vencimiento | CVC), sin tocar el isotipo. */
 const RIGHT_COL_LEFT = 610;
 const RIGHT_COL_MAX_WIDTH = GLYPH_LEFT - RIGHT_COL_LEFT - GLYPH_GAP;
+
+/**
+ * Filas de datos, repartidas para que la columna quede centrada en la tarjeta
+ * (sin hueco grande arriba ni abajo) y el bloque Numero + Vencimiento/CVC
+ * caiga a la altura del isotipo "R" (GLYPH_TOP..GLYPH_TOP+315).
+ */
+const NAME_LABEL_TOP = 95;
+const NAME_TOP = 137;
+const NUMBER_LABEL_TOP = 218;
+const NUMBER_TOP = 260;
+const BOTTOM_LABEL_TOP = 475;
+const BOTTOM_TOP = 519;
+/** Grupo VIRTUAL + "R" + remeza: la "R" alineada con la etiqueta del Numero. */
+const GLYPH_TOP = NUMBER_LABEL_TOP;
 
 type Props = {
   t: any;
@@ -61,6 +75,11 @@ type Props = {
   copyTestID?: string;
   onCopyCvv?: () => void;
   copyCvvTestID?: string;
+  /** Refs de los iconos de copiar, para enmarcarlos en la guia. */
+  copyRef?: (node: any) => void;
+  copyCvvRef?: (node: any) => void;
+  /** Corre todo el contenido hacia abajo (unidades del arte), p. ej. sin controles abajo. */
+  offsetY?: number;
   /** Capas encima del arte (p. ej. el aviso de tarjeta apagada) */
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -86,10 +105,13 @@ export default function RemezaCardBack({
   showData = false,
   dimmed = false,
   variant = "physical",
+  offsetY = 0,
   onCopyNumber,
   copyTestID,
   onCopyCvv,
   copyCvvTestID,
+  copyRef,
+  copyCvvRef,
   children,
   style,
   testID,
@@ -140,7 +162,7 @@ export default function RemezaCardBack({
           <Text
             style={[
               styles.label,
-              { left: LEFT_MARGIN * s, top: 100 * s, fontSize: 36 * s, lineHeight: 42 * s },
+              { left: LEFT_MARGIN * s, top: (NAME_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
             ]}
           >
             {t.cardHolderLabel}
@@ -154,7 +176,7 @@ export default function RemezaCardBack({
               styles.absolute,
               {
                 left: LEFT_MARGIN * s,
-                top: 145 * s,
+                top: (NAME_TOP + offsetY) * s,
                 width: CONTENT_MAX_WIDTH * s,
                 fontFamily: fontFamily.bold,
                 fontSize: 64 * s,
@@ -170,13 +192,13 @@ export default function RemezaCardBack({
       <Text
         style={[
           styles.label,
-          { left: LEFT_MARGIN * s, top: 345 * s, fontSize: 36 * s, lineHeight: 42 * s },
+          { left: LEFT_MARGIN * s, top: (NUMBER_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
         ]}
       >
         {t.cardNumberLabel}
       </Text>
 
-      <View style={[styles.row, { left: LEFT_MARGIN * s, top: 390 * s, maxWidth: CONTENT_MAX_WIDTH * s, gap: 12 * s }]}>
+      <View style={[styles.row, { left: LEFT_MARGIN * s, top: (NUMBER_TOP + offsetY) * s, maxWidth: CONTENT_MAX_WIDTH * s, gap: 12 * s }]}>
         <Text
           testID={numberTestID}
           numberOfLines={1}
@@ -198,6 +220,8 @@ export default function RemezaCardBack({
 
         {showData && onCopyNumber ? (
           <Pressable
+            ref={copyRef}
+            collapsable={false}
             testID={copyTestID}
             accessibilityRole="button"
             onPress={onCopyNumber}
@@ -213,7 +237,7 @@ export default function RemezaCardBack({
       <Text
         style={[
           styles.label,
-          { left: LEFT_MARGIN * s, top: 620 * s, fontSize: 36 * s, lineHeight: 42 * s },
+          { left: LEFT_MARGIN * s, top: (BOTTOM_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
         ]}
       >
         {t.cardExpiryLabel}
@@ -225,7 +249,7 @@ export default function RemezaCardBack({
           styles.absolute,
           {
             left: LEFT_MARGIN * s,
-            top: 665 * s,
+            top: (BOTTOM_TOP + offsetY) * s,
             fontFamily: fontFamily.semibold,
             fontSize: 64 * s,
             lineHeight: 76 * s,
@@ -239,7 +263,7 @@ export default function RemezaCardBack({
       <Text
         style={[
           styles.label,
-          { left: RIGHT_COL_LEFT * s, top: 620 * s, fontSize: 36 * s, lineHeight: 42 * s },
+          { left: RIGHT_COL_LEFT * s, top: (BOTTOM_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
         ]}
       >
         {t.cardCvvLabel}
@@ -247,7 +271,7 @@ export default function RemezaCardBack({
       <View
         style={[
           styles.row,
-          { left: RIGHT_COL_LEFT * s, top: 665 * s, maxWidth: RIGHT_COL_MAX_WIDTH * s, gap: 12 * s },
+          { left: RIGHT_COL_LEFT * s, top: (BOTTOM_TOP + offsetY) * s, maxWidth: RIGHT_COL_MAX_WIDTH * s, gap: 12 * s },
         ]}
       >
         <Text
@@ -269,6 +293,8 @@ export default function RemezaCardBack({
 
         {showData && onCopyCvv ? (
           <Pressable
+            ref={copyCvvRef}
+            collapsable={false}
             testID={copyCvvTestID}
             accessibilityRole="button"
             onPress={onCopyCvv}
@@ -288,7 +314,7 @@ export default function RemezaCardBack({
           styles.variantLabel,
           {
             left: GLYPH_LEFT * s,
-            top: 218 * s,
+            top: (GLYPH_TOP - 113 + offsetY) * s,
             width: glyphWidth,
             fontSize: 42 * s,
             lineHeight: 48 * s,
@@ -299,8 +325,8 @@ export default function RemezaCardBack({
         {variantLabel}
       </Text>
 
-      {/* Isotipo: no se mueve. */}
-      <View style={[styles.glyph, { left: GLYPH_LEFT * s, top: 331 * s }]}>
+      {/* Isotipo: arranca a la altura de la fila del Numero. */}
+      <View style={[styles.glyph, { left: GLYPH_LEFT * s, top: (GLYPH_TOP + offsetY) * s }]}>
         <Svg width={glyphWidth} height={glyphHeight}>
           <G scale={glyphScale}>
             <Path d={remezaGlyph.path} fill={INK} />
@@ -314,7 +340,7 @@ export default function RemezaCardBack({
           styles.absolute,
           {
             left: 1110 * s,
-            top: 655 * s,
+            top: (GLYPH_TOP + 324 + offsetY) * s,
             fontFamily: fontFamily.medium,
             fontSize: 90 * s,
             lineHeight: 108 * s,

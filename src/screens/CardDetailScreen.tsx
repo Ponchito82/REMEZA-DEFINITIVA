@@ -14,8 +14,10 @@ import { BanknoteArrowDown, ChevronLeft, ShieldOff, Eye, EyeOff, Lock, Menu } fr
 import Clipboard from "@react-native-clipboard/clipboard";
 import { styles } from "../theme/styles";
 import { PURPLE, colors } from "../theme/colors";
+import { typography } from "../theme/typography";
 import { PrimaryButton, RemezaLogo } from "../components/ui";
-import { ActivityItem, CardTypeToggle, RemezaCardBack } from "../components/remeza";
+import { CardActivityPreview, CardTypeToggle, RemezaCardBack } from "../components/remeza";
+import type { CardMovementsState } from "../api/cardTransactions";
 import { spacing, screenPadding } from "../theme/spacing";
 import { useHardwareBack } from "../hooks/useHardwareBack";
 
@@ -27,13 +29,46 @@ const CARD_DEMO = {
   cvv: "123",
 };
 
+export type CardDisplayData = typeof CARD_DEMO;
+
+/** La virtual no se captura al activarla: siempre muestra sus datos asignados. */
+export const VIRTUAL_CARD_DATA: CardDisplayData = CARD_DEMO;
+
+/**
+ * Datos que pinta la tarjeta fisica: tras activarla, los capturados en la
+ * activacion; antes, los de muestra.
+ */
+export function resolveCardData(
+  isFactoryInactive: boolean,
+  cardNumber: string,
+  expiryDate: string,
+  cvv: string,
+): CardDisplayData {
+  const entered = cardNumber.replace(/\s/g, "");
+  return !isFactoryInactive && entered.length === 16
+    ? { number: cardNumber, last4: entered.slice(-4), expiry: expiryDate, cvv }
+    : CARD_DEMO;
+}
+
 type Props = {
   t: any;
   holderName: string;
 
+  /** Fisica: sin activar, encendida/bloqueada. */
   isFactoryInactive: boolean;
   isCardActive: boolean;
   setIsCardActive: (value: boolean) => void;
+
+  /** Virtual: su propia activacion y su propio bloqueo, independientes de la fisica. */
+  isVirtualInactive: boolean;
+  isVirtualCardActive: boolean;
+  setIsVirtualCardActive: (value: boolean) => void;
+
+  /**
+   * La fisica solo aparece (selector Fisica/Virtual) una vez solicitada. Antes
+   * de eso esta pantalla es solo de la virtual.
+   */
+  physicalCardRequested: boolean;
 
   setIsMenuOpen: (value: boolean) => void;
   onSendMoneyPress?: () => void;
@@ -74,15 +109,18 @@ type Props = {
   handleActivateCard: () => void;
   handleActivateVirtualCard: () => void;
 
-  /** Actividad reducida (2 movimientos), igual en fisica y virtual. */
-  transactions: any[];
+  /** Movimientos reales de la tarjeta; aqui se muestran los 2 ultimos. */
+  activity: CardMovementsState;
+  /** "Ver todo": abre los movimientos de la tarjeta */
+  onViewAllActivity?: () => void;
 };
 
 /**
- * Pantalla de la tarjeta (fisica o virtual), a la que se llega desde "Mis
- * tarjetas" en el dashboard. El selector Fisica/Virtual cambia cual tarjeta
- * se ve sin salir de la pantalla; ambas comparten el mismo flujo de
- * activacion que antes vivia en el dashboard.
+ * Pantalla de la tarjeta, a la que se llega desde "Mi tarjeta" en el
+ * dashboard. Mientras no se solicite la fisica, es solo de la virtual; ya
+ * solicitada, aparece el selector Fisica/Virtual. Cada tarjeta tiene su propia
+ * activacion (la fisica con sus datos impresos, la virtual con fecha de
+ * nacimiento y codigo) y su propio bloqueo.
  */
 export default function CardDetailScreen({
   t,
@@ -90,6 +128,10 @@ export default function CardDetailScreen({
   isFactoryInactive,
   isCardActive,
   setIsCardActive,
+  isVirtualInactive,
+  isVirtualCardActive,
+  setIsVirtualCardActive,
+  physicalCardRequested,
   setIsMenuOpen,
   onSendMoneyPress,
   onBack,
@@ -116,7 +158,8 @@ export default function CardDetailScreen({
   setShowCardData,
   handleActivateCard,
   handleActivateVirtualCard,
-  transactions,
+  activity,
+  onViewAllActivity,
 }: Props) {
   useHardwareBack(() => {
     onBack();
@@ -132,13 +175,27 @@ export default function CardDetailScreen({
   const isVirtualFormValid = birthDate.length === 10 && virtualSecureCode.length === 6;
 
   // Tras activar, las dos tarjetas muestran los datos capturados en la activacion.
-  const enteredNumber = cardNumber.replace(/\s/g, "");
-  const cardData =
-    !isFactoryInactive && enteredNumber.length === 16
-      ? { number: cardNumber, last4: enteredNumber.slice(-4), expiry: expiryDate, cvv }
-      : CARD_DEMO;
+  // Ya activada, la fisica sigue visible aunque el flag de solicitud no este.
+  const showPhysical = physicalCardRequested || !isFactoryInactive;
+  const variant: "physical" | "virtual" =
+    showPhysical && activeCardIndex === 0 ? "physical" : "virtual";
+  const isPhysical = variant === "physical";
 
-  const variant: "physical" | "virtual" = activeCardIndex === 0 ? "physical" : "virtual";
+  // Cada tarjeta con su propio estado.
+  const inactive = isPhysical ? isFactoryInactive : isVirtualInactive;
+  const active = isPhysical ? isCardActive : isVirtualCardActive;
+  const setActive = isPhysical ? setIsCardActive : setIsVirtualCardActive;
+  const cardData = isPhysical
+    ? resolveCardData(isFactoryInactive, cardNumber, expiryDate, cvv)
+    : VIRTUAL_CARD_DATA;
+
+  const openActivation = () => {
+    if (isPhysical) {
+      setShowSecureCodeModal(true);
+    } else {
+      setShowVirtualCardModal(true);
+    }
+  };
 
   return (
     <View style={styles.dashboardScreen}>
@@ -381,40 +438,24 @@ export default function CardDetailScreen({
           <Text style={detailStyles.backText}>{t.back}</Text>
         </Pressable>
 
-        <CardTypeToggle
-          testID="cardDetail-typeToggle"
-          value={variant}
-          onChange={(next) => setActiveCardIndex(next === "physical" ? 0 : 1)}
-          physicalLabel={t.physical}
-          virtualLabel={t.virtual}
-          style={detailStyles.cardTypeToggle}
-        />
+        {showPhysical ? (
+          <CardTypeToggle
+            testID="cardDetail-typeToggle"
+            value={variant}
+            onChange={(next) => setActiveCardIndex(next === "physical" ? 0 : 1)}
+            physicalLabel={t.physical}
+            virtualLabel={t.virtual}
+            style={detailStyles.cardTypeToggle}
+          />
+        ) : null}
 
-        {isFactoryInactive && !showSuccessMessage && (
+        {inactive && !showSuccessMessage && (
           <View style={styles.inactiveCardMessage}>
-            <Pressable
-              testID="dashboard-inactiveCardTitle"
-              onPress={() => {
-                if (variant === "physical") {
-                  setShowSecureCodeModal(true);
-                } else {
-                  setShowVirtualCardModal(true);
-                }
-              }}
-            >
+            <Pressable testID="dashboard-inactiveCardTitle" onPress={openActivation}>
               <Text style={styles.inactiveCardTitle}>{t.inactiveCard}</Text>
             </Pressable>
 
-            <Pressable
-              testID="dashboard-activateNowButton"
-              onPress={() => {
-                if (variant === "physical") {
-                  setShowSecureCodeModal(true);
-                } else {
-                  setShowVirtualCardModal(true);
-                }
-              }}
-            >
+            <Pressable testID="dashboard-activateNowButton" onPress={openActivation}>
               <Text style={styles.activateNowText}>{t.activateNow}</Text>
             </Pressable>
           </View>
@@ -430,28 +471,22 @@ export default function CardDetailScreen({
 
         <Pressable
           testID={variant === "physical" ? "dashboard-physicalCardPressable" : "dashboard-virtualCardPressable"}
-          onPress={() => {
-            if (isFactoryInactive) {
-              if (variant === "physical") {
-                setShowSecureCodeModal(true);
-              } else {
-                setShowVirtualCardModal(true);
-              }
-            }
-          }}
+          onPress={inactive ? openActivation : undefined}
         >
           <RemezaCardBack
             testID={variant === "physical" ? "dashboard-physicalCard" : "dashboard-virtualCard"}
             t={t}
             variant={variant}
+            // Aqui no hay controles abajo: se baja el contenido para que quede centrado en la tarjeta.
+            offsetY={100}
             holderName={holderName}
             number={cardData.number}
             last4={cardData.last4}
             expiry={cardData.expiry}
             cvv={cardData.cvv}
             showData={showCardData}
-            dimmed={!(isCardActive && !isFactoryInactive)}
-            onCopyNumber={() => Clipboard.setString(cardNumber.replace(/\s/g, ""))}
+            dimmed={inactive || !active}
+            onCopyNumber={() => Clipboard.setString(cardData.number.replace(/\s/g, ""))}
             copyTestID={
               variant === "physical" ? "dashboard-copyPhysicalCardNumberButton" : "dashboard-copyVirtualCardNumberButton"
             }
@@ -461,7 +496,7 @@ export default function CardDetailScreen({
             }
             style={detailStyles.card}
           >
-            {!isFactoryInactive && !isCardActive && (
+            {!inactive && !active && (
               <View style={styles.virtualCardOverlay}>
                 <ShieldOff size={48} color="#fff" />
                 <Text style={styles.virtualCardOverlayText}>{t.cardOff}</Text>
@@ -470,14 +505,13 @@ export default function CardDetailScreen({
           </RemezaCardBack>
         </Pressable>
 
-        <View style={styles.dotsRow}>
-          {[0, 1].map((index) => (
-            <View
-              key={index}
-              style={[styles.dot, activeCardIndex === index && styles.dotActive]}
-            />
-          ))}
-        </View>
+        {showPhysical ? (
+          <View style={styles.dotsRow}>
+            {(["physical", "virtual"] as const).map((item) => (
+              <View key={item} style={[styles.dot, variant === item && styles.dotActive]} />
+            ))}
+          </View>
+        ) : null}
 
         {onSendMoneyPress ? (
           <PrimaryButton
@@ -510,7 +544,7 @@ export default function CardDetailScreen({
             </Text>
           </Pressable>
 
-          {!isFactoryInactive ? (
+          {!inactive ? (
             <View
               testID="dashboard-blockCardSwitchRow"
               style={{
@@ -519,17 +553,17 @@ export default function CardDetailScreen({
                 gap: 8,
               }}
             >
-              {isCardActive ? null : <Lock size={22} color="#6B7280" />}
+              {active ? null : <Lock size={22} color="#6B7280" />}
 
               <Text style={styles.cardToggleText}>
-                {isCardActive ? t.cardActiveLabel : t.cardBlockedLabel}
+                {active ? t.cardActiveLabel : t.cardBlockedLabel}
               </Text>
 
               <Switch
                 testID="dashboard-blockCardSwitch"
-                accessibilityLabel={isCardActive ? t.blockCardButton : t.unblockCardButton}
-                value={isCardActive}
-                onValueChange={setIsCardActive}
+                accessibilityLabel={active ? t.blockCardButton : t.unblockCardButton}
+                value={active}
+                onValueChange={setActive}
                 trackColor={{ false: "#3B3B55", true: PURPLE }}
                 thumbColor="#FFFFFF"
               />
@@ -537,25 +571,37 @@ export default function CardDetailScreen({
           ) : null}
         </View>
 
-        <Text style={styles.sectionTitle}>{t.activity}</Text>
+        <View style={detailStyles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>{t.activity}</Text>
 
-        <View style={styles.stack12}>
-          {transactions.map((item, index) => (
-            <ActivityItem
-              key={index}
-              testID={`dashboard-activityItem-${index}`}
-              label={item.label}
-              amount={item.amount}
-              direction={item.amount.trim().startsWith("+") ? "in" : "out"}
-            />
-          ))}
+          {onViewAllActivity ? (
+            <Pressable testID="cardDetail-viewAllActivityButton" onPress={onViewAllActivity}>
+              <Text style={detailStyles.seeAll}>{t.seeAll}</Text>
+            </Pressable>
+          ) : null}
         </View>
+
+        <CardActivityPreview
+          t={t}
+          state={activity}
+          limit={2}
+          itemTestID="cardDetail-activityItem"
+        />
       </ScrollView>
     </View>
   );
 }
 
 const detailStyles = StyleSheet.create({
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  seeAll: {
+    ...typography.link,
+    color: PURPLE,
+  },
   card: {
     width: "95%",
     marginBottom: 16,

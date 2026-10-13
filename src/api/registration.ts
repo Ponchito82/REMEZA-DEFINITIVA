@@ -1,13 +1,10 @@
 import { API_BASE_URL, ApiError, apiPost } from "./client";
 import { OnboardingData } from "./verification";
 
-const LOCAL_AUTO_APPROVE = true;
-
 export type VerificationStatus = "approved" | "rejected" | "pending";
 
 export type VerificationResult = {
   status: VerificationStatus;
-  backendMessage?: string;
   kycStatus?: string | null;
 };
 
@@ -35,6 +32,7 @@ export type RegistrationDocuments = {
 
 export type SubmitRegistrationParams = {
   onboardingId: string | null;
+  accessCode: string;
   personalInfo: RegistrationPersonalInfo;
   documents: RegistrationDocuments;
 };
@@ -54,6 +52,14 @@ function mimeTypeOf(path: string): string {
 
 function toUploadUri(path: string): string {
   return path.startsWith("file://") || path.startsWith("content://") ? path : `file://${path}`;
+}
+
+async function saveAccessCode(onboardingId: string, pin: string): Promise<OnboardingData> {
+  return apiPost<OnboardingData>(
+    `/api/v1/onboarding/${encodeURIComponent(onboardingId)}/pin/save`,
+    { pin },
+    false,
+  );
 }
 
 async function savePersonalInformation(
@@ -103,43 +109,50 @@ async function uploadIdDocuments(
   return json?.data as OnboardingData;
 }
 
+type RegistrationStep = "accessCode" | "personalInfo";
+
+/** Pasos del envio final ya aceptados por el backend, por proceso de registro. */
+const completedSteps = new Map<string, Set<RegistrationStep>>();
+
+/**
+ * El backend exige este orden: PIN -> datos personales (crea el KYC) -> documentos.
+ * El PIN se manda aqui y no al crearlo en el paso 3, porque el backend solo lo
+ * acepta con el correo ya verificado. Cada paso depende del anterior, asi que
+ * el primer error detiene el envio y sube como ApiError.
+ */
 export async function submitRegistration(
   params: SubmitRegistrationParams,
 ): Promise<VerificationResult> {
-  const { onboardingId, personalInfo, documents } = params;
-  let backendMessage: string | undefined;
-  let kycStatus: string | null | undefined;
+  const { onboardingId, accessCode, personalInfo, documents } = params;
 
-  if (onboardingId) {
-    try {
-      await savePersonalInformation(onboardingId, personalInfo);
-    } catch (error) {
-      backendMessage =
-        error instanceof ApiError ? `personal-information: ${error.message}` : "personal-information: error";
-    }
-
-    try {
-      const data = await uploadIdDocuments(onboardingId, documents);
-      kycStatus = data?.kycStatus ?? null;
-    } catch (error) {
-      const detail = error instanceof ApiError ? error.message : "error";
-      backendMessage = backendMessage
-        ? `${backendMessage} | id-documents: ${detail}`
-        : `id-documents: ${detail}`;
-    }
-  } else {
-    backendMessage = "sin onboardingId: no se pudo enviar al backend";
+  if (!onboardingId) {
+    throw new ApiError("No se encontró el proceso de registro. Vuelve a empezar.", 0);
   }
 
-  if (LOCAL_AUTO_APPROVE) {
-    return { status: "approved", backendMessage, kycStatus };
+  // Cada paso solo se acepta una vez y en su turno: si el KYC o las fotos fallan
+  // y la persona reintenta, volver a mandar el PIN lo rechaza el backend con
+  // "Email has not been verified" y tapa el error verdadero. Se recuerda hasta
+  // donde llego este registro y el reintento retoma desde el paso que fallo.
+  const done = (completedSteps.get(onboardingId) ?? new Set<RegistrationStep>());
+  completedSteps.set(onboardingId, done);
+
+  if (!done.has("accessCode")) {
+    await saveAccessCode(onboardingId, accessCode);
+    done.add("accessCode");
   }
+  if (!done.has("personalInfo")) {
+    await savePersonalInformation(onboardingId, personalInfo);
+    done.add("personalInfo");
+  }
+  const data = await uploadIdDocuments(onboardingId, documents);
+  completedSteps.delete(onboardingId);
+  const kycStatus = data?.kycStatus ?? null;
 
   if (kycStatus && ["APPROVED", "VERIFIED", "COMPLETED"].includes(kycStatus.toUpperCase())) {
-    return { status: "approved", backendMessage, kycStatus };
+    return { status: "approved", kycStatus };
   }
   if (kycStatus && ["REJECTED", "DENIED"].includes(kycStatus.toUpperCase())) {
-    return { status: "rejected", backendMessage, kycStatus };
+    return { status: "rejected", kycStatus };
   }
-  return { status: "pending", backendMessage, kycStatus };
+  return { status: "pending", kycStatus };
 }

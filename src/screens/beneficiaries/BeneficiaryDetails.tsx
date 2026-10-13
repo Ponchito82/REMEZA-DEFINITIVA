@@ -1,5 +1,5 @@
 import React from "react";
-import { CreditCard, Landmark, Mail, MapPin, Smartphone, User } from "lucide-react-native";
+import { CreditCard, Landmark, Smartphone, User } from "lucide-react-native";
 
 import { DetailRow } from "../../components/ui";
 import { bankFromClabe, formatClabe } from "../../utils/bank";
@@ -7,7 +7,7 @@ import { Beneficiary } from "../../types/app";
 
 type Props = {
   t: any;
-  beneficiary: Pick<Beneficiary, "fullName" | "phone" | "city" | "state" | "email" | "clabe">;
+  beneficiary: Pick<Beneficiary, "fullName" | "phone" | "clabe">;
   testIDPrefix: string;
 };
 
@@ -18,7 +18,6 @@ type Props = {
  */
 export default function BeneficiaryDetails({ t, beneficiary, testIDPrefix }: Props) {
   const bank = bankFromClabe(beneficiary.clabe);
-  const residence = [beneficiary.city, beneficiary.state].filter(Boolean).join(", ");
 
   const rows = [
     { key: "fullName", icon: User, label: t.fullName, value: beneficiary.fullName },
@@ -31,8 +30,6 @@ export default function BeneficiaryDetails({ t, beneficiary, testIDPrefix }: Pro
       copy: true,
     },
     { key: "phone", icon: Smartphone, label: t.phoneNumber, value: beneficiary.phone },
-    { key: "residence", icon: MapPin, label: t.residenceLabel, value: residence },
-    { key: "email", icon: Mail, label: t.emailAddress, value: beneficiary.email },
   ];
 
   return (

@@ -23,8 +23,20 @@ export function isValidForeignId(id: string): boolean {
   return trimmed.length >= 1 && trimmed.length <= 50;
 }
 
-export function isValidSsnLast4(ssn: string): boolean {
-  return ssn.length === 0 || ssn.length === 4;
+/**
+ * BlackPay rechaza el KYC con el SSN vacio y el backend solo acepta el formato
+ * completo `123-45-6789`, asi que se piden los 9 digitos (guardados sin guiones).
+ */
+export function isValidSsn(digits: string): boolean {
+  return /^\d{9}$/.test(digits);
+}
+
+/** "123456789" -> "123-45-6789" (tambien con digitos incompletos, mientras se escribe). */
+export function formatSsn(digits: string): string {
+  const d = digits.replace(/\D/g, "").slice(0, 9);
+  if (d.length <= 3) return d;
+  if (d.length <= 5) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)}`;
 }
 
 export function isValidAddressLine(address: string): boolean {
@@ -126,6 +138,16 @@ export const FOREIGN_ID_TYPE_OPTIONS_ES = [
 export const NATIONALITY_OPTIONS = ["United States"].map((label) => ({ label, value: label }));
 
 export const NATIONALITY_OPTIONS_ES = ["Estados Unidos"].map((label) => ({ label, value: label }));
+
+/** BlackPay pide la nacionalidad como codigo de pais de 2 letras (ISO 3166-1), no como nombre. */
+const NATIONALITY_CODES: Record<string, string> = {
+  "United States": "US",
+  "Estados Unidos": "US",
+};
+
+export function nationalityCode(label: string): string {
+  return NATIONALITY_CODES[label] ?? label;
+}
 
 /**
  * Reglas visibles de un codigo de acceso de 6 digitos, las mismas que aplica
