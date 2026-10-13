@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
-  Building2,
   CircleAlert,
   CreditCard,
-  Mail,
-  MapPin,
   Star,
   User,
   UserPen,
@@ -37,7 +34,7 @@ type Props = {
   language: Language;
   beneficiary: Beneficiary;
   onCancel: () => void;
-  onSave: (updated: Beneficiary) => void;
+  onSave: (updated: Beneficiary) => void | Promise<unknown>;
 };
 
 /** Editar beneficiario (pantalla 38). Mismos campos y reglas que el alta. */
@@ -47,9 +44,6 @@ export default function EditBeneficiaryScreen({ t, language, beneficiary, onCanc
   const [paternal, setPaternal] = useState(beneficiary.paternalLastName);
   const [maternal, setMaternal] = useState(beneficiary.maternalLastName ?? "");
   const [phone, setPhone] = useState(mxPhoneDigits(beneficiary.phone));
-  const [state, setState] = useState(beneficiary.state);
-  const [city, setCity] = useState(beneficiary.city);
-  const [email, setEmail] = useState(beneficiary.email ?? "");
   const [clabe, setClabe] = useState(beneficiary.clabe ?? "");
   const [favorite, setFavorite] = useState(beneficiary.favorite);
 
@@ -57,7 +51,7 @@ export default function EditBeneficiaryScreen({ t, language, beneficiary, onCanc
 
   const handleSave = () => {
     const valid = form.validate(
-      beneficiaryRules(t, { firstName, paternalLastName: paternal, phone, email, clabe }),
+      beneficiaryRules(t, { firstName, paternalLastName: paternal, phone, clabe }),
     );
     if (!valid) return;
 
@@ -68,9 +62,6 @@ export default function EditBeneficiaryScreen({ t, language, beneficiary, onCanc
       maternalLastName: maternal.trim() || undefined,
       fullName: [firstName, paternal, maternal].map((part) => part.trim()).filter(Boolean).join(" "),
       phone: formatMxPhone(phone),
-      state: state.trim(),
-      city: city.trim(),
-      email: email.trim() || undefined,
       clabe,
       favorite,
     });
@@ -136,32 +127,6 @@ export default function EditBeneficiaryScreen({ t, language, beneficiary, onCanc
               onDigitsChange={setPhone}
               inputRef={form.input("phone")}
               highlighted={highlighted("phone")}
-            />
-          </View>
-          <FormInput
-            testID="editBeneficiary.stateInput"
-            leftIcon={MapPin}
-            label={t.residenceState}
-            value={state}
-            onChangeText={setState}
-          />
-          <FormInput
-            testID="editBeneficiary.cityInput"
-            leftIcon={Building2}
-            label={t.residenceCity}
-            value={city}
-            onChangeText={setCity}
-          />
-          <View ref={form.anchor("email")} collapsable={false}>
-            <FormInput
-              testID="editBeneficiary.emailInput"
-              leftIcon={Mail}
-              label={t.emailAddress}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              inputRef={form.input("email")}
-              highlighted={highlighted("email")}
             />
           </View>
           <View ref={form.anchor("clabe")} collapsable={false}>

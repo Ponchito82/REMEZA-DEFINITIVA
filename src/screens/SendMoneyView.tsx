@@ -131,7 +131,7 @@ export default function SendMoneyView({
               accessibilityLabel={beneficiary.fullName}
               leading={<Avatar name={beneficiary.fullName} size={metrics.rowIconCircle} />}
               title={beneficiary.fullName}
-              subtitle={`${beneficiary.phone}\n${beneficiary.city}, ${beneficiary.state}`}
+              subtitle={beneficiary.phone}
               right="radio"
               selected={selectedBeneficiaryId === beneficiary.id}
               onPress={() => setSelectedBeneficiaryId(beneficiary.id)}

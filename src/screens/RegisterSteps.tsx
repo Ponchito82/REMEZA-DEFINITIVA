@@ -59,7 +59,9 @@ import {
   isWeakPasscode,
   isValidPersonName,
   isValidForeignId,
-  isValidSsnLast4,
+  isValidSsn,
+  formatSsn,
+  nationalityCode,
   DAY_OPTIONS,
   MONTH_OPTIONS,
   MONTH_OPTIONS_ES,
@@ -467,7 +469,7 @@ export default function RegisterSteps(props: Props) {
   const maternalLastNameValid =
     registerMaternalLastName.length === 0 || isValidPersonName(registerMaternalLastName);
   const foreignIdValid = isValidForeignId(registerForeignId);
-  const ssnValid = isValidSsnLast4(registerSsnLast4);
+  const ssnValid = isValidSsn(registerSsnLast4);
   const zipValid = isValidPostalCode(registerZipCode, addressCountry);
   const countryValid = !!addressCountry;
   const stateValid = !!registerState;
@@ -546,15 +548,16 @@ export default function RegisterSteps(props: Props) {
     try {
       const result = await submitRegistration({
         onboardingId,
+        accessCode: registerAccessCode,
         personalInfo: {
           firstName: registerFirstName.trim(),
           lastName: registerPaternalLastName.trim(),
           dateOfBirth: `${registerDobYear}-${registerDobMonth}-${registerDobDay}`,
-          nationality: registerNationality,
+          nationality: nationalityCode(registerNationality),
           foreignIdType: registerForeignIdType,
           foreignId: registerForeignId.trim(),
           gender: GENDER_CODES[registerGender] ?? "U",
-          ssn: "",
+          ssn: formatSsn(registerSsnLast4),
           email: registerEmail.trim(),
           addressLine1: [registerAddressDetail.street, registerAddressDetail.exteriorNumber]
             .filter(Boolean)
@@ -572,10 +575,7 @@ export default function RegisterSteps(props: Props) {
       });
 
       if (__DEV__) {
-        console.log(
-          `[registro] verificacion=${result.status}` +
-            (result.backendMessage ? ` backend="${result.backendMessage}"` : ""),
-        );
+        console.log(`[registro] verificacion=${result.status} kyc=${result.kycStatus ?? "-"}`);
       }
 
       setFrontDocStatus("loaded");
@@ -587,10 +587,11 @@ export default function RegisterSteps(props: Props) {
         setSubmitError(t.verificationNotApproved);
         setRegStep(4);
       }
-    } catch {
+    } catch (error) {
+      if (__DEV__) console.log("[registro] error", error);
       setFrontDocStatus("error");
       setBackDocStatus("error");
-      setSubmitError(t.connectionError);
+      setSubmitError(verificationErrorMessage(error, t.connectionError));
       setRegStep(4);
     } finally {
       setIsSubmittingRegistration(false);
@@ -640,7 +641,7 @@ export default function RegisterSteps(props: Props) {
               language={language}
               testID="register-phoneInput"
               country={registerPhoneCountry}
-              lockCountry
+              onCountryChange={setRegisterPhoneCountry}
               digits={registerPhone}
               onDigitsChange={setRegisterPhone}
               onBlur={() => setPhoneTouched(true)}
@@ -900,12 +901,13 @@ export default function RegisterSteps(props: Props) {
                 <View style={styles.flex1}>
                   <FormInput
                     label={t.ssnLast4}
-                    value={registerSsnLast4}
-                    onChangeText={(text) => setRegisterSsnLast4(text.replace(/\D/g, "").slice(0, 4))}
+                    placeholder="000-00-0000"
+                    value={formatSsn(registerSsnLast4)}
+                    onChangeText={(text) => setRegisterSsnLast4(text.replace(/\D/g, "").slice(0, 9))}
                     onBlur={() => markTouched("ssnLast4")}
                     error={fieldError("ssnLast4", ssnValid, t.invalidSsnLast4)}
                     keyboardType="number-pad"
-                    maxLength={4}
+                    maxLength={11}
                     secureToggle
                     testID="register-ssnLast4Input"
                   />

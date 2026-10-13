@@ -1,7 +1,7 @@
 import { ApiError, apiPost } from "./client";
 
 
-const REAL_VERIFICATION_ENABLED = false;
+const REAL_VERIFICATION_ENABLED = true;
 
 function simulatedDelay(): Promise<void> {
   return new Promise((resolve) => setTimeout(() => resolve(), 400));
@@ -107,9 +107,8 @@ export function resendCodeBySms(phoneNumberE164: string, email = ""): Promise<st
     return simulatedDelay().then(() => "Code verification send");
   }
 
-  const query = `phoneNumber=${encodeURIComponent(phoneNumberE164)}&email=${encodeURIComponent(email)}`;
   return guardedSend(sendKeyForPhone(phoneNumberE164), () =>
-    apiPost<string>(`/api/verification/send?${query}`, undefined, false),
+    apiPost<string>("/api/v1/verification/send", { phoneNumber: phoneNumberE164, email }, false),
   );
 }
 
@@ -121,8 +120,7 @@ export function checkVerificationCode(
     return simulatedDelay().then(() => "Valid verification code");
   }
 
-  const query = `phoneNumber=${encodeURIComponent(phoneNumberE164)}&code=${encodeURIComponent(code)}`;
-  return apiPost<string>(`/api/verification/check?${query}`, undefined, false);
+  return apiPost<string>("/api/v1/verification/check", { phoneNumber: phoneNumberE164, code }, false);
 }
 
 export function saveOnboardingEmail(

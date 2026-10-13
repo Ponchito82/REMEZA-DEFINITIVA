@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle } from "react-native";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
+import { ArrowDownLeft, ArrowUpRight, CreditCard } from "lucide-react-native";
 import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
 import { spacing } from "../../theme/spacing";
@@ -11,8 +11,11 @@ type Props = {
   /** Fecha/hora del movimiento, p. ej. "Hoy · 9:12 a.m." */
   subtitle?: string;
   amount: string;
-  /** `in` para ingresos (verde), `out` para egresos (rosa) */
-  direction: "in" | "out";
+  /**
+   * `in` para ingresos (verde), `out` para egresos (rosa). `neutral` cuando no
+   * se sabe: los movimientos de BlackPay aun no traen `direction`.
+   */
+  direction: "in" | "out" | "neutral";
   style?: ViewStyle;
   testID?: string;
 };
@@ -22,13 +25,16 @@ const ICON_SIZE = 48;
 /** Fila de actividad reciente del Home. */
 export default function ActivityItem({ label, subtitle, amount, direction, style, testID }: Props) {
   const isIncome = direction === "in";
-  const tone = isIncome ? colors.success : colors.danger;
-  const Icon = isIncome ? ArrowDownLeft : ArrowUpRight;
+  const isNeutral = direction === "neutral";
+  const tone = isNeutral ? colors.text.primary : isIncome ? colors.success : colors.danger;
+  const iconTone = isNeutral ? colors.primaryLight : tone;
+  const iconBg = isNeutral ? colors.surfaceStrong : isIncome ? colors.successBg : colors.dangerBg;
+  const Icon = isNeutral ? CreditCard : isIncome ? ArrowDownLeft : ArrowUpRight;
 
   return (
     <GlassCard flush style={[styles.root, style]} testID={testID}>
-      <View style={[styles.icon, { backgroundColor: isIncome ? colors.successBg : colors.dangerBg }]}>
-        <Icon size={20} color={tone} strokeWidth={2} />
+      <View style={[styles.icon, { backgroundColor: iconBg }]}>
+        <Icon size={20} color={iconTone} strokeWidth={2} />
       </View>
 
       <View style={styles.text}>

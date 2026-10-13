@@ -1,5 +1,5 @@
 import { isValidNationalPhone } from "./phone";
-import { isValidEmail, isValidPersonName } from "./validation";
+import { isValidPersonName } from "./validation";
 
 /** Quien recibe siempre es de Mexico: la lada va fija en +52. */
 export const BENEFICIARY_PHONE_COUNTRY = "MX";
@@ -8,7 +8,6 @@ export type BeneficiaryFields = {
   firstName: string;
   paternalLastName: string;
   phone: string;
-  email: string;
   clabe: string;
 };
 
@@ -32,11 +31,6 @@ export function beneficiaryRules(t: any, fields: BeneficiaryFields) {
       key: "phone",
       valid: isValidNationalPhone(fields.phone, BENEFICIARY_PHONE_COUNTRY),
       message: fields.phone.length === 0 ? t.requiredPhone : t.invalidPhoneForCountry,
-    },
-    {
-      key: "email",
-      valid: fields.email.length === 0 || isValidEmail(fields.email),
-      message: t.requiredEmail,
     },
     {
       key: "clabe",
