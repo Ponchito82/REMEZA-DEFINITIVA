@@ -12,7 +12,7 @@ import { X } from "lucide-react-native";
 import { tokens, PURPLE } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { metrics, radius } from "../../theme/radius";
-import { TOUR_STEPS } from "../../onboarding/tourSteps";
+import { TOUR_STEPS, stepTargetIds } from "../../onboarding/tourSteps";
 import { measureTarget, TourRect } from "../../onboarding/tourTargets";
 import PrimaryButton from "./PrimaryButton";
 import StepProgress from "./StepProgress";
@@ -41,7 +41,12 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
   // Pasos con `awaitAction` no tienen boton: avanzan solos cuando App.tsx
   // detecta la accion real (abrir el menu, navegar a cierta pantalla, etc.).
   const waitingForAction = !!step.awaitAction;
-  const [rect, setRect] = React.useState<TourRect | null>(null);
+  // Pasos de introduccion (`dimBackground: false`) dejan la pantalla normal.
+  const dimBackground = step.dimBackground !== false;
+  const targetIds = stepTargetIds(step);
+  const targetKey = targetIds.join("|");
+  // Un rect por objetivo del paso (normalmente uno; las tarjetas usan dos).
+  const [rects, setRects] = React.useState<TourRect[]>([]);
   const layerRef = React.useRef<View>(null);
   const [layerSize, setLayerSize] = React.useState({ width: 0, height: 0 });
   // Ancho real del texto del chip, medido con una copia invisible y sin
@@ -56,19 +61,19 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
 
   React.useEffect(() => {
     setChipTextWidth(null);
-  }, [step.titleKey]);
+  }, [step.chipKey ?? step.titleKey]);
 
   React.useEffect(() => {
-    setRect(null);
-    const id = step.targetId;
-    if (!id) return;
+    setRects([]);
+    const ids = targetKey ? targetKey.split("|") : [];
+    if (ids.length === 0) return;
     let cancelled = false;
     const measure = async () => {
       // Se mide tambien la capa del overlay y se resta su origen: asi el cuadro
       // queda bien aunque la ventana y la capa no compartan origen (p. ej. por
       // la barra de estado en Android).
-      const [target, origin] = await Promise.all([
-        measureTarget(id),
+      const [targets, origin] = await Promise.all([
+        Promise.all(ids.map((id) => measureTarget(id))),
         new Promise<{ x: number; y: number } | null>((resolve) => {
           const layer = layerRef.current;
           if (!layer) return resolve(null);
@@ -76,15 +81,21 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
         }),
       ]);
       if (cancelled) return;
-      const next = target && origin ? { ...target, x: target.x - origin.x, y: target.y - origin.y } : null;
-      setRect((prev) => {
-        if (!next) return prev === null ? prev : null;
+      const next = origin
+        ? targets
+            .filter((target): target is TourRect => target !== null)
+            .map((target) => ({ ...target, x: target.x - origin.x, y: target.y - origin.y }))
+        : [];
+      setRects((prev) => {
         if (
-          prev &&
-          Math.abs(prev.x - next.x) < 0.5 &&
-          Math.abs(prev.y - next.y) < 0.5 &&
-          Math.abs(prev.width - next.width) < 0.5 &&
-          Math.abs(prev.height - next.height) < 0.5
+          prev.length === next.length &&
+          prev.every(
+            (p, i) =>
+              Math.abs(p.x - next[i].x) < 0.5 &&
+              Math.abs(p.y - next[i].y) < 0.5 &&
+              Math.abs(p.width - next[i].width) < 0.5 &&
+              Math.abs(p.height - next[i].height) < 0.5,
+          )
         ) {
           return prev;
         }
@@ -97,30 +108,42 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [step.targetId, stepIndex]);
+  }, [targetKey, stepIndex]);
 
-  // La tarjeta va abajo salvo que el objetivo este en la mitad inferior.
-  const cardOnTop = rect ? rect.y + rect.height / 2 > windowHeight / 2 : false;
-  const frame = rect
-    ? {
-        left: rect.x - FRAME_PAD,
-        top: rect.y - FRAME_PAD,
-        width: rect.width + FRAME_PAD * 2,
-        height: rect.height + FRAME_PAD * 2,
-      }
-    : null;
-  const frameRadius = frame ? Math.min(frame.height / 2, 18) : 0;
-  // Fondo atenuado con un hueco redondeado sobre el objetivo (relleno evenodd).
+  // La tarjeta va abajo salvo que los objetivos esten en la mitad inferior.
+  const targetsTop = rects.length ? Math.min(...rects.map((r) => r.y)) : 0;
+  const targetsBottom = rects.length ? Math.max(...rects.map((r) => r.y + r.height)) : 0;
+  const cardOnTop = rects.length ? (targetsTop + targetsBottom) / 2 > windowHeight / 2 : false;
+  const frames = rects.map((rect) => {
+    const f = {
+      left: rect.x - FRAME_PAD,
+      top: rect.y - FRAME_PAD,
+      width: rect.width + FRAME_PAD * 2,
+      height: rect.height + FRAME_PAD * 2,
+    };
+    return { ...f, radius: Math.min(f.height / 2, 18) };
+  });
+  // El chip con el titulo va solo en el primer cuadro.
+  const frame = frames[0] ?? null;
+  // Fondo atenuado con un hueco redondeado sobre cada objetivo (relleno evenodd).
   const { width: lw, height: lh } = layerSize;
   let dimPath = `M0 0H${lw}V${lh}H0Z`;
-  if (frame) {
-    const { left: x, top: y, width: w, height: h } = frame;
-    const r = frameRadius;
+  for (const { left: x, top: y, width: w, height: h, radius: r } of frames) {
     dimPath += ` M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
   }
   const chipAbove = frame ? frame.top - CHIP_HEIGHT - 4 >= insets.top : false;
   const chipWidth =
     chipTextWidth !== null ? Math.min(chipTextWidth + CHIP_PAD_H * 2, 220) : null;
+  // El chip arranca en el borde izquierdo del cuadro; si el objetivo esta pegado
+  // a la derecha (p. ej. "Ver detalles"), se recorre a la izquierda para caber
+  // completo en pantalla, sin pasarse tampoco del borde izquierdo.
+  const chipLeft =
+    frame && chipWidth !== null && lw > 0
+      ? Math.max(
+          CHIP_SCREEN_MARGIN - frame.left,
+          Math.min(CHIP_DEFAULT_LEFT, lw - CHIP_SCREEN_MARGIN - frame.left - chipWidth),
+        )
+      : CHIP_DEFAULT_LEFT;
 
   return (
     <View
@@ -130,7 +153,7 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
       style={styles.layer}
       onLayout={(e) => setLayerSize(e.nativeEvent.layout)}
     >
-      {lw > 0 ? (
+      {lw > 0 && dimBackground ? (
         <Svg pointerEvents="none" width={lw} height={lh} style={StyleSheet.absoluteFill}>
           <Path d={dimPath} fill="rgba(2,2,26,0.78)" fillRule="evenodd" />
         </Svg>
@@ -144,29 +167,41 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
             numberOfLines={1}
             onLayout={(e) => setChipTextWidth(e.nativeEvent.layout.width)}
           >
-            {t[step.titleKey]}
+            {t[step.chipKey ?? step.titleKey]}
           </Text>
+
+          {frames.slice(1).map((f, i) => (
+            <View
+              key={i}
+              pointerEvents="none"
+              style={[
+                styles.frame,
+                { left: f.left, top: f.top, width: f.width, height: f.height },
+                { borderRadius: f.radius },
+              ]}
+            />
+          ))}
 
           <View
             pointerEvents="none"
             style={[
               styles.frame,
-              frame,
-              { borderRadius: frameRadius },
+              { left: frame.left, top: frame.top, width: frame.width, height: frame.height },
+              { borderRadius: frame.radius },
             ]}
           >
             {chipWidth !== null ? (
               <View
                 style={[
                   styles.chip,
-                  { width: chipWidth },
+                  { width: chipWidth, left: chipLeft },
                   chipAbove
                     ? { top: -CHIP_HEIGHT - 4 }
                     : { bottom: -CHIP_HEIGHT - 4 },
                 ]}
               >
                 <Text style={styles.chipText} numberOfLines={1}>
-                  {t[step.titleKey]}
+                  {t[step.chipKey ?? step.titleKey]}
                 </Text>
               </View>
             ) : null}
@@ -210,7 +245,9 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
           {waitingForAction ? null : (
             <PrimaryButton
               testID="onboardingTour-nextButton"
-              title={isLast ? t.tourFinish : t.tourNext}
+              title={
+                isLast ? t.tourFinish : step.nextLabelKey ? t[step.nextLabelKey] : t.tourNext
+              }
               onPress={onNext}
               showArrow={!isLast}
             />
@@ -224,6 +261,10 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
 const FRAME_PAD = 5;
 const CHIP_HEIGHT = 24;
 const CHIP_PAD_H = 10;
+/** Posicion normal del chip respecto al cuadro (alineado a su borde izquierdo). */
+const CHIP_DEFAULT_LEFT = -2;
+/** Distancia minima del chip a los bordes de la pantalla. */
+const CHIP_SCREEN_MARGIN = 8;
 
 const styles = StyleSheet.create({
   layer: {
@@ -242,7 +283,6 @@ const styles = StyleSheet.create({
   },
   chip: {
     position: "absolute",
-    left: -2,
     height: CHIP_HEIGHT,
     paddingHorizontal: CHIP_PAD_H,
     borderRadius: radius.pill,

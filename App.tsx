@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, Text, StyleSheet } from "react-native";
+import { Alert, Animated, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 
 import { ScreenBackground, TourOverlay } from "./src/components/ui";
-import { TOUR_STEPS } from "./src/onboarding/tourSteps";
-import { DANGER, DANGER_SURFACE, SUCCESS, SUCCESS_SURFACE } from "./src/theme/colors";
+import ServiceUnavailableDialog from "./src/components/ui/ServiceUnavailableDialog";
+import { TOUR_STEPS, stepTargetIds } from "./src/onboarding/tourSteps";
 
 import { translations } from "./src/i18n/translations";
 import { Beneficiary, Language, Transaction, TransactionsFilter, ViewName } from "./src/types/app";
@@ -47,9 +46,8 @@ import SecurityFlow from "./src/flows/SecurityFlow";
 import RecoveryFlow from "./src/flows/RecoveryFlow";
 import ServicePaymentFlow from "./src/flows/ServicePaymentFlow";
 import CardControlsFlow from "./src/flows/CardControlsFlow";
+import { VIRTUAL_CARD_DATA } from "./src/screens/CardDetailScreen";
 import type { CardEntry } from "./src/flows/CardControlsFlow";
-import { MOCK_BENEFICIARIES } from "./src/mocks/remeza";
-import { submitTransfer } from "./src/services/transfers";
 import { bankFromClabe } from "./src/utils/bank";
 import { formatMxPhone } from "./src/utils/beneficiary";
 import { formatDateTime } from "./src/utils/date";
@@ -66,12 +64,27 @@ import { CountryCode, stateNameByCode } from "./src/services/geo";
 import {
     UnauthorizedReason,
     clearSession,
+    getToken,
     onUnauthorized,
     startSession,
 } from "./src/api/session";
+import { getBalance, getExchangeRate } from "./src/api/account";
+import { ApiError } from "./src/api/client";
+import { FORCE_BALANCE_ERROR, IGNORE_BALANCE_ERROR } from "./src/api/devFlags";
 import { verifySession } from "./src/api/sessionProbe";
+import { cancelOrder, createOrder, getHistory } from "./src/api/history";
+import { getCardStatement } from "./src/api/cardTransactions";
+import CardMovementsScreen, { CardMovementsState } from "./src/screens/CardMovementsScreen";
+import { getProfile, ProfileData } from "./src/api/profile";
+import {
+    createBeneficiary,
+    deleteBeneficiaryById,
+    listBeneficiaries,
+    setBeneficiaryFavorite,
+    updateBeneficiaryById,
+} from "./src/api/beneficiaries";
 import { toE164 } from "./src/utils/phone";
-import { isBiometricsEnabled } from "./src/services/securitySettings";
+import { isBiometricsEnabled, syncBiometricsFromServer } from "./src/services/securitySettings";
 
 /**
  * Unico cliente de la base de pruebas (E.164 completo). No paso por el
@@ -118,11 +131,23 @@ function AppContent() {
      * dashboard (no vuelve a redirigir por su cuenta).
      */
     const [biometricPromptShown, setBiometricPromptShown] = useState(false);
+    /**
+     * `true` cuando ya se le pregunto al backend si este dispositivo tiene la
+     * biometria activa. Hasta entonces no se ofrece, para no mostrar el aviso a
+     * quien ya la activo en una sesion anterior.
+     */
+    const [biometricsSynced, setBiometricsSynced] = useState(false);
+
+    useEffect(() => {
+        if (view !== "dashboard" || biometricsSynced) return;
+        if (!getToken()) return setBiometricsSynced(true);
+        syncBiometricsFromServer().finally(() => setBiometricsSynced(true));
+    }, [view, biometricsSynced]);
     const [biometricReminderDay, setBiometricReminderDay] = useState<string | null>(null);
     const [biometricReminderVisible, setBiometricReminderVisible] = useState(false);
 
     useEffect(() => {
-        if (view !== "dashboard" || isBiometricsEnabled()) return;
+        if (view !== "dashboard" || !biometricsSynced || isBiometricsEnabled()) return;
 
         const today = new Date().toDateString();
 
@@ -137,7 +162,8 @@ function AppContent() {
             setBiometricReminderDay(today);
             setBiometricReminderVisible(true);
         }
-    }, [view]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [view, biometricsSynced]);
 
     const handleBiometricPromptResolved = () => {
         setBiometricReminderVisible(false);
@@ -182,7 +208,7 @@ function AppContent() {
     };
 
     useEffect(() => {
-        if (view !== "dashboard" || tourPromptCheckedThisSession) return;
+        if (view !== "dashboard" || tourPromptCheckedThisSession || !biometricsSynced) return;
         // La primera vez, el dashboard redirige a `biometricPrompt` en este
         // mismo tick (ver el efecto de arriba): hay que esperar a que ese
         // ida-y-vuelta termine y `view` vuelva a quedarse en "dashboard" de
@@ -196,7 +222,7 @@ function AppContent() {
             startTour();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [view, tourPromptCheckedThisSession, biometricPromptShown]);
+    }, [view, tourPromptCheckedThisSession, biometricPromptShown, biometricsSynced]);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -265,11 +291,18 @@ function AppContent() {
         setAuthToken(null);
         setCustomerId(null);
         setTourPromptCheckedThisSession(false);
+        // Nada del cliente anterior debe verse con la siguiente sesion.
+        setRemoteProfile(null);
+        setTransactionRecords([]);
+        setBeneficiaries([]);
+        setBiometricsSynced(false);
+        setAvailableUsdBalance(null);
+        setPhysicalPromoDismissed(false);
     }, [view]);
 
 
     const [registerPhone, setRegisterPhone] = useState("");
-    const [registerPhoneCountry, setRegisterPhoneCountry] = useState<CountryCode>("US");
+    const [registerPhoneCountry, setRegisterPhoneCountry] = useState<CountryCode>("MX");
 
     const [registerAddressDetail, setRegisterAddressDetail] = useState<AddressDetail>(EMPTY_ADDRESS_DETAIL);
     const patchRegisterAddressDetail = (patch: Partial<AddressDetail>) =>
@@ -301,12 +334,12 @@ function AppContent() {
 
     // El perfil es de solo lectura: se arma con los datos que la persona dio en
     // el KYC del registro y no hay forma de editarlos desde la app.
-    const profileFullName = [registerFirstName, registerPaternalLastName, registerMaternalLastName]
+    const registeredFullName = [registerFirstName, registerPaternalLastName, registerMaternalLastName]
         .map((part) => part.trim())
         .filter(Boolean)
         .join(" ");
-    const profilePhone = registerPhone.length > 0 ? toE164(registerPhone, registerPhoneCountry) : "";
-    const profileAddress = [
+    const registeredPhone = registerPhone.length > 0 ? toE164(registerPhone, registerPhoneCountry) : "";
+    const registeredAddress = [
         [registerAddressDetail.exteriorNumber, registerAddressDetail.street].filter(Boolean).join(" "),
         registerAddressDetail.interiorNumber ? `Apt ${registerAddressDetail.interiorNumber}` : "",
         registerCity,
@@ -317,47 +350,87 @@ function AppContent() {
         .filter(Boolean)
         .join(", ");
 
-    const [physicalCardRequested, setPhysicalCardRequested] = useState(false);
+    /**
+     * Datos del cliente leidos del backend al entrar. Despues de iniciar sesion
+     * los campos del registro estan vacios, asi que el perfil sale de aqui; si
+     * todavia no llegan (o fallan) se usa lo que dio el registro.
+     */
+    const [remoteProfile, setRemoteProfile] = useState<ProfileData | null>(null);
+    const profileFullName =
+        [remoteProfile?.firstName, remoteProfile?.lastName].filter(Boolean).join(" ") ||
+        registeredFullName;
+    const profilePhone = remoteProfile?.phoneNumber || registeredPhone;
+    const profileEmail = remoteProfile?.email || registerEmail.trim();
+    const profileAddress = remoteProfile
+        ? [
+              remoteProfile.addressLine1,
+              remoteProfile.city,
+              [remoteProfile.state, remoteProfile.zipCode].filter(Boolean).join(" "),
+          ]
+              .filter(Boolean)
+              .join(", ") || registeredAddress
+        : registeredAddress;
 
-    const [transactionRecords, setTransactionRecords] = useState<Transaction[]>(() => [
-        {
-            id: "1",
-            type: "virtual",
-            labelKey: "zelleDeposit",
-            label: "Zelle Deposit",
-            amount: "+$500.00",
-            amountUsd: 500,
-            date: "MAR 02, 2026",
-            status: "completed",
-            provider: "blackpay",
-            reference: "RMZ-000001",
-        },
-        {
-            id: "2",
-            type: "physical",
-            label: "POS Purchase",
-            amount: "-$46.20",
-            amountUsd: 46.2,
-            date: "MAR 05, 2026",
-            status: "completed",
-            provider: "blackpay",
-            reference: "RMZ-000002",
-        },
-        {
-            id: "3",
-            type: "remittance",
-            label: "Mario Diaz / 1,725.00 MXN",
-            amount: "-$100.00",
-            amountUsd: 100,
-            date: "MAR 05, 2026",
-            status: "pending",
-            provider: "remeza",
-            reference: "RMZ-000003",
-            mxnAmount: 1725,
-            exchangeRate: 17.25,
-            beneficiary: "Mario Diaz",
-        },
-    ]);
+    const [physicalCardRequested, setPhysicalCardRequested] = useState(false);
+    /** El usuario cerro la invitacion "Tarjeta fisica" del Home (vuelve a salir en la siguiente sesion). */
+    const [physicalPromoDismissed, setPhysicalPromoDismissed] = useState(false);
+
+    /**
+     * Movimientos y envios del cliente, leidos del backend. Los envios hechos
+     * en esta sesion con el cobro simulado (`tx-...`) se conservan arriba hasta
+     * que el envio real quede conectado.
+     */
+    const [transactionRecords, setTransactionRecords] = useState<Transaction[]>([]);
+
+    useEffect(() => {
+        if ((view !== "dashboard" && view !== "transactions") || !getToken()) return;
+        getHistory()
+            .then((remote) =>
+                setTransactionRecords((prev) => [
+                    ...prev.filter((tx) => tx.id.startsWith("tx-")),
+                    ...remote,
+                ])
+            )
+            .catch(() => {});
+    }, [view]);
+
+    /**
+     * Movimientos de la tarjeta (BlackPay), aparte de los envios. Se piden cada
+     * vez que se entra al Home, al detalle de tarjeta o a la pantalla completa; el 503 de BlackPay caido sale como error y
+     * no como lista vacia.
+     */
+    const [cardMovements, setCardMovements] = useState<CardMovementsState>({ status: "loading" });
+    const [cardMovementsReturnView, setCardMovementsReturnView] = useState<ViewName>("dashboard");
+
+    const openCardMovements = (from: ViewName) => {
+        setCardMovementsReturnView(from);
+        setView("cardMovements");
+    };
+
+    const loadCardMovements = useCallback(() => {
+        setCardMovements({ status: "loading" });
+        getCardStatement()
+            .then((statement) => setCardMovements({ status: "ready", statement }))
+            .catch((error) => {
+                // Un 401 ya cierra la sesion por su cuenta (onUnauthorized).
+                if (error instanceof ApiError && error.status === 401) return;
+                setCardMovements({ status: "error" });
+            });
+    }, []);
+
+    // Tambien alimenta la seccion "Actividad" del Home y del detalle de tarjeta.
+    useEffect(() => {
+        if ((view === "dashboard" || view === "cardDetail" || view === "cardMovements") && getToken()) {
+            loadCardMovements();
+        }
+    }, [view, loadCardMovements]);
+
+    useEffect(() => {
+        if ((view !== "dashboard" && view !== "profile") || remoteProfile || !getToken()) return;
+        getProfile()
+            .then(setRemoteProfile)
+            .catch(() => {});
+    }, [view, remoteProfile]);
 
     const allTransactions = useMemo(
         () =>
@@ -390,34 +463,57 @@ function AppContent() {
         setAppeals((prev) => ({ ...prev, [id]: reason }));
     };
 
-    const handleCancelTransaction = (id: string) => {
+    const handleCancelTransaction = async (id: string) => {
         const target = transactionRecords.find((tx) => tx.id === id);
         if (!target || target.status !== "pending") return;
+
+        // Envio registrado en el backend: el decide si sigue en la ventana de 30
+        // minutos. No se devuelve saldo porque registrar la orden no lo desconto.
+        if (id.startsWith("order-")) {
+            try {
+                const cancelled = await cancelOrder(id.slice("order-".length));
+                setTransactionRecords((prev) => prev.map((tx) => (tx.id === id ? cancelled : tx)));
+            } catch (error) {
+                if (error instanceof ApiError && error.status === 401) return;
+                Alert.alert(
+                    "No se pudo cancelar el envío",
+                    error instanceof Error ? error.message : t.transferErrorGeneric
+                );
+            }
+            return;
+        }
 
         setTransactionRecords((prev) =>
             prev.map((tx) => (tx.id === id ? { ...tx, status: "cancelled" } : tx))
         );
-        setAvailableUsdBalance((prev) => Number((prev + target.amountUsd).toFixed(2)));
+        setAvailableUsdBalance((prev) =>
+            prev === null ? prev : Number((prev + target.amountUsd).toFixed(2))
+        );
     };
 
     const [beneficiaryFirstName, setBeneficiaryFirstName] = useState("");
     const [beneficiaryPaternalLastName, setBeneficiaryPaternalLastName] = useState("");
     const [beneficiaryMaternalLastName, setBeneficiaryMaternalLastName] = useState("");
     const [beneficiaryPhone, setBeneficiaryPhone] = useState("");
-    const [beneficiaryResidenceState, setBeneficiaryResidenceState] = useState("");
-    const [beneficiaryResidenceCity, setBeneficiaryResidenceCity] = useState("");
-    const [beneficiaryEmail, setBeneficiaryEmail] = useState("");
     const [beneficiaryClabe, setBeneficiaryClabe] = useState("");
 
-    const [availableUsdBalance, setAvailableUsdBalance] = useState(2450);
+    /**
+     * Saldo real del backend. `null` mientras no se conoce (cargando o sin
+     * respuesta): nunca se inventa un monto, para que nadie decida cuanto
+     * enviar con una cifra que no es la suya.
+     */
+    const [availableUsdBalance, setAvailableUsdBalance] = useState<number | null>(null);
     const [sendAmountUsd, setSendAmountUsd] = useState("");
-    const [exchangeRate] = useState(17.25);
+    const [exchangeRate, setExchangeRate] = useState(17.25);
     const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState("");
     const [sendMoneySuccess, setSendMoneySuccess] = useState(false);
     const [sendMoneyError, setSendMoneyError] = useState("");
 
-    /** Beneficiarios del cliente. Mock hasta que exista el endpoint. */
-    const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(MOCK_BENEFICIARIES);
+    /**
+     * Beneficiarios del cliente, leidos del backend. El favorito
+     * y las ediciones solo viven en memoria: el backend no los guarda.
+     */
+    const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
     /** Beneficiario abierto en detalle, edicion, borrado o recien agregado */
     const [activeBeneficiaryId, setActiveBeneficiaryId] = useState<string | null>(null);
     const activeBeneficiary = beneficiaries.find((b) => b.id === activeBeneficiaryId);
@@ -427,9 +523,6 @@ function AppContent() {
         setBeneficiaryPaternalLastName("");
         setBeneficiaryMaternalLastName("");
         setBeneficiaryPhone("");
-        setBeneficiaryResidenceState("");
-        setBeneficiaryResidenceCity("");
-        setBeneficiaryEmail("");
         setBeneficiaryClabe("");
     };
 
@@ -440,9 +533,6 @@ function AppContent() {
             .filter(Boolean)
             .join(" "),
         phone: formatMxPhone(beneficiaryPhone),
-        city: beneficiaryResidenceCity.trim(),
-        state: beneficiaryResidenceState.trim(),
-        email: beneficiaryEmail.trim() || undefined,
         clabe: beneficiaryClabe,
     };
 
@@ -451,36 +541,143 @@ function AppContent() {
         setView("beneficiaryConfirm");
     };
 
-    // TODO API: alta del beneficiario.
-    const handleConfirmBeneficiary = () => {
-        const created: Beneficiary = {
-            id: `b-${Date.now()}`,
-            firstName: beneficiaryFirstName.trim(),
-            paternalLastName: beneficiaryPaternalLastName.trim(),
-            maternalLastName: beneficiaryMaternalLastName.trim() || undefined,
-            ...beneficiaryDraft,
-            favorite: false,
-            createdAt: Date.now(),
-        };
-        setBeneficiaries((prev) => [...prev, created]);
-        setActiveBeneficiaryId(created.id);
-        clearBeneficiaryForm();
-        setView("beneficiaryAdded");
+    /**
+     * Une lo que dice el backend con lo que solo vive en la app (correo, CLABE completa tecleada en esta sesion). Lo del backend manda en
+     * nombre, telefono y favorito.
+     */
+    const mergeBeneficiaries = (
+        fresh: Beneficiary[],
+        prev: Beneficiary[],
+        extras: Record<string, Partial<Beneficiary>> = {}
+    ) => {
+        const known = new Map(prev.map((b) => [b.id, b]));
+        return fresh.map((b) => {
+            const old = known.get(b.id);
+            const local: Partial<Beneficiary> = old
+                ? {
+                      createdAt: old.createdAt,
+                      // Se conserva la CLABE completa solo si sigue siendo la misma.
+                      clabe:
+                          old.clabe &&
+                          old.clabe.replace(/\D/g, "").length === 18 &&
+                          old.clabe.endsWith(b.clabe?.replace(/\D/g, "").slice(-4) ?? "?")
+                              ? old.clabe
+                              : b.clabe,
+                      ...(old.maternalLastName &&
+                      `${old.paternalLastName} ${old.maternalLastName}`.trim() === b.paternalLastName
+                          ? {
+                                paternalLastName: old.paternalLastName,
+                                maternalLastName: old.maternalLastName,
+                            }
+                          : {}),
+                  }
+                : {};
+            return { ...b, ...local, ...extras[b.id] };
+        });
     };
 
-    // TODO API: actualizar el beneficiario.
-    const updateBeneficiary = (updated: Beneficiary) => {
-        setBeneficiaries((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    /** Vuelve a leer la lista del backend sin perder lo que solo existe en la app. */
+    const refreshBeneficiaries = async () => {
+        const fresh = await listBeneficiaries();
+        setBeneficiaries((prev) => mergeBeneficiaries(fresh, prev));
+        return fresh;
     };
 
-    const toggleFavorite = (id: string, value?: boolean) => {
+    const beneficiaryErrorMessage = (error: unknown) =>
+        error instanceof Error ? error.message : "Ocurrió un error de conexión.";
+
+    useEffect(() => {
+        if ((view !== "beneficiaries" && view !== "sendMoney") || !getToken()) return;
+        refreshBeneficiaries().catch(() => {});
+    }, [view]);
+
+    const handleConfirmBeneficiary = async () => {
+        const knownIds = new Set(beneficiaries.map((b) => b.id));
+        const clabe = beneficiaryClabe.replace(/\D/g, "");
+        try {
+            await createBeneficiary({
+                firstName: beneficiaryFirstName.trim(),
+                lastName: [beneficiaryPaternalLastName, beneficiaryMaternalLastName]
+                    .map((part) => part.trim())
+                    .filter(Boolean)
+                    .join(" "),
+                clabe,
+                phoneDigits: beneficiaryPhone.replace(/\D/g, ""),
+            });
+            const fresh = await listBeneficiaries();
+            const created = fresh.find((b) => !knownIds.has(b.id));
+            const extras: Record<string, Partial<Beneficiary>> = created
+                ? {
+                      [created.id]: {
+                          paternalLastName: beneficiaryPaternalLastName.trim(),
+                          maternalLastName: beneficiaryMaternalLastName.trim() || undefined,
+                          clabe,
+                          fullName: beneficiaryDraft.fullName,
+                          createdAt: Date.now(),
+                      },
+                  }
+                : {};
+            setBeneficiaries((prev) => mergeBeneficiaries(fresh, prev, extras));
+            if (created) setActiveBeneficiaryId(created.id);
+            clearBeneficiaryForm();
+            setView(created ? "beneficiaryAdded" : "beneficiaries");
+        } catch (error) {
+            Alert.alert("No se pudo agregar al beneficiario", beneficiaryErrorMessage(error));
+        }
+    };
+
+    /** Guarda los cambios en el backend y, si salio bien, en la lista. */
+    const updateBeneficiary = async (updated: Beneficiary): Promise<boolean> => {
+        const previous = beneficiaries.find((b) => b.id === updated.id);
+        const clabeDigits = (updated.clabe ?? "").replace(/\D/g, "");
+        const lastName = [updated.paternalLastName, updated.maternalLastName]
+            .map((part) => (part ?? "").trim())
+            .filter(Boolean)
+            .join(" ");
+        try {
+            await updateBeneficiaryById(updated.id, {
+                firstName: updated.firstName.trim(),
+                lastName,
+                // Una CLABE enmascarada (solo 4 digitos) no se reenvia.
+                ...(clabeDigits.length === 18 ? { clabe: clabeDigits } : {}),
+            });
+        } catch (error) {
+            Alert.alert("No se pudo guardar al beneficiario", beneficiaryErrorMessage(error));
+            return false;
+        }
         setBeneficiaries((prev) =>
-            prev.map((b) => (b.id === id ? { ...b, favorite: value ?? !b.favorite } : b))
+            prev.map((b) =>
+                b.id === updated.id
+                    ? { ...updated, fullName: [updated.firstName.trim(), lastName].filter(Boolean).join(" ") }
+                    : b
+            )
         );
+        return previous !== undefined;
     };
 
-    // TODO API: borrar el beneficiario.
-    const deleteBeneficiary = (id: string) => {
+    /** Cambia el favorito de inmediato y lo confirma con el backend; si falla, lo regresa. */
+    const toggleFavorite = async (id: string, value?: boolean) => {
+        const current = beneficiaries.find((b) => b.id === id);
+        if (!current) return;
+        const next = value ?? !current.favorite;
+        const apply = (favorite: boolean) =>
+            setBeneficiaries((prev) => prev.map((b) => (b.id === id ? { ...b, favorite } : b)));
+        apply(next);
+        try {
+            await setBeneficiaryFavorite(id, next);
+        } catch (error) {
+            apply(current.favorite);
+            Alert.alert("No se pudo actualizar el favorito", beneficiaryErrorMessage(error));
+        }
+    };
+
+    const deleteBeneficiary = async (id: string) => {
+        try {
+            await deleteBeneficiaryById(id);
+        } catch (error) {
+            Alert.alert("No se pudo borrar al beneficiario", beneficiaryErrorMessage(error));
+            return;
+        }
         setBeneficiaries((prev) => prev.filter((b) => b.id !== id));
         if (selectedBeneficiaryId === id) setSelectedBeneficiaryId("");
         setActiveBeneficiaryId(null);
@@ -491,6 +688,38 @@ function AppContent() {
         setSelectedBeneficiaryId(id);
         setView("sendMoney");
     };
+
+    /** Aviso "Servicio no disponible" cuando falla la consulta de saldo. */
+    const [serviceUnavailable, setServiceUnavailable] = useState(false);
+
+    /**
+     * Saldo y tipo de cambio reales, pedidos al backend cada vez que se entra
+     * al dashboard o a "Enviar dinero". Si alguno falla (BlackPay caido, sin
+     * tipo de cambio guardado, sin tarjeta activa) se queda el valor que ya
+     * habia; el motivo sale en el log de Metro con el prefijo [api].
+     * Sin sesion no se pide nada: el registro simulado tambien llega al
+     * dashboard, y una llamada sin token cerraria la sesion.
+     */
+    useEffect(() => {
+        if ((view !== "dashboard" && view !== "sendMoney") || !getToken()) return;
+
+        // Banderas de desarrollo (src/api/devFlags.ts); en produccion no existen.
+        if (__DEV__ && FORCE_BALANCE_ERROR) {
+            setServiceUnavailable(true);
+        } else {
+            getBalance()
+                .then((balance) => setAvailableUsdBalance(Number(balance.availableBalance)))
+                .catch((error) => {
+                    // Un 401 ya cierra la sesion por su cuenta (onUnauthorized).
+                    if (error instanceof ApiError && error.status === 401) return;
+                    if (__DEV__ && IGNORE_BALANCE_ERROR) return;
+                    setServiceUnavailable(true);
+                });
+        }
+        getExchangeRate()
+            .then((rate) => setExchangeRate(Number(rate.customerExchangeRate)))
+            .catch(() => {});
+    }, [view]);
 
     /** Envio en curso o recien hecho: lo muestran las pantallas 40 a 44 */
     const [transferSummary, setTransferSummary] = useState<TransferSummary | null>(null);
@@ -512,11 +741,9 @@ function AppContent() {
             return;
         }
 
-        if (amount > availableUsdBalance) {
-            setSendMoneyError(t.insufficientFunds);
-            return;
-        }
-
+        // Los fondos no se validan aqui: el backend los revisa al registrar la
+        // orden contra la cuenta Remeza, que puede no coincidir con el saldo de
+        // BlackPay que muestra la app. Si no alcanza, lo dice al confirmar.
         const beneficiary = beneficiaries.find((b) => b.id === selectedBeneficiaryId);
         setTransferSummary({
             beneficiaryName: beneficiary?.fullName ?? "",
@@ -536,27 +763,29 @@ function AppContent() {
         const amount = transferSummary.amountUsd;
         setView("transferProcessing");
 
-        if (amount > availableUsdBalance) {
-            setTransferFailReason(t.insufficientFunds);
+        let order;
+        try {
+            order = await createOrder(selectedBeneficiaryId, amount);
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 401) return;
+            const insufficient = error instanceof Error && /insufficient funds/i.test(error.message);
+            setTransferFailReason(insufficient ? t.insufficientFunds : t.transferErrorGeneric);
             setView("transferFailed");
             return;
         }
 
-        const result = await submitTransfer(amount);
-        if (!result.ok) {
-            setTransferFailReason(t.transferErrorGeneric);
-            setView("transferFailed");
-            return;
-        }
-
+        // Los montos y el folio son los que guardo el backend, no los que la app
+        // calculo en la pantalla de revision. El saldo no se toca: registrar la
+        // orden no mueve el dinero.
         const createdAt = Date.now();
-        const reference = `RMZ-${String(createdAt).slice(-6)}`;
-        const { mxnAmount, beneficiaryName } = transferSummary;
+        const reference = order.folio;
+        const mxnAmount = Number(order.mxnAmount);
+        const exchangeRate = Number(order.customerExchangeRate);
+        const { beneficiaryName } = transferSummary;
 
-        setAvailableUsdBalance((prev) => Number((prev - amount).toFixed(2)));
         setTransactionRecords((prev) => [
             {
-                id: `tx-${createdAt}`,
+                id: `order-${order.id}`,
                 type: "remittance",
                 label: `${beneficiaryName} / ${mxnAmount.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
@@ -572,12 +801,12 @@ function AppContent() {
                 reference,
                 createdAt,
                 mxnAmount,
-                exchangeRate: transferSummary.exchangeRate,
+                exchangeRate,
                 beneficiary: beneficiaryName,
             },
             ...prev,
         ]);
-        setTransferSummary({ ...transferSummary, at: createdAt, reference });
+        setTransferSummary({ ...transferSummary, mxnAmount, exchangeRate, at: createdAt, reference });
         setSendAmountUsd("");
         setSendMoneySuccess(true);
         setView("transferSuccess");
@@ -586,7 +815,7 @@ function AppContent() {
     /** Pago de servicios hecho (54): descuenta el saldo y lo registra. */
     const handleServicePaid = (amount: number, concept: string, folio: string) => {
         const paidAt = Date.now();
-        setAvailableUsdBalance((prev) => Number((prev - amount).toFixed(2)));
+        setAvailableUsdBalance((prev) => (prev === null ? prev : Number((prev - amount).toFixed(2))));
         setTransactionRecords((prev) => [
             {
                 id: `sp-${paidAt}`,
@@ -676,6 +905,14 @@ function AppContent() {
     const [birthDate, setBirthDate] = useState("");
     const [showCardData, setShowCardData] = useState(false);
 
+    /** Paso "Ver y copiar datos" de la guia: muestra los datos y al salir los vuelve a ocultar. */
+    const revealCardDataForTour = tourActive && !!TOUR_STEPS[tourStepIndex]?.revealCardData;
+    useEffect(() => {
+        if (!revealCardDataForTour) return;
+        setShowCardData(true);
+        return () => setShowCardData(false);
+    }, [revealCardDataForTour]);
+
     const handleActivateCard = () => {
         if (secureCode.length !== 6) return;
 
@@ -684,6 +921,24 @@ function AppContent() {
         setShowSecureCodeModal(false);
         setShowSuccessMessage(true);
         setSecureCode("");
+
+        setTimeout(() => {
+            setShowSuccessMessage(false);
+        }, 3000);
+    };
+
+    /** Tarjeta virtual: se activa y se bloquea por su cuenta, sin tocar la fisica. */
+    const [isVirtualInactive, setIsVirtualInactive] = useState(true);
+    const [isVirtualCardActive, setIsVirtualCardActive] = useState(true);
+
+    const handleActivateVirtualCard = () => {
+        if (birthDate.length !== 10 || virtualSecureCode.length !== 6) return;
+
+        setIsVirtualInactive(false);
+        setIsVirtualCardActive(true);
+        setShowVirtualCardModal(false);
+        setShowSuccessMessage(true);
+        setVirtualSecureCode("");
 
         setTimeout(() => {
             setShowSuccessMessage(false);
@@ -704,36 +959,6 @@ function AppContent() {
             }),
         ]).start();
     }, [isMenuOpen, overlayOpacity, drawerTranslateX]);
-
-    const transactions = useMemo(
-        () => [
-            {
-                label: t.zelleDeposit,
-                time: t.zelleDepositTime,
-                amount: "+$500.00",
-                color: SUCCESS,
-                bg: SUCCESS_SURFACE,
-                icon: <ArrowDownLeft size={18} color={SUCCESS} />,
-            },
-            {
-                label: t.servicePayment,
-                time: t.servicePaymentTime,
-                amount: "-$80.00",
-                color: DANGER,
-                bg: DANGER_SURFACE,
-                icon: <ArrowUpRight size={18} color={DANGER} />,
-            },
-            {
-                label: t.sendToBeneficiary,
-                time: t.sendToBeneficiaryTime,
-                amount: "-$150.00",
-                color: DANGER,
-                bg: DANGER_SURFACE,
-                icon: <ArrowUpRight size={18} color={DANGER} />,
-            },
-        ],
-        [t]
-    );
 
     if (__DEV__ && isShowcaseOpen) {
         return (
@@ -856,17 +1081,38 @@ function AppContent() {
                 <DashboardView
                     t={t}
                     holderName={profileFullName}
+                    availableUsdBalance={availableUsdBalance}
                     setIsMenuOpen={setIsMenuOpen}
-                    onBalancePress={() => setView("multiCurrency")}
                     onSendMoneyPress={() => setView("sendMoney")}
-                    onViewAllActivity={() => setView("transactions")}
+                    onViewAllActivity={() => openCardMovements("dashboard")}
                     onOpenCard={(variant) => {
                         setActiveCardIndex(variant === "physical" ? 0 : 1);
                         setView("cardDetail");
                     }}
-                    transactions={transactions}
+                    card={VIRTUAL_CARD_DATA}
+                    isVirtualInactive={isVirtualInactive}
+                    isCardActive={isVirtualCardActive}
+                    onCardActiveChange={setIsVirtualCardActive}
+                    showCardData={showCardData}
+                    onShowCardDataChange={setShowCardData}
+                    // Mismo criterio que el menu lateral: activada, ya no se ofrece solicitarla.
+                    physicalCardActive={!isFactoryInactive}
+                    physicalCardRequested={physicalCardRequested}
+                    physicalPromoDismissed={physicalPromoDismissed}
+                    onDismissPhysicalPromo={() => setPhysicalPromoDismissed(true)}
+                    onRequestPhysicalCard={() => setView("physicalCard")}
+                    onActivatePhysicalCard={() => {
+                        setActiveCardIndex(0);
+                        setView("cardDetail");
+                    }}
+                    activity={cardMovements}
                     biometricReminderVisible={biometricReminderVisible}
                     onBiometricReminderPress={handleBiometricReminderPress}
+                    tourFocusId={
+                        tourActive && TOUR_STEPS[tourStepIndex]
+                            ? stepTargetIds(TOUR_STEPS[tourStepIndex])[0]
+                            : undefined
+                    }
                 />
             )}
 
@@ -877,6 +1123,10 @@ function AppContent() {
                     isFactoryInactive={isFactoryInactive}
                     isCardActive={isCardActive}
                     setIsCardActive={setIsCardActive}
+                    isVirtualInactive={isVirtualInactive}
+                    isVirtualCardActive={isVirtualCardActive}
+                    setIsVirtualCardActive={setIsVirtualCardActive}
+                    physicalCardRequested={physicalCardRequested}
                     setIsMenuOpen={setIsMenuOpen}
                     onSendMoneyPress={() => setView("sendMoney")}
                     onBack={() => setView("dashboard")}
@@ -902,8 +1152,9 @@ function AppContent() {
                     showCardData={showCardData}
                     setShowCardData={setShowCardData}
                     handleActivateCard={handleActivateCard}
-                    handleActivateVirtualCard={handleActivateCard}
-                    transactions={transactions.slice(0, 2)}
+                    handleActivateVirtualCard={handleActivateVirtualCard}
+                    activity={cardMovements}
+                    onViewAllActivity={() => openCardMovements("cardDetail")}
                 />
             )}
 
@@ -912,7 +1163,7 @@ function AppContent() {
                     t={t}
                     setView={setView}
                     fullName={profileFullName}
-                    email={registerEmail.trim()}
+                    email={profileEmail}
                     phone={profilePhone}
                     address={profileAddress}
                     onOpen={handleProfileOpen}
@@ -928,6 +1179,15 @@ function AppContent() {
                     setTransactionsFilter={setTransactionsFilter}
                     filteredTransactions={filteredTransactions}
                     onSelectTransaction={openTransaction}
+                />
+            )}
+
+            {view === "cardMovements" && (
+                <CardMovementsScreen
+                    t={t}
+                    state={cardMovements}
+                    onBack={() => setView(cardMovementsReturnView)}
+                    onRetry={loadCardMovements}
                 />
             )}
 
@@ -970,12 +1230,6 @@ function AppContent() {
                     setBeneficiaryMaternalLastName={setBeneficiaryMaternalLastName}
                     beneficiaryPhone={beneficiaryPhone}
                     setBeneficiaryPhone={setBeneficiaryPhone}
-                    beneficiaryResidenceState={beneficiaryResidenceState}
-                    setBeneficiaryResidenceState={setBeneficiaryResidenceState}
-                    beneficiaryResidenceCity={beneficiaryResidenceCity}
-                    setBeneficiaryResidenceCity={setBeneficiaryResidenceCity}
-                    beneficiaryEmail={beneficiaryEmail}
-                    setBeneficiaryEmail={setBeneficiaryEmail}
                     beneficiaryClabe={beneficiaryClabe}
                     setBeneficiaryClabe={setBeneficiaryClabe}
                     handleBeneficiarySave={handleBeneficiarySave}
@@ -986,7 +1240,7 @@ function AppContent() {
                 <SendMoneyView
                     t={t}
                     setView={setView}
-                    availableUsdBalance={availableUsdBalance}
+                    availableUsdBalance={availableUsdBalance ?? 0}
                     sendAmountUsd={sendAmountUsd}
                     setSendAmountUsd={setSendAmountUsd}
                     exchangeRate={exchangeRate}
@@ -1087,9 +1341,8 @@ function AppContent() {
                     language={language}
                     beneficiary={activeBeneficiary}
                     onCancel={() => setView("beneficiaryDetail")}
-                    onSave={(updated) => {
-                        updateBeneficiary(updated);
-                        setView("beneficiaryDetail");
+                    onSave={async (updated) => {
+                        if (await updateBeneficiary(updated)) setView("beneficiaryDetail");
                     }}
                 />
             )}
@@ -1164,7 +1417,7 @@ function AppContent() {
                     onExit={() => setView("profile")}
                     onHome={() => setView("dashboard")}
                     phone={profilePhone}
-                    email={registerEmail.trim()}
+                    email={profileEmail}
                 />
             )}
 
@@ -1176,7 +1429,7 @@ function AppContent() {
                     onHome={handleBiometricPromptResolved}
                     onBiometricsResolved={handleBiometricPromptResolved}
                     phone={profilePhone}
-                    email={registerEmail.trim()}
+                    email={profileEmail}
                 />
             )}
 
@@ -1200,7 +1453,7 @@ function AppContent() {
                 <ServicePaymentFlow
                     t={t}
                     language={language}
-                    availableUsdBalance={availableUsdBalance}
+                    availableUsdBalance={availableUsdBalance ?? 0}
                     onPaid={handleServicePaid}
                     onExit={() => setView("dashboard")}
                 />
@@ -1255,41 +1508,21 @@ function AppContent() {
                 />
             )}
 
-            {__DEV__ ? (
-                <Pressable
-                    testID="dev-showcaseButton"
-                    accessibilityLabel="Open component showcase"
-                    onPress={() => setIsShowcaseOpen(true)}
-                    style={devStyles.showcaseButton}
-                >
-                    <Text style={devStyles.showcaseLabel}>UI</Text>
-                </Pressable>
-            ) : null}
+            {serviceUnavailable && (
+                <ServiceUnavailableDialog
+                    t={t}
+                    onAccept={() => {
+                        setServiceUnavailable(false);
+                        setIsMenuOpen(false);
+                        // La guia pudo arrancar en el dashboard junto con el aviso.
+                        setTourActive(false);
+                        setView("login");
+                    }}
+                />
+            )}
         </ScreenBackground>
     );
 }
-
-/** Atajo de desarrollo: no se compila en release porque va tras `__DEV__`. */
-const devStyles = StyleSheet.create({
-    showcaseButton: {
-        position: "absolute",
-        left: 12,
-        bottom: 96,
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "rgba(255,255,255,0.07)",
-        borderWidth: 1,
-        borderColor: "rgba(124,92,255,0.45)",
-    },
-    showcaseLabel: {
-        fontFamily: "Inter-SemiBold",
-        fontSize: 13,
-        color: "#FFFFFF",
-    },
-});
 
 export default function App() {
     return (

@@ -3,9 +3,6 @@ import { View, StyleSheet } from "react-native";
 import {
   User,
   UserPlus,
-  MapPin,
-  Building2,
-  Mail,
   CreditCard,
   CircleAlert,
 } from "lucide-react-native";
@@ -41,15 +38,6 @@ type Props = {
   beneficiaryPhone: string;
   setBeneficiaryPhone: (value: string) => void;
 
-  beneficiaryResidenceState: string;
-  setBeneficiaryResidenceState: (value: string) => void;
-
-  beneficiaryResidenceCity: string;
-  setBeneficiaryResidenceCity: (value: string) => void;
-
-  beneficiaryEmail: string;
-  setBeneficiaryEmail: (value: string) => void;
-
   beneficiaryClabe: string;
   setBeneficiaryClabe: (value: string) => void;
 
@@ -70,12 +58,6 @@ export default function BeneficiariesView({
   setBeneficiaryMaternalLastName,
   beneficiaryPhone,
   setBeneficiaryPhone,
-  beneficiaryResidenceState,
-  setBeneficiaryResidenceState,
-  beneficiaryResidenceCity,
-  setBeneficiaryResidenceCity,
-  beneficiaryEmail,
-  setBeneficiaryEmail,
   beneficiaryClabe,
   setBeneficiaryClabe,
   handleBeneficiarySave,
@@ -88,7 +70,6 @@ export default function BeneficiariesView({
         firstName: beneficiaryFirstName,
         paternalLastName: beneficiaryPaternalLastName,
         phone: beneficiaryPhone,
-        email: beneficiaryEmail,
         clabe: beneficiaryClabe,
       }),
     );
@@ -165,38 +146,6 @@ export default function BeneficiariesView({
               onDigitsChange={setBeneficiaryPhone}
               inputRef={form.input("phone")}
               highlighted={highlighted("phone")}
-            />
-          </View>
-
-          <FormInput
-            testID="beneficiaries-residenceStateInput"
-            leftIcon={MapPin}
-            label={t.residenceState}
-            placeholder={t.residenceStateExample}
-            value={beneficiaryResidenceState}
-            onChangeText={setBeneficiaryResidenceState}
-          />
-
-          <FormInput
-            testID="beneficiaries-residenceCityInput"
-            leftIcon={Building2}
-            label={t.residenceCity}
-            placeholder={t.residenceCityExample}
-            value={beneficiaryResidenceCity}
-            onChangeText={setBeneficiaryResidenceCity}
-          />
-
-          <View ref={form.anchor("email")} collapsable={false}>
-            <FormInput
-              testID="beneficiaries-emailInput"
-              leftIcon={Mail}
-              label={t.emailAddress}
-              placeholder={t.emailExample}
-              value={beneficiaryEmail}
-              onChangeText={setBeneficiaryEmail}
-              keyboardType="email-address"
-              inputRef={form.input("email")}
-              highlighted={highlighted("email")}
             />
           </View>
 

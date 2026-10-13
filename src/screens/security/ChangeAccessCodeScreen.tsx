@@ -8,7 +8,8 @@ type Props = {
   t: any;
   saving: boolean;
   onBack: () => void;
-  onSubmit: (currentCode: string, newCode: string) => void;
+  /** Devuelve el mensaje de error del backend, o null si el cambio salio bien. */
+  onSubmit: (currentCode: string, newCode: string) => Promise<string | null> | void;
 };
 
 const digitsOnly = (text: string) => text.replace(/\D/g, "").slice(0, 6);
@@ -22,13 +23,14 @@ export default function ChangeAccessCodeScreen({ t, saving, onBack, onSubmit }: 
 
   const checks = accessCodeChecks(next);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
     if (current.length !== 6) return setError(t.requiredCurrentCode);
     if (isWeakPasscode(next)) return setError(t.weakAccessCode);
     if (next === current) return setError(t.sameAsCurrentCode);
     if (next !== confirm) return setError(t.accessCodeMismatch);
-    onSubmit(current, next);
+    const serverError = await onSubmit(current, next);
+    if (serverError) setError(serverError);
   };
 
   return (

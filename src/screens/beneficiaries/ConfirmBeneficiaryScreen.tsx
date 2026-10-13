@@ -7,7 +7,7 @@ import BeneficiaryDetails from "./BeneficiaryDetails";
 
 type Props = {
   t: any;
-  draft: Pick<Beneficiary, "fullName" | "phone" | "city" | "state" | "email" | "clabe">;
+  draft: Pick<Beneficiary, "fullName" | "phone" | "clabe">;
   onBack: () => void;
   onConfirm: () => void;
 };

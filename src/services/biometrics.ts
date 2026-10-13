@@ -51,3 +51,30 @@ export async function authenticateWithBiometrics(
     return { ok: false, reason: "failed" };
   }
 }
+
+/** Hash corto y estable (djb2) para que el identificador no sea largo. */
+function shortHash(value: string): string {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = ((hash << 5) + hash + value.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+/**
+ * Identificador de este dispositivo para el backend, armado con lo que el
+ * sistema ya expone (marca, modelo y huella de la build en Android). Es estable
+ * entre sesiones, pero dos telefonos del mismo modelo y build comparten id.
+ * Para uno unico por equipo habria que agregar `react-native-device-info`.
+ */
+export function getDeviceId(): Promise<string> {
+  const constants = Platform.constants as Record<string, unknown>;
+  const parts = [
+    Platform.OS,
+    constants.Brand ?? constants.systemName,
+    constants.Model ?? constants.interfaceIdiom,
+    constants.Fingerprint ?? constants.osVersion ?? Platform.Version,
+  ].map((part) => String(part ?? ""));
+  const label = parts.slice(0, 3).join("-").replace(/\s+/g, "_");
+  return Promise.resolve(`${label}-${shortHash(parts.join("|"))}`.slice(0, 190));
+}

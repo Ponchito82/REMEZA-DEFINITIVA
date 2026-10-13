@@ -107,6 +107,10 @@ export function apiPost<T>(path: string, body: unknown, authenticated = true): P
   return apiRequest<T>(path, { method: "POST", body, authenticated });
 }
 
+export function apiPut<T>(path: string, body: unknown, authenticated = true): Promise<T> {
+  return apiRequest<T>(path, { method: "PUT", body, authenticated });
+}
+
 export function apiPatch<T>(path: string, body: unknown, authenticated = true): Promise<T> {
   return apiRequest<T>(path, { method: "PATCH", body, authenticated });
 }

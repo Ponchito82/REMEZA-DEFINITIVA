@@ -19,6 +19,11 @@ export function tourRef(id: string) {
   return cb;
 }
 
+/** Nodo registrado con `tourRef`, o `undefined` si no esta montado. */
+export function getTargetNode(id: string): any {
+  return nodes.get(id);
+}
+
 /** Mide el objetivo en coordenadas de ventana (mismas que un View absoluto a pantalla completa). */
 export function measureTarget(id: string): Promise<TourRect | null> {
   const node = nodes.get(id);

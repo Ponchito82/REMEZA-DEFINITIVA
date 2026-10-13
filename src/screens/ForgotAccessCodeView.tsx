@@ -20,6 +20,8 @@ import {
 import { ViewName } from "../types/app";
 import { spacing } from "../theme/spacing";
 import { formatUsPhoneDisplay, isWeakPasscode } from "../utils/validation";
+import { ApiError } from "../api/client";
+import { confirmNewSecureCode, requestSecureCodeRecovery } from "../api/secureCode";
 
 type Props = {
   t: any;
@@ -37,6 +39,13 @@ type Step = "phone" | "code" | "newCode" | "success";
  * login. `forgotAccessCode.spec.js` ubica los inputs por **indice de
  * `EditText` dentro de cada paso**, asi que el orden de los campos de cada
  * pantalla no se puede alterar.
+ *
+ * Usa `/api/v1/secure-code`: "Enviar codigo" pide el SMS (`recovery`) y el
+ * codigo recibido se valida hasta el final (`confirm`), junto con el nuevo
+ * codigo de acceso. Si el backend lo rechaza, se regresa al paso del codigo.
+ *
+ * El telefono acepta E.164 (`+52...`, como en el login) o 10 digitos sin
+ * lada, que el backend toma como numero de EE. UU.
  */
 export default function ForgotAccessCodeView({ t, setView }: Props) {
   const [step, setStep] = useState<Step>("phone");
@@ -45,10 +54,31 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
   const [newAccessCode, setNewAccessCode] = useState("");
   const [confirmAccessCode, setConfirmAccessCode] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleSendCode = () => {
-    if (phone.replace(/\D/g, "").length < 7) return;
-    setStep("code");
+  const isInternational = phone.startsWith("+");
+
+  const handlePhoneChange = (text: string) => {
+    const digits = text.replace(/\D/g, "");
+    setPhone(text.trim().startsWith("+") ? `+${digits.slice(0, 15)}` : digits.slice(0, 10));
+  };
+
+  const errorMessage = (err: unknown) =>
+    err instanceof ApiError && err.status !== 0 && err.message ? err.message : t.connectionError;
+
+  const handleSendCode = async () => {
+    if (busy || phone.replace(/\D/g, "").length < 7) return;
+    setError("");
+    setBusy(true);
+    try {
+      await requestSecureCodeRecovery(phone);
+      setRecoveryCode("");
+      setStep("code");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleContinueFromCode = () => {
@@ -60,7 +90,8 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
     setStep("newCode");
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    if (busy) return;
     setError("");
 
     if (isWeakPasscode(newAccessCode)) {
@@ -73,7 +104,21 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
       return;
     }
 
-    setStep("success");
+    setBusy(true);
+    try {
+      await confirmNewSecureCode(phone, recoveryCode, newAccessCode);
+      setStep("success");
+    } catch (err) {
+      setError(errorMessage(err));
+      // Codigo vencido, equivocado o demasiados intentos: se pide otra vez.
+      // Sin conexion se queda aqui para reintentar sin volver a capturar.
+      if (err instanceof ApiError && err.status !== 0) {
+        setRecoveryCode("");
+        setStep("code");
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -99,15 +144,20 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
               label={t.phoneNumber}
               leftIcon={Phone}
               placeholder={t.phoneExample}
-              value={formatUsPhoneDisplay(phone)}
-              onChangeText={(text) => setPhone(text.replace(/\D/g, "").slice(0, 10))}
+              value={isInternational ? phone : formatUsPhoneDisplay(phone)}
+              onChangeText={handlePhoneChange}
               keyboardType="phone-pad"
             />
+
+            {error ? (
+              <InfoCard testID="forgot.errorCard" icon={CircleAlert} tone="danger" text={error} />
+            ) : null}
 
             <PrimaryButton
               testID="forgot-sendCodeButton"
               title={t.sendRecoveryCode}
               showArrow
+              loading={busy}
               onPress={handleSendCode}
             />
           </View>
@@ -186,7 +236,12 @@ export default function ForgotAccessCodeView({ t, setView }: Props) {
               <InfoCard testID="forgot.errorCard" icon={CircleAlert} tone="danger" text={error} />
             ) : null}
 
-            <PrimaryButton testID="forgot-resetButton" title={t.resetAccessCode} onPress={handleReset} />
+            <PrimaryButton
+              testID="forgot-resetButton"
+              title={t.resetAccessCode}
+              loading={busy}
+              onPress={handleReset}
+            />
           </View>
         </>
       ) : null}

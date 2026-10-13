@@ -8,6 +8,7 @@ export type ViewName =
   | "cardDetail"
   | "physicalCard"
   | "transactions"
+  | "cardMovements"
   | "profile"
   | "beneficiaries"
   | "sendMoney"
