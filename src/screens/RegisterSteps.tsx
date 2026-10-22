@@ -498,7 +498,7 @@ export default function RegisterSteps(props: Props) {
     nationalityValid,
     foreignIdTypeValid,
     genderValid,
-    emailValid,
+    emailValid && emailVerified,
     documentsValid,
   ];
 
@@ -515,6 +515,7 @@ export default function RegisterSteps(props: Props) {
       { key: "foreignId", valid: foreignIdValid, message: t.invalidForeignId },
       { key: "gender", valid: genderValid, message: t.requiredGender },
       { key: "email", valid: emailValid, message: t.requiredEmail },
+      { key: "email", valid: emailVerified, message: t.requiredEmailVerified },
       { key: "firstName", valid: firstNameValid, message: t.requiredFirstName },
       { key: "paternalLastName", valid: paternalLastNameValid, message: t.requiredLastName },
       { key: ADDRESS_FIELD_KEYS.postalCode, valid: zipValid, message: t.requiredPostalCode },
@@ -589,8 +590,9 @@ export default function RegisterSteps(props: Props) {
       }
     } catch (error) {
       if (__DEV__) console.log("[registro] error", error);
-      setFrontDocStatus("error");
-      setBackDocStatus("error");
+      // Las fotos siguen elegidas: el fallo puede venir de un paso previo (PIN, datos), no de ellas.
+      setFrontDocStatus("loaded");
+      setBackDocStatus("loaded");
       setSubmitError(verificationErrorMessage(error, t.connectionError));
       setRegStep(4);
     } finally {

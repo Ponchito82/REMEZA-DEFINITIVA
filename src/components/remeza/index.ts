@@ -21,3 +21,7 @@ export { default as PhysicalCardArt } from "./PhysicalCardArt";
 
 export type { CarouselCard } from "./CardCarousel";
 export type { InfoDetailItem } from "./InfoDetailsCard";
+export { default as CreditCardArt } from "./CreditCardArt";
+export { default as CreditFlowHeader } from "./CreditFlowHeader";
+export { default as CreditMovementRow } from "./CreditMovementRow";
+export { default as CreditStatementDocument } from "./CreditStatementDocument";

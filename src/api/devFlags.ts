@@ -18,3 +18,12 @@ export const IGNORE_BALANCE_ERROR = true;
  * el aviso a proposito. Tiene prioridad sobre `IGNORE_BALANCE_ERROR`.
  */
 export const FORCE_BALANCE_ERROR = false;
+
+/**
+ * Saldo disponible simulado (USD) para probar sin depender de BlackPay.
+ * `null` usa el saldo real del backend. Solo aplica en `__DEV__`.
+ */
+export const SIMULATED_BALANCE_USD: number | null = 600;
+
+/** Direccion simulada si el perfil no trae una. `""` la desactiva. Solo en `__DEV__`. */
+export const SIMULATED_ADDRESS = "1234 Main St, Apt 5, Houston, TX 77001";
