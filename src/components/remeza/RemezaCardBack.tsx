@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,26 +8,35 @@ import {
   ViewStyle,
   useWindowDimensions,
   LayoutChangeEvent,
-} from "react-native";
-import Svg, { G, Path } from "react-native-svg";
-import { Clipboard as ClipboardIcon } from "lucide-react-native";
-import { fontFamily } from "../../theme/typography";
-import { remezaGlyph } from "../ui/remezaGlyph";
-import { screenPadding } from "../../theme/spacing";
+} from 'react-native';
+import Svg, {
+  G,
+  Path,
+  Defs,
+  LinearGradient,
+  Stop,
+  Rect,
+} from 'react-native-svg';
+import { Clipboard as ClipboardIcon } from 'lucide-react-native';
+import { fontFamily } from '../../theme/typography';
+import { remezaGlyph } from '../ui/remezaGlyph';
+import { screenPadding } from '../../theme/spacing';
 
 /** Lienzo del arte nuevo (foto de referencia del reverso): todas las medidas salen de aqui. */
 const ART_W = 1574;
 const ART_H = 999;
 
 /** Colores muestreados de la referencia; no son tokens de la app. */
-const CARD_BG = "#3636B0";
-const CARD_BORDER = "#07074A";
+const CARD_BG = '#3636B0';
+const CARD_BORDER = '#07074A';
 /** Version mas oscura para distinguir la tarjeta virtual de la fisica a simple vista. */
-const CARD_BG_VIRTUAL = "#1B1B4D";
+const CARD_BG_VIRTUAL = '#40489E';
+/** Credito: el mismo diseno en un morado mas oscuro para distinguirla de la de debito. */
+const CARD_BG_CREDIT = '#2A1A6B';
 /** Contorno/resplandor blanco: refuerza que la virtual es la tarjeta distinta. */
-const CARD_GLOW_VIRTUAL = "#FFFFFF";
-const INK = "#FFFFFF";
-const LABEL_INK = "rgba(255,255,255,0.62)";
+const CARD_GLOW_VIRTUAL = '#FFFFFF';
+const INK = '#FFFFFF';
+const LABEL_INK = 'rgba(255,255,255,0.62)';
 
 /** Lado del boton de copiar, en dp (no escala con la tarjeta: es un area tactil) */
 const COPY_SIZE = 22;
@@ -70,7 +79,7 @@ type Props = {
   /** Tarjeta sin activar o bloqueada: se atenua encima del arte */
   dimmed?: boolean;
   /** Fisica (por defecto) o virtual: cambia el color de fondo y la etiqueta sobre el isotipo */
-  variant?: "physical" | "virtual";
+  variant?: 'physical' | 'virtual' | 'credit';
   onCopyNumber?: () => void;
   copyTestID?: string;
   onCopyCvv?: () => void;
@@ -104,7 +113,7 @@ export default function RemezaCardBack({
   cvv,
   showData = false,
   dimmed = false,
-  variant = "physical",
+  variant = 'physical',
   offsetY = 0,
   onCopyNumber,
   copyTestID,
@@ -132,14 +141,33 @@ export default function RemezaCardBack({
   const glyphScale = glyphWidth / remezaGlyph.width;
 
   const displayNumber = showData ? number : `•••• •••• •••• ${last4}`;
-  const displayExpiry = showData ? expiry : "••/••";
-  const displayCvv = showData ? cvv : "•••";
-  const trimmedName = (holderName ?? "").trim();
-  const isVirtual = variant === "virtual";
-  const bg = isVirtual ? CARD_BG_VIRTUAL : CARD_BG;
-  const border = isVirtual ? CARD_GLOW_VIRTUAL : CARD_BORDER;
-  const glow = isVirtual ? CARD_GLOW_VIRTUAL : bg;
-  const variantLabel = isVirtual ? t.virtual : t.physical;
+  const displayExpiry = showData ? expiry : '••/••';
+  const displayCvv = showData ? cvv : '•••';
+  const trimmedName = (holderName ?? '').trim();
+  const isVirtual = variant === 'virtual';
+  const isCredit = variant === 'credit';
+  // Virtual y credito comparten el arte nuevo (chip, VISA); solo cambia el color.
+  const modern = isVirtual || isCredit;
+  const bg = isCredit ? CARD_BG_CREDIT : isVirtual ? CARD_BG_VIRTUAL : CARD_BG;
+  const border = modern ? bg : CARD_BORDER;
+  const glow = bg;
+  const baseOffsetY = modern ? 0 : offsetY;
+  const numOffsetY = baseOffsetY;
+  const bottomOffsetY = baseOffsetY;
+  const variantLabel = isCredit
+    ? t.creditCardTag
+    : isVirtual
+    ? 'Debit'
+    : t.physical;
+  // Sin tagline abajo, los datos se reparten en el espacio libre bajo el chip.
+  const hasName = !!trimmedName;
+  const nameLabelTop = hasName ? (modern ? 323 : 245) : NAME_LABEL_TOP;
+  const nameTop = hasName ? (modern ? 365 : 285) : NAME_TOP;
+  const numLabelTop = modern ? (hasName ? 544 : 362) : NUMBER_LABEL_TOP;
+  const numTop = modern ? (hasName ? 586 : 404) : NUMBER_TOP;
+  const botLabelTop = modern ? (hasName ? 793 : 650) : BOTTOM_LABEL_TOP;
+  const botTop = modern ? (hasName ? 837 : 694) : BOTTOM_TOP;
+  const glyphTop = modern ? 82 : GLYPH_TOP;
 
   return (
     <View
@@ -151,6 +179,7 @@ export default function RemezaCardBack({
           backgroundColor: bg,
           borderColor: border,
           shadowColor: glow,
+          ...(modern ? { shadowOpacity: 0.5 } : null),
           borderRadius: 70 * s,
           borderWidth: 13 * s,
         },
@@ -162,7 +191,12 @@ export default function RemezaCardBack({
           <Text
             style={[
               styles.label,
-              { left: LEFT_MARGIN * s, top: (NAME_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
+              {
+                left: LEFT_MARGIN * s,
+                top: (nameLabelTop + baseOffsetY) * s,
+                fontSize: 36 * s,
+                lineHeight: 42 * s,
+              },
             ]}
           >
             {t.cardHolderLabel}
@@ -176,7 +210,7 @@ export default function RemezaCardBack({
               styles.absolute,
               {
                 left: LEFT_MARGIN * s,
-                top: (NAME_TOP + offsetY) * s,
+                top: (nameTop + baseOffsetY) * s,
                 width: CONTENT_MAX_WIDTH * s,
                 fontFamily: fontFamily.bold,
                 fontSize: 64 * s,
@@ -192,13 +226,28 @@ export default function RemezaCardBack({
       <Text
         style={[
           styles.label,
-          { left: LEFT_MARGIN * s, top: (NUMBER_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
+          {
+            left: LEFT_MARGIN * s,
+            top: (numLabelTop + numOffsetY) * s,
+            fontSize: 36 * s,
+            lineHeight: 42 * s,
+          },
         ]}
       >
         {t.cardNumberLabel}
       </Text>
 
-      <View style={[styles.row, { left: LEFT_MARGIN * s, top: (NUMBER_TOP + offsetY) * s, maxWidth: CONTENT_MAX_WIDTH * s, gap: 12 * s }]}>
+      <View
+        style={[
+          styles.row,
+          {
+            left: LEFT_MARGIN * s,
+            top: (numTop + numOffsetY) * s,
+            maxWidth: CONTENT_MAX_WIDTH * s,
+            gap: 12 * s,
+          },
+        ]}
+      >
         <Text
           testID={numberTestID}
           numberOfLines={1}
@@ -237,7 +286,12 @@ export default function RemezaCardBack({
       <Text
         style={[
           styles.label,
-          { left: LEFT_MARGIN * s, top: (BOTTOM_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
+          {
+            left: LEFT_MARGIN * s,
+            top: (botLabelTop + bottomOffsetY) * s,
+            fontSize: 36 * s,
+            lineHeight: 42 * s,
+          },
         ]}
       >
         {t.cardExpiryLabel}
@@ -249,7 +303,7 @@ export default function RemezaCardBack({
           styles.absolute,
           {
             left: LEFT_MARGIN * s,
-            top: (BOTTOM_TOP + offsetY) * s,
+            top: (botTop + bottomOffsetY) * s,
             fontFamily: fontFamily.semibold,
             fontSize: 64 * s,
             lineHeight: 76 * s,
@@ -263,7 +317,12 @@ export default function RemezaCardBack({
       <Text
         style={[
           styles.label,
-          { left: RIGHT_COL_LEFT * s, top: (BOTTOM_LABEL_TOP + offsetY) * s, fontSize: 36 * s, lineHeight: 42 * s },
+          {
+            left: RIGHT_COL_LEFT * s,
+            top: (botLabelTop + bottomOffsetY) * s,
+            fontSize: 36 * s,
+            lineHeight: 42 * s,
+          },
         ]}
       >
         {t.cardCvvLabel}
@@ -271,7 +330,12 @@ export default function RemezaCardBack({
       <View
         style={[
           styles.row,
-          { left: RIGHT_COL_LEFT * s, top: (BOTTOM_TOP + offsetY) * s, maxWidth: RIGHT_COL_MAX_WIDTH * s, gap: 12 * s },
+          {
+            left: RIGHT_COL_LEFT * s,
+            top: (botTop + bottomOffsetY) * s,
+            maxWidth: RIGHT_COL_MAX_WIDTH * s,
+            gap: 12 * s,
+          },
         ]}
       >
         <Text
@@ -306,27 +370,114 @@ export default function RemezaCardBack({
         ) : null}
       </View>
 
-      {/* Etiqueta fisica/virtual: encima del isotipo, sin tocarlo ni moverlo. */}
-      <Text
-        numberOfLines={1}
-        style={[
-          styles.label,
-          styles.variantLabel,
-          {
-            left: GLYPH_LEFT * s,
-            top: (GLYPH_TOP - 113 + offsetY) * s,
-            width: glyphWidth,
-            fontSize: 42 * s,
-            lineHeight: 48 * s,
-            letterSpacing: 2 * s,
-          },
-        ]}
-      >
-        {variantLabel}
-      </Text>
+      {modern ? (
+        <>
+          {/* Chip */}
+          <View style={[styles.glyph, { left: LEFT_MARGIN * s, top: 70 * s }]}>
+            <Svg width={200 * s} height={150 * s} viewBox="0 0 200 150">
+              <Defs>
+                <LinearGradient id="chipGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#D9D6D0" />
+                  <Stop offset="0.5" stopColor="#8F8C88" />
+                  <Stop offset="1" stopColor="#BDBAB4" />
+                </LinearGradient>
+              </Defs>
+              <Rect
+                x="0"
+                y="0"
+                width="200"
+                height="150"
+                rx="24"
+                fill="url(#chipGrad)"
+              />
+              <Path
+                d="M0 50H55M0 100H55M145 50H200M145 100H200M55 20V130M145 20V130M55 50Q100 30 145 50M55 100Q100 120 145 100M100 38V112"
+                stroke="#5E5B57"
+                strokeWidth="4"
+                fill="none"
+              />
+            </Svg>
+          </View>
+          {/* Contactless */}
+          <View
+            style={[
+              styles.glyph,
+              { left: (LEFT_MARGIN + 250) * s, top: 95 * s },
+            ]}
+          >
+            <Svg width={90 * s} height={100 * s} viewBox="0 0 90 100">
+              <Path
+                d="M15 25Q30 50 15 75M40 12Q68 50 40 88M65 0Q105 50 65 100"
+                stroke={INK}
+                strokeWidth="7"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </Svg>
+          </View>
+          {/* DEBIT / CREDIT + VISA, abajo a la derecha */}
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.ink,
+              styles.absolute,
+              {
+                right: 84 * s,
+                top: 690 * s,
+                fontFamily: fontFamily.medium,
+                fontSize: 62 * s,
+                lineHeight: 74 * s,
+                textTransform: 'uppercase',
+              },
+            ]}
+          >
+            {variantLabel}
+          </Text>
+          <Text
+            style={[
+              styles.ink,
+              styles.absolute,
+              {
+                right: 84 * s,
+                top: 765 * s,
+                fontFamily: fontFamily.bold,
+                fontStyle: 'italic',
+                fontSize: 150 * s,
+                lineHeight: 170 * s,
+                letterSpacing: -2 * s,
+              },
+            ]}
+          >
+            VISA
+          </Text>
+        </>
+      ) : (
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.label,
+            styles.variantLabel,
+            {
+              left: GLYPH_LEFT * s,
+              top: (GLYPH_TOP - 113 + numOffsetY) * s,
+              width: glyphWidth,
+              fontSize: 42 * s,
+              lineHeight: 48 * s,
+              letterSpacing: 2 * s,
+            },
+          ]}
+        >
+          {variantLabel}
+        </Text>
+      )}
 
       {/* Isotipo: arranca a la altura de la fila del Numero. */}
-      <View style={[styles.glyph, { left: GLYPH_LEFT * s, top: (GLYPH_TOP + offsetY) * s }]}>
+      <View
+        style={[
+          styles.glyph,
+          { left: GLYPH_LEFT * s, top: (glyphTop + numOffsetY) * s },
+        ]}
+      >
         <Svg width={glyphWidth} height={glyphHeight}>
           <G scale={glyphScale}>
             <Path d={remezaGlyph.path} fill={INK} />
@@ -340,7 +491,7 @@ export default function RemezaCardBack({
           styles.absolute,
           {
             left: 1110 * s,
-            top: (GLYPH_TOP + 324 + offsetY) * s,
+            top: (glyphTop + 324 + numOffsetY) * s,
             fontFamily: fontFamily.medium,
             fontSize: 90 * s,
             lineHeight: 108 * s,
@@ -358,9 +509,9 @@ export default function RemezaCardBack({
 
 const styles = StyleSheet.create({
   root: {
-    width: "100%",
+    width: '100%',
     aspectRatio: ART_W / ART_H,
-    overflow: "hidden",
+    overflow: 'hidden',
     elevation: 10,
     shadowOpacity: 0.4,
     shadowRadius: 22,
@@ -371,41 +522,48 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   label: {
-    position: "absolute",
+    position: 'absolute',
     color: LABEL_INK,
     includeFontPadding: false,
     fontFamily: fontFamily.medium,
   },
   absolute: {
-    position: "absolute",
+    position: 'absolute',
   },
   variantLabel: {
-    textAlign: "center",
-    textTransform: "uppercase",
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   row: {
-    position: "absolute",
-    flexDirection: "row",
-    alignItems: "center",
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   shrink: {
     flexShrink: 1,
   },
   glyph: {
-    position: "absolute",
+    position: 'absolute',
   },
   copy: {
     width: COPY_SIZE,
     height: COPY_SIZE,
     borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   dim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2,2,26,0.55)",
+    backgroundColor: 'rgba(2,2,26,0.55)',
   },
 });
 
-export { ART_W, ART_H, CARD_BG, CARD_BG_VIRTUAL, CARD_GLOW_VIRTUAL };
+export {
+  ART_W,
+  ART_H,
+  CARD_BG,
+  CARD_BG_VIRTUAL,
+  CARD_BG_CREDIT,
+  CARD_GLOW_VIRTUAL,
+};

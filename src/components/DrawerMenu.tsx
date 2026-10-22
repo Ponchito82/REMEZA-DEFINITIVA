@@ -7,6 +7,7 @@ import {
   Package,
   UserCheck,
   BanknoteArrowDown,
+  ChartNoAxesColumn,
   Coins,
   LogOut,
 } from "lucide-react-native";
@@ -36,7 +37,11 @@ type Props = {
    * aqui, queda en la misma ventana y se ve por encima del panel.
    */
   tourOverlay?: React.ReactNode;
+  /** "Inicia tu historial crediticio"; la pantalla destino aun no existe. */
+  onStartCreditHistory?: () => void;
 };
+
+const SHOW_CREDIT_HISTORY = false;
 
 export default function DrawerMenu({
   t,
@@ -48,6 +53,7 @@ export default function DrawerMenu({
   onLogout,
   physicalCardActive = false,
   tourOverlay,
+  onStartCreditHistory,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -66,6 +72,20 @@ export default function DrawerMenu({
     { id: "sendMoney", icon: BanknoteArrowDown, label: t.sendMoney, onPress: () => go("sendMoney") },
     // Pagos de servicio: oculto por ahora. La ruta `servicePayments` sigue en App.
     { id: "multiCurrency", icon: Coins, label: t.multiCurrencyTitle, onPress: () => go("multiCurrency") },
+    // Historial crediticio: oculto temporalmente. Cambiar SHOW_CREDIT_HISTORY a true para reactivarlo.
+    ...(SHOW_CREDIT_HISTORY
+      ? [
+          {
+            id: "creditHistory",
+            icon: ChartNoAxesColumn,
+            label: t.creditHistoryTitle,
+            onPress: () => {
+              setIsMenuOpen(false);
+              onStartCreditHistory?.();
+            },
+          },
+        ]
+      : []),
   ];
 
   return (

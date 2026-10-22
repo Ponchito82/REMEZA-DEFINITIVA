@@ -10,6 +10,8 @@ export type BeneficiaryData = {
   maskedClabe: string;
   phoneNumber: string;
   favorite: boolean;
+  /** Epoch en ms de cuando se creo */
+  createdAtMs?: number;
 };
 
 export type CreateBeneficiaryInput = {
@@ -37,7 +39,7 @@ export function toBeneficiary(data: BeneficiaryData): Beneficiary {
     state: "",
     clabe: data.maskedClabe,
     favorite: data.favorite === true,
-    createdAt: 0,
+    createdAt: data.createdAtMs ?? 0,
   };
 }
 

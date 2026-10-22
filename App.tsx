@@ -12,6 +12,14 @@ import { Beneficiary, Language, Transaction, TransactionsFilter, ViewName } from
 import ComponentsShowcaseScreen from "./src/screens/ComponentsShowcaseScreen";
 import { useViewHistory } from "./src/hooks/useViewHistory";
 import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScreen";
+import CreditHistoryScreen from "./src/screens/CreditHistoryScreen";
+import CreditAmountScreen from "./src/screens/CreditAmountScreen";
+import CreditSummaryScreen from "./src/screens/CreditSummaryScreen";
+import CreditPaymentScreen from "./src/screens/CreditPaymentScreen";
+import CreditPaymentSuccessScreen, { type CreditPaymentReceipt } from "./src/screens/CreditPaymentSuccessScreen";
+import CreditMovementsScreen from "./src/screens/CreditMovementsScreen";
+import CreditStatementsScreen from "./src/screens/CreditStatementsScreen";
+import { buildCreditSimulation, creditPaymentDue, type CreditMovement } from "./src/utils/creditSimulation";
 import TwoStepVerificationScreen from "./src/screens/TwoStepVerificationScreen";
 import SecurityAlertScreen from "./src/screens/SecurityAlertScreen";
 import WelcomeScreen from "./src/screens/WelcomeScreen";
@@ -70,7 +78,12 @@ import {
 } from "./src/api/session";
 import { getBalance, getExchangeRate } from "./src/api/account";
 import { ApiError } from "./src/api/client";
-import { FORCE_BALANCE_ERROR, IGNORE_BALANCE_ERROR } from "./src/api/devFlags";
+import {
+    FORCE_BALANCE_ERROR,
+    IGNORE_BALANCE_ERROR,
+    SIMULATED_ADDRESS,
+    SIMULATED_BALANCE_USD,
+} from "./src/api/devFlags";
 import { verifySession } from "./src/api/sessionProbe";
 import { cancelOrder, createOrder, getHistory } from "./src/api/history";
 import { getCardStatement } from "./src/api/cardTransactions";
@@ -361,7 +374,7 @@ function AppContent() {
         registeredFullName;
     const profilePhone = remoteProfile?.phoneNumber || registeredPhone;
     const profileEmail = remoteProfile?.email || registerEmail.trim();
-    const profileAddress = remoteProfile
+    const realProfileAddress = remoteProfile
         ? [
               remoteProfile.addressLine1,
               remoteProfile.city,
@@ -370,10 +383,21 @@ function AppContent() {
               .filter(Boolean)
               .join(", ") || registeredAddress
         : registeredAddress;
+    const profileAddress = realProfileAddress || (__DEV__ ? SIMULATED_ADDRESS : "");
 
     const [physicalCardRequested, setPhysicalCardRequested] = useState(false);
     /** El usuario cerro la invitacion "Tarjeta fisica" del Home (vuelve a salir en la siguiente sesion). */
     const [physicalPromoDismissed, setPhysicalPromoDismissed] = useState(false);
+    /** Limite de credito (monto de la garantia). `null` hasta que el usuario inicia su historial; solo en memoria. */
+    const [creditLimitUsd, setCreditLimitUsd] = useState<number | null>(null);
+    /** Saldo utilizado y fecha limite de pago; sin backend de credito aun, quedan en $0 y +30 dias. */
+    const [creditUsedUsd, setCreditUsedUsd] = useState(0);
+    const [creditBalanceUsd, setCreditBalanceUsd] = useState(0);
+    const [creditDepositedAt, setCreditDepositedAt] = useState<number | null>(null);
+    const [creditReceipt, setCreditReceipt] = useState<CreditPaymentReceipt | null>(null);
+    const [creditMovements, setCreditMovements] = useState<CreditMovement[]>([]);
+    const [creditDueAt, setCreditDueAt] = useState(() => creditPaymentDue());
+    const openCredit = () => setView(creditLimitUsd === null ? "creditHistory" : "creditSummary");
 
     /**
      * Movimientos y envios del cliente, leidos del backend. Los envios hechos
@@ -555,7 +579,7 @@ function AppContent() {
             const old = known.get(b.id);
             const local: Partial<Beneficiary> = old
                 ? {
-                      createdAt: old.createdAt,
+                      createdAt: b.createdAt || old.createdAt,
                       // Se conserva la CLABE completa solo si sigue siendo la misma.
                       clabe:
                           old.clabe &&
@@ -613,7 +637,6 @@ function AppContent() {
                           maternalLastName: beneficiaryMaternalLastName.trim() || undefined,
                           clabe,
                           fullName: beneficiaryDraft.fullName,
-                          createdAt: Date.now(),
                       },
                   }
                 : {};
@@ -706,6 +729,9 @@ function AppContent() {
         // Banderas de desarrollo (src/api/devFlags.ts); en produccion no existen.
         if (__DEV__ && FORCE_BALANCE_ERROR) {
             setServiceUnavailable(true);
+        } else if (__DEV__ && SIMULATED_BALANCE_USD !== null) {
+            // Solo la primera vez: despues el saldo local ya refleja envios y credito.
+            setAvailableUsdBalance((prev) => prev ?? SIMULATED_BALANCE_USD);
         } else {
             getBalance()
                 .then((balance) => setAvailableUsdBalance(Number(balance.availableBalance)))
@@ -775,9 +801,11 @@ function AppContent() {
         }
 
         // Los montos y el folio son los que guardo el backend, no los que la app
-        // calculo en la pantalla de revision. El saldo no se toca: registrar la
-        // orden no mueve el dinero.
+        // calculo en la pantalla de revision. El backend no mueve el dinero al
+        // registrar la orden, asi que el saldo local se descuenta aqui (y se
+        // devuelve si la orden se cancela).
         const createdAt = Date.now();
+        setAvailableUsdBalance((prev) => (prev === null ? prev : Number((prev - amount).toFixed(2))));
         const reference = order.folio;
         const mxnAmount = Number(order.mxnAmount);
         const exchangeRate = Number(order.customerExchangeRate);
@@ -1085,6 +1113,7 @@ function AppContent() {
                     setIsMenuOpen={setIsMenuOpen}
                     onSendMoneyPress={() => setView("sendMoney")}
                     onViewAllActivity={() => openCardMovements("dashboard")}
+                    onStartCreditHistory={openCredit}
                     onOpenCard={(variant) => {
                         setActiveCardIndex(variant === "physical" ? 0 : 1);
                         setView("cardDetail");
@@ -1267,6 +1296,142 @@ function AppContent() {
 
             {view === "multiCurrency" && (
                 <MultiCurrencyAccountsScreen t={t} setView={setView} />
+            )}
+
+            {view === "creditHistory" && (
+                <CreditHistoryScreen
+                    t={t}
+                    holderName={profileFullName}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onBack={() => setView("dashboard")}
+                    isDebitCardActive={isCardActive}
+                    onRequestCard={() => setView("creditAmount")}
+                />
+            )}
+
+            {view === "creditAmount" && (
+                <CreditAmountScreen
+                    t={t}
+                    holderName={profileFullName}
+                    setIsMenuOpen={setIsMenuOpen}
+                    availableUsdBalance={availableUsdBalance ?? 0}
+                    onBack={() => setView("creditHistory")}
+                    onContinue={(amount) => {
+                        // El limite se respalda con el saldo de la tarjeta digital: se retiene al solicitarla.
+                        setAvailableUsdBalance((prev) => Number(((prev ?? 0) - amount).toFixed(2)));
+                        const simulation = buildCreditSimulation(amount);
+                        setCreditLimitUsd(amount);
+                        setCreditDepositedAt(Date.now());
+                        setCreditUsedUsd(simulation.usedUsd);
+                        setCreditMovements(simulation.movements);
+                        setCreditDueAt(creditPaymentDue());
+                        setView("creditSummary");
+                    }}
+                />
+            )}
+
+            {view === "creditSummary" && creditLimitUsd !== null && (
+                <CreditSummaryScreen
+                    onBack={() => setView("dashboard")}
+                    t={t}
+                    language={language}
+                    holderName={profileFullName}
+                    creditLimitUsd={creditLimitUsd}
+                    usedUsd={creditUsedUsd}
+                    creditBalanceUsd={creditBalanceUsd}
+                    dueAt={creditDueAt}
+                    depositedAt={creditDepositedAt}
+                    onPay={() => setView("creditPayment")}
+                    movements={creditMovements}
+                    onOpenMovements={() => setView("creditMovements")}
+                    onOpenStatements={() => setView("creditStatements")}
+                    onWithdrawGuarantee={() => {
+                        // Sin backend de credito: el abono a la tarjeta virtual se refleja solo en el saldo local.
+                        setAvailableUsdBalance((prev) => Number(((prev ?? 0) + creditLimitUsd).toFixed(2)));
+                        setCreditLimitUsd(null);
+                        setCreditDepositedAt(null);
+                        setCreditUsedUsd(0);
+                        setCreditBalanceUsd(0);
+                        setCreditMovements([]);
+                        setView("dashboard");
+                    }}
+                    setIsMenuOpen={setIsMenuOpen}
+                />
+            )}
+
+            {view === "creditPayment" && creditLimitUsd !== null && (
+                <CreditPaymentScreen
+                    t={t}
+                    holderName={profileFullName}
+                    language={language}
+                    creditLimitUsd={creditLimitUsd}
+                    usedUsd={creditUsedUsd}
+                    dueAt={creditDueAt}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onBack={() => setView("creditSummary")}
+                    onContinue={(amount) => {
+                        const at = Date.now();
+                        const remaining = Math.max(0, creditUsedUsd - amount);
+                        setCreditUsedUsd(remaining);
+                        const surplus = Math.max(0, Math.round((amount - creditUsedUsd) * 100) / 100);
+                        setCreditBalanceUsd((prev) => Math.round((prev + surplus) * 100) / 100);
+                        setCreditMovements((list) => [
+                            {
+                                id: `payment-${at}`,
+                                kind: "payment",
+                                nameKey: "creditMerchantPayment",
+                                icon: "payment",
+                                amountUsd: amount,
+                                at,
+                            },
+                            ...list,
+                        ]);
+                        setCreditReceipt({
+                            amountUsd: amount,
+                            at,
+                            reference: `RMZ-${String(at).slice(-8)}`,
+                            remainingUsd: remaining,
+                        });
+                        setView("creditPaymentSuccess");
+                    }}
+                />
+            )}
+
+            {view === "creditPaymentSuccess" && creditReceipt !== null && (
+                <CreditPaymentSuccessScreen
+                    t={t}
+                    language={language}
+                    receipt={creditReceipt}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onViewMovements={() => setView("creditMovements")}
+                    onDone={() => setView("creditSummary")}
+                />
+            )}
+
+            {view === "creditMovements" && creditLimitUsd !== null && (
+                <CreditMovementsScreen
+                    t={t}
+                    holderName={profileFullName}
+                    language={language}
+                    creditLimitUsd={creditLimitUsd}
+                    usedUsd={creditUsedUsd}
+                    movements={creditMovements}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onBack={() => setView("creditSummary")}
+                />
+            )}
+
+            {view === "creditStatements" && creditLimitUsd !== null && (
+                <CreditStatementsScreen
+                    t={t}
+                    language={language}
+                    holderName={profileFullName}
+                    holderAddress={profileAddress}
+                    creditLimitUsd={creditLimitUsd}
+                    movements={creditMovements}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onBack={() => setView("creditSummary")}
+                />
             )}
 
             {view === "twoStepVerification" && (
@@ -1486,6 +1651,7 @@ function AppContent() {
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
                 onLogout={requestLogout}
+                onStartCreditHistory={openCredit}
                 physicalCardActive={!isFactoryInactive}
                 tourOverlay={
                     tourActive && isMenuOpen ? (
