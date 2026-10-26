@@ -90,7 +90,7 @@ export default function LoginScreen({
     onSessionNoticeDismissed?.();
     setIsSubmitting(true);
     try {
-      const auth = await login(phone, loginAccessCode);
+      const auth = await login(phone, loginAccessCode, language);
       onLoginSuccess(auth.customerId, auth.token, auth.expiresInMs, phone);
       setView(postLoginView);
     } catch (err) {

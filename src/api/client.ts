@@ -4,7 +4,10 @@ import { getToken, isSessionExpired, remainingSessionMs, reportUnauthorized } fr
 // telefono fisico por USB; "10.0.2.2" solo existe dentro del emulador.
 const DEV_HOST = "localhost";
 
-export const API_BASE_URL = `http://${DEV_HOST}:8700`;
+// true: API de pruebas desplegado (dev.api.remeza.app); false: backend local por adb reverse.
+const USE_REMOTE_DEV_API = true;
+
+export const API_BASE_URL = USE_REMOTE_DEV_API ? "https://dev.api.remeza.app" : `http://${DEV_HOST}:8700`;
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -14,10 +17,33 @@ type ApiEnvelope<T> = {
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
+  /** Mensaje original del servidor (en ingles), para detectar casos concretos. */
+  serverMessage?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string, serverMessage?: string) {
     super(message);
     this.status = status;
+    this.code = code;
+    this.serverMessage = serverMessage;
+  }
+}
+
+// El API responde { message, status, timestamp } con mensajes en ingles y sin
+// codigo; la unica excepcion es code "KYC_FAILED". Se traduce segun el status.
+function localizedMessage(status: number, authenticated: boolean, json: any, fallback: string): string {
+  if (json?.code === "KYC_FAILED") return json?.message ?? fallback;
+  switch (status) {
+    case 400:
+      return "Los datos ingresados no son válidos.";
+    case 401:
+      return authenticated ? "Tu sesión expiró. Inicia sesión de nuevo." : "Código de acceso incorrecto.";
+    case 404:
+      return "No se encontró la información solicitada.";
+    case 500:
+      return "Ocurrió un error interno. Intenta de nuevo más tarde.";
+    default:
+      return json?.message ?? fallback;
   }
 }
 
@@ -80,12 +106,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (response.status === 401) {
     trace(`${route} respondio 401 -> cierre de sesion y regreso al Login`);
     if (authenticated) reportUnauthorized("rejected");
-    throw new ApiError(json?.message ?? "Sesión no autorizada.", 401);
+    throw new ApiError(localizedMessage(401, authenticated, json, "Sesión no autorizada."), 401);
   }
 
   if (!response.ok) {
     trace(`${route} respondio HTTP ${response.status}`);
-    throw new ApiError(json?.message ?? "Ocurrió un error de conexión.", response.status);
+    throw new ApiError(
+      localizedMessage(response.status, authenticated, json, "Ocurrió un error de conexión."),
+      response.status,
+      json?.code,
+      json?.message,
+    );
   }
 
   const envelope = json as ApiEnvelope<T>;

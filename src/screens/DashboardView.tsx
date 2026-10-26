@@ -94,7 +94,7 @@ type Props = {
 
 /** Ancho del arte de la tarjeta fisica en la invitacion a solicitarla. */
 /** Oculto temporalmente: poner en true para volver a mostrar el banner "Inicia tu historial crediticio". */
-const SHOW_CREDIT_HISTORY_BANNER = false;
+const SHOW_CREDIT_HISTORY_BANNER = true;
 
 const PROMO_CARD_WIDTH = 150;
 
