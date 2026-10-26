@@ -283,6 +283,7 @@ export const screenTranslations = {
     attemptedAmount: "Attempted amount",
     rejectionReason: "Reason for rejection",
     transferErrorGeneric: "We couldn't process your transfer. Please try again later.",
+    transferErrorNoCard: "You need an active card to send money. Request your card first.",
 
     /* Pago de servicios (17, 51-56) */
     servicesTitle: "Bill payments",
@@ -612,6 +613,7 @@ export const screenTranslations = {
     attemptedAmount: "Monto intentado",
     rejectionReason: "Motivo del rechazo",
     transferErrorGeneric: "No pudimos procesar tu envío. Intenta más tarde.",
+    transferErrorNoCard: "Necesitas una tarjeta activa para enviar dinero. Solicita tu tarjeta primero.",
 
     servicesTitle: "Pago de servicios",
     servicesSubtitle: "Paga tus servicios de forma rápida y segura.",

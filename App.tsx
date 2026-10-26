@@ -85,7 +85,10 @@ import {
     SIMULATED_BALANCE_USD,
 } from "./src/api/devFlags";
 import { verifySession } from "./src/api/sessionProbe";
-import { cancelOrder, createOrder, getHistory } from "./src/api/history";
+import { cancelOrder, createOrder, getHistory, type CreatedOrder } from "./src/api/history";
+
+// DEMO: true simula un envio exitoso cuando el backend rechaza la orden. Quitar al tener cuenta/tarjeta en dev.
+const DEMO_FORCE_TRANSFER_SUCCESS = false;
 import { getCardStatement } from "./src/api/cardTransactions";
 import CardMovementsScreen, { CardMovementsState } from "./src/screens/CardMovementsScreen";
 import { getProfile, ProfileData } from "./src/api/profile";
@@ -789,15 +792,35 @@ function AppContent() {
         const amount = transferSummary.amountUsd;
         setView("transferProcessing");
 
-        let order;
+        let order: CreatedOrder;
         try {
             order = await createOrder(selectedBeneficiaryId, amount);
         } catch (error) {
             if (error instanceof ApiError && error.status === 401) return;
-            const insufficient = error instanceof Error && /insufficient funds/i.test(error.message);
-            setTransferFailReason(insufficient ? t.insufficientFunds : t.transferErrorGeneric);
-            setView("transferFailed");
-            return;
+            if (!DEMO_FORCE_TRANSFER_SUCCESS) {
+                const insufficient =
+                    error instanceof ApiError && /insufficient funds/i.test(error.serverMessage ?? error.message);
+                const noCard =
+                    error instanceof ApiError && /no active card/i.test(error.serverMessage ?? "");
+                setTransferFailReason(
+                    insufficient ? t.insufficientFunds : noCard ? t.transferErrorNoCard : t.transferErrorGeneric,
+                );
+                setView("transferFailed");
+                return;
+            }
+            // DEMO: el backend de dev no tiene cuenta/tarjeta para este cliente.
+            // Se simula la orden con los montos de la pantalla de revision.
+            await new Promise<void>((resolve) => setTimeout(resolve, 1500));
+            order = {
+                id: `demo-${Date.now()}`,
+                folio: `DEMO-${String(Date.now()).slice(-6)}`,
+                status: "PENDING",
+                usdAmount: amount,
+                mxnAmount: transferSummary.mxnAmount,
+                fee: 0,
+                bitsoExchangeRate: transferSummary.exchangeRate,
+                customerExchangeRate: transferSummary.exchangeRate,
+            };
         }
 
         // Los montos y el folio son los que guardo el backend, no los que la app

@@ -41,7 +41,7 @@ type Props = {
   onStartCreditHistory?: () => void;
 };
 
-const SHOW_CREDIT_HISTORY = false;
+const SHOW_CREDIT_HISTORY = true;
 
 export default function DrawerMenu({
   t,
