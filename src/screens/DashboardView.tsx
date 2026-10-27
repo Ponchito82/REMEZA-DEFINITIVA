@@ -12,6 +12,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import {
   BanknoteArrowDown,
   ChartNoAxesColumn,
+  ArrowRight,
   ChevronRight,
   Eye,
   EyeOff,
@@ -28,6 +29,7 @@ import { GlassBanner, RemezaLogo } from '../components/ui';
 import {
   CardActivityPreview,
   PhysicalCardArt,
+  VirtualCardArt,
   RemezaCardBack,
 } from '../components/remeza';
 import type { CardMovementsState } from '../api/cardTransactions';
@@ -474,6 +476,56 @@ export default function DashboardView({
             </View>
           </View>
 
+          {/* Generar tarjeta virtual: solo diseno, sin funcionalidad todavia. */}
+          <View
+            testID="dashboard-virtualCardPromo"
+            style={[dashboardStyles.promoCard, dashboardStyles.virtualPromo]}
+          >
+            <LinearGradient
+              colors={['rgba(75,35,250,0.30)', 'rgba(20,16,70,0.55)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+
+            <VirtualCardArt
+              width={PROMO_CARD_WIDTH}
+              style={dashboardStyles.virtualPromoArt}
+            />
+
+            <View style={dashboardStyles.promoText}>
+              <Text style={dashboardStyles.promoTitle}>
+                {t.virtualPromoTitle}
+              </Text>
+              <Text style={[dashboardStyles.promoDesc, { color: '#FFFFFF' }]}>
+                {t.virtualPromoDesc}
+              </Text>
+            </View>
+
+            <Pressable
+              testID="dashboard-generateVirtualCardButton"
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                dashboardStyles.promoButton,
+                dashboardStyles.virtualPromoButton,
+                pressed && dashboardStyles.pressed,
+              ]}
+            >
+              <LinearGradient
+                colors={primaryGradient.colors}
+                locations={primaryGradient.locations}
+                start={primaryGradient.start}
+                end={primaryGradient.end}
+                style={StyleSheet.absoluteFill}
+              />
+              <Text style={dashboardStyles.promoButtonText}>
+                {t.virtualPromoCta}
+              </Text>
+              <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.2} />
+            </Pressable>
+          </View>
+
           {/* Ya solicitada, la seccion pasa a "Activa tu tarjeta fisica" y no se puede cerrar. */}
           {!physicalCardActive &&
           (physicalCardRequested || !physicalPromoDismissed) ? (
@@ -864,6 +916,20 @@ const dashboardStyles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  virtualPromo: {
+    marginBottom: spacing.md,
+    paddingTop: spacing.lg,
+  },
+  virtualPromoArt: {
+    position: 'absolute',
+    right: 4,
+    top: 24,
+    transform: [{ rotate: '-16deg' }],
+  },
+  virtualPromoButton: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   promoClose: {
     position: 'absolute',
