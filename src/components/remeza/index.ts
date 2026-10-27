@@ -18,6 +18,7 @@ export { default as DrawerItem } from "./DrawerItem";
 export { default as CardSummaryTile } from "./CardSummaryTile";
 export { default as CardTypeToggle } from "./CardTypeToggle";
 export { default as PhysicalCardArt } from "./PhysicalCardArt";
+export { default as VirtualCardArt } from "./VirtualCardArt";
 
 export type { CarouselCard } from "./CardCarousel";
 export type { InfoDetailItem } from "./InfoDetailsCard";
