@@ -1,8 +1,4 @@
 
-export const DEFAULT_SESSION_TTL_MS = 30 * 60 * 1000;
-
-const EXPIRY_SKEW_MS = 5000;
-
 export type UnauthorizedReason = "expired" | "rejected";
 
 type Session = {
@@ -22,19 +18,42 @@ function clearExpiryTimer(): void {
   }
 }
 
-export function startSession(customerId: string, token: string, expiresInMs?: number): void {
-  const ttl = expiresInMs && expiresInMs > 0 ? expiresInMs : DEFAULT_SESSION_TTL_MS;
+/** La sesion no vence por inactividad (antes: 30 * 60 * 1000). */
+export const INACTIVITY_LIMIT_MS = Infinity;
+
+function scheduleExpiry(): void {
+  clearExpiryTimer();
+  if (!currentSession) return;
+  // Sin limite no hay temporizador (setTimeout(Infinity) dispararia de inmediato).
+  if (!Number.isFinite(currentSession.expiresAt)) return;
+  expiryTimer = setTimeout(() => {
+    if (currentSession && Date.now() >= currentSession.expiresAt) reportUnauthorized("expired");
+    else scheduleExpiry();
+  }, Math.max(currentSession.expiresAt - Date.now(), 0) + 50);
+}
+
+/**
+ * La sesion no se cierra por inactividad. `expiresInMs` del servidor se
+ * ignora a proposito.
+ */
+export function startSession(customerId: string, token: string, _expiresInMs?: number): void {
   currentSession = {
     customerId,
     token,
-    expiresAt: Date.now() + ttl,
+    expiresAt: Date.now() + INACTIVITY_LIMIT_MS,
   };
+  scheduleExpiry();
+}
 
-  clearExpiryTimer();
-  expiryTimer = setTimeout(() => {
-    expiryTimer = null;
-    reportUnauthorized("expired");
-  }, Math.max(0, ttl - EXPIRY_SKEW_MS));
+/** Marca actividad del usuario: reinicia la cuenta de los 30 minutos. */
+export function touchSession(): void {
+  if (!currentSession) return;
+  currentSession.expiresAt = Date.now() + INACTIVITY_LIMIT_MS;
+}
+
+/** Cierra la sesion si ya paso el limite (p. ej. al volver de segundo plano). */
+export function checkInactivity(): void {
+  if (currentSession && Date.now() >= currentSession.expiresAt) reportUnauthorized("expired");
 }
 
 export function clearSession(): void {
@@ -52,12 +71,12 @@ export function getCustomerId(): string | null {
 
 export function isSessionExpired(): boolean {
   if (!currentSession) return true;
-  return Date.now() + EXPIRY_SKEW_MS >= currentSession.expiresAt;
+  return Date.now() >= currentSession.expiresAt;
 }
 
 export function remainingSessionMs(): number {
   if (!currentSession) return 0;
-  return Math.max(0, currentSession.expiresAt - Date.now());
+  return Math.max(currentSession.expiresAt - Date.now(), 0);
 }
 
 export function onUnauthorized(handler: (reason: UnauthorizedReason) => void): () => void {

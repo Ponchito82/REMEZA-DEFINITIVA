@@ -5,6 +5,8 @@ export { default as LogoTile } from "./LogoTile";
 export { default as Glow } from "./Glow";
 
 export { default as Button } from "./Button";
+export { default as ScreenTransition } from "./ScreenTransition";
+export { default as AnimatedMenuIcon } from "./AnimatedMenuIcon";
 export { default as CloseButton } from "./CloseButton";
 export { default as ScreenHeader } from "./ScreenHeader";
 export { default as StepProgress } from "./StepProgress";

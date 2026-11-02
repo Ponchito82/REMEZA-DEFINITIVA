@@ -1,12 +1,23 @@
 import React from "react";
-import { View, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import { fontFamily } from "../../theme/typography";
+import { View, Image, StyleSheet, StyleProp, ViewStyle } from "react-native";
 
-/** Misma proporcion que PhysicalCardArt (tarjeta ID-1). */
+/** Misma proporcion que PhysicalCardArt (810x509). */
 const ASPECT_RATIO = 810 / 509;
 
+export type VirtualCardColor = "white" | "black" | "purple";
+export type VirtualCardArtColor = VirtualCardColor | "glass";
+
+const SOURCES = {
+  white: require("../../assets/virtual-card.jpg"),
+  black: require("../../assets/virtual-card-black.jpg"),
+  purple: require("../../assets/virtual-card-purple.jpg"),
+  /** Morado translucido: solo la vista previa de "Nueva tarjeta". */
+  glass: require("../../assets/virtual-card-glass.png"),
+};
+
 type Props = {
+  /** Colorway; por defecto la blanca. */
+  color?: VirtualCardArtColor;
   /** Ancho en dp; todo lo demas escala con el. */
   width: number;
   style?: StyleProp<ViewStyle>;
@@ -14,12 +25,14 @@ type Props = {
 };
 
 /**
- * Frente de la tarjeta virtual Remeza (blanca). Solo decorativo: no muestra
- * datos del cliente.
+ * Frente de la tarjeta virtual Remeza: el mismo diseno de la fisica con los
+ * colores cambiados (blanca con letras moradas, negra o morada). Solo decorativo.
  */
-export default function VirtualCardArt({ width, style, testID }: Props) {
+export default function VirtualCardArt({ width, color = "white", style, testID }: Props) {
   const height = width / ASPECT_RATIO;
-  const radius = width * 0.07;
+  const isGlass = color === "glass";
+  // El PNG translucido trae las esquinas redondeadas con radio 30/810.
+  const borderRadius = width * (isGlass ? 30 / 810 : 0.045);
 
   return (
     <View
@@ -27,55 +40,31 @@ export default function VirtualCardArt({ width, style, testID }: Props) {
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[styles.root, { width, height, borderRadius: radius }, style]}
+      style={[styles.root, color === "glass" && styles.glass, { width, height, borderRadius }, style]}
     >
-      <LinearGradient
-        colors={["#FFFFFF", "#D9D9E4"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
+      <Image
+        source={SOURCES[color]}
+        style={{ width, height, borderRadius }}
+        resizeMode="cover"
       />
-      <View
-        style={{
-          position: "absolute",
-          left: width * 0.09,
-          top: height * 0.4,
-          width: width * 0.16,
-          height: height * 0.22,
-          borderRadius: width * 0.025,
-          backgroundColor: "#B79A7A",
-        }}
-      />
-      <Text
-        style={{
-          position: "absolute",
-          right: width * 0.08,
-          top: height * 0.1,
-          fontFamily: fontFamily.bold,
-          fontSize: width * 0.1,
-          color: "#4B23FA",
-        }}
-      >
-        remeza
-      </Text>
-      <Text
-        style={{
-          position: "absolute",
-          right: width * 0.08,
-          bottom: height * 0.1,
-          fontFamily: fontFamily.bold,
-          fontSize: width * 0.13,
-          fontStyle: "italic",
-          color: "#4B23FA",
-        }}
-      >
-        VISA
-      </Text>
+      {isGlass ? <View style={[styles.glassBorder, { borderRadius }]} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /** Margen marcado de la tarjeta translucida. */
+  glassBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: "rgba(150,125,255,0.95)",
+  },
+  /** Sin fondo ni sombra: solo se ve el morado translucido. */
+  glass: {
+    backgroundColor: "transparent",
+    elevation: 0,
+    shadowOpacity: 0,
+  },
   root: {
     overflow: "hidden",
     backgroundColor: "#FFFFFF",

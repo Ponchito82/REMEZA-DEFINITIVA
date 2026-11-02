@@ -86,16 +86,33 @@ export function buildCreditSimulation(
 /** Dia del mes en que corta el estado de cuenta. */
 export const CREDIT_CUTOFF_DAY = 10;
 
-/** Proxima fecha de corte (dia 10): este mes si aun no pasa, si no el siguiente. */
+/** Dias para pagar despues del corte. */
+export const CREDIT_PAYMENT_DAYS = 20;
+
+/**
+ * Proxima fecha de corte (siempre dia 10): del 1 al 9 es el 10 de este mes, y
+ * del 10 en adelante el 10 del mes siguiente. Asi lo define el backend.
+ */
 export function nextCreditCutoff(now: number = Date.now()): number {
   const base = new Date(now);
-  const thisMonth = new Date(base.getFullYear(), base.getMonth(), CREDIT_CUTOFF_DAY, 23, 59, 59);
-  if (thisMonth.getTime() >= now) return thisMonth.getTime();
-  return new Date(base.getFullYear(), base.getMonth() + 1, CREDIT_CUTOFF_DAY, 23, 59, 59).getTime();
+  const month = base.getDate() < CREDIT_CUTOFF_DAY ? base.getMonth() : base.getMonth() + 1;
+  return new Date(base.getFullYear(), month, CREDIT_CUTOFF_DAY, 23, 59, 59).getTime();
 }
 
-/** Fecha de pago: ultimo dia del mes en curso (dia 0 del mes siguiente). */
+/** Fecha limite de pago de un corte: corte + 20 dias (en febrero cae el 2 de marzo, o el 1). */
+export function creditDueFromCutoff(cutoffAt: number): number {
+  const cutoff = new Date(cutoffAt);
+  return new Date(
+    cutoff.getFullYear(),
+    cutoff.getMonth(),
+    cutoff.getDate() + CREDIT_PAYMENT_DAYS,
+    23,
+    59,
+    59,
+  ).getTime();
+}
+
+/** Fecha limite de pago del proximo corte. */
 export function creditPaymentDue(now: number = Date.now()): number {
-  const base = new Date(now);
-  return new Date(base.getFullYear(), base.getMonth() + 1, 0, 23, 59, 59).getTime();
+  return creditDueFromCutoff(nextCreditCutoff(now));
 }

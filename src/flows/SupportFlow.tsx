@@ -16,10 +16,12 @@ type Props = {
   onExit: () => void;
   /** Vuelve al dashboard y lanza la guia paso a paso */
   onStartGuide: () => void;
+  /** Lleva a "Mis tarjetas virtuales" y lanza su guia */
+  onStartCardsGuide: () => void;
 };
 
 /** Soporte: en vivo (5), centro de ayuda (18) y preguntas frecuentes. El chat en vivo redirige a WhatsApp. */
-export default function SupportFlow({ t, language, entry, onExit, onStartGuide }: Props) {
+export default function SupportFlow({ t, language, entry, onExit, onStartGuide, onStartCardsGuide }: Props) {
   const { step, push, pop } = useStepStack<Step>(entry, onExit);
 
   switch (step) {
@@ -33,6 +35,7 @@ export default function SupportFlow({ t, language, entry, onExit, onStartGuide }
           onContactSupport={() => push("live")}
           onOpenFaq={() => push("faq")}
           onStartGuide={onStartGuide}
+          onStartCardsGuide={onStartCardsGuide}
         />
       );
     default:

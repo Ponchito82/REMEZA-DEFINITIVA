@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
-import { CalendarDays, ChevronRight, FileText, Info, Settings, Wallet } from "lucide-react-native";
+import { CalendarDays, CalendarPlus, ChevronRight, FileText, Info, Settings, Wallet } from "lucide-react-native";
 import { styles as appStyles } from "../theme/styles";
 import { colors } from "../theme/colors";
 import { fontFamily, typography } from "../theme/typography";
@@ -31,6 +31,8 @@ type Props = {
   onWithdrawGuarantee: () => void;
   onOpenMovements: () => void;
   onOpenStatements: () => void;
+  /** Abre la pantalla para ampliar el periodo de historial. */
+  onOpenExtension: () => void;
   setIsMenuOpen: (value: boolean) => void;
   /** Regresa a la pantalla principal (donde esta la tarjeta de debito). */
   onBack: () => void;
@@ -45,6 +47,9 @@ export function formatDueDate(dueAt: number, language: Language): string {
   const due = new Date(dueAt);
   return `${due.getDate()} ${MONTHS[language][due.getMonth()]} ${due.getFullYear()}`;
 }
+
+/** Temporal: habilita "Ampliar periodo" desde ya; luego solo al cumplirse el ano (canWithdraw). */
+const EXTENSION_ALWAYS_ENABLED = true;
 
 const money = (value: number) => `$${value.toLocaleString("en-US")}`;
 
@@ -61,6 +66,7 @@ export default function CreditSummaryScreen({
   movements,
   onOpenMovements,
   onOpenStatements,
+  onOpenExtension,
   onWithdrawGuarantee,
   setIsMenuOpen,
   onBack,
@@ -87,6 +93,9 @@ export default function CreditSummaryScreen({
     { id: "pay", icon: Wallet, label: t.creditActionPay },
     { id: "movements", icon: FileText, label: t.creditActionMovements },
     { id: "statements", icon: CalendarDays, label: t.creditActionStatements },
+    ...(EXTENSION_ALWAYS_ENABLED || canWithdraw
+      ? [{ id: "extend", icon: CalendarPlus, label: t.creditActionExtend }]
+      : []),
     ...(canWithdraw ? [{ id: "guarantee", icon: Settings, label: t.creditActionGuarantee }] : []),
   ];
 
@@ -170,7 +179,9 @@ export default function CreditSummaryScreen({
                       ? onOpenMovements
                       : item.id === "statements"
                         ? onOpenStatements
-                        : () => setShowGuarantee(true)
+                        : item.id === "extend"
+                          ? onOpenExtension
+                          : () => setShowGuarantee(true)
                 }
                 style={({ pressed }) => [localStyles.action, pressed && localStyles.pressed]}
               >

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
-import { BookOpen, CircleHelp, FileText, Headset, Info, Lock, ShieldCheck } from "lucide-react-native";
+import { BookOpen, CircleHelp, CreditCard, FileText, Headset, Info, Lock, ShieldCheck } from "lucide-react-native";
 
 import { InfoCard, ListRow, StatusScreen } from "../../components/ui";
 import type { IconComponent } from "../../components/ui";
@@ -13,8 +13,10 @@ type Props = {
   onContactSupport: () => void;
   /** Abre la pantalla de Preguntas frecuentes */
   onOpenFaq: () => void;
-  /** Vuelve al dashboard y lanza la guia paso a paso */
+  /** Vuelve al dashboard y lanza la guia de bienvenida */
   onStartGuide: () => void;
+  /** Lleva a "Mis tarjetas virtuales" y lanza su guia */
+  onStartCardsGuide: () => void;
 };
 
 type Topic = (typeof MOCK_HELP_TOPICS)[number];
@@ -37,7 +39,7 @@ const openLink = (url: string) => {
  * Centro de ayuda (pantalla 18). "Preguntas frecuentes" abre su propia
  * pantalla; el resto de temas despliega su respuesta debajo.
  */
-export default function HelpCenterScreen({ t, onBack, onContactSupport, onOpenFaq, onStartGuide }: Props) {
+export default function HelpCenterScreen({ t, onBack, onContactSupport, onOpenFaq, onStartGuide, onStartCardsGuide }: Props) {
   const [open, setOpen] = useState<Topic | null>(null);
 
   return (
@@ -61,15 +63,31 @@ export default function HelpCenterScreen({ t, onBack, onContactSupport, onOpenFa
             testID={`helpCenter.topic.${topic}`}
             icon={TOPIC_ICONS[topic]}
             title={t[`help_${topic}`]}
-            selected={topic !== "faq" && topic !== "guides" && open === topic}
+            selected={topic !== "faq" && open === topic}
             onPress={
               topic === "faq"
                 ? onOpenFaq
-                : topic === "guides"
-                  ? onStartGuide
-                  : () => setOpen((prev) => (prev === topic ? null : topic))
+                : () => setOpen((prev) => (prev === topic ? null : topic))
             }
           />
+          {topic === "guides" && open === topic ? (
+            <View style={styles.guides}>
+              <ListRow
+                testID="helpCenter.guide.welcome"
+                icon={BookOpen}
+                title={t.help_guides_welcome}
+                subtitle={t.help_guides_welcome_desc}
+                onPress={onStartGuide}
+              />
+              <ListRow
+                testID="helpCenter.guide.cards"
+                icon={CreditCard}
+                title={t.help_guides_cards}
+                subtitle={t.help_guides_cards_desc}
+                onPress={onStartCardsGuide}
+              />
+            </View>
+          ) : null}
           {topic !== "faq" && topic !== "guides" && open === topic ? (
             <InfoCard
               testID={`helpCenter.answer.${topic}`}
@@ -106,5 +124,13 @@ export default function HelpCenterScreen({ t, onBack, onContactSupport, onOpenFa
 const styles = StyleSheet.create({
   answer: {
     marginTop: 6,
+  },
+  guides: {
+    marginTop: 6,
+    marginLeft: 18,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "rgba(130,110,255,0.45)",
+    gap: 6,
   },
 });

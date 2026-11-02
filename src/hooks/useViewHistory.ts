@@ -28,7 +28,7 @@ const ROOT_VIEWS = new Set<ViewName>(["welcome", "login", "dashboard"]);
 const PRE_AUTH_VIEWS = new Set<ViewName>(["welcome", "register", "forgotAccessCode", "recoverAccess"]);
 
 /** Pantallas de paso: no se guardan como destino de "atras". */
-const TRANSIENT_VIEWS = new Set<ViewName>(["transferProcessing"]);
+const TRANSIENT_VIEWS = new Set<ViewName>(["transferProcessing", "newCardSuccess", "fundSuccess"]);
 
 /** Mientras estan visibles, el atras no hace nada (hay una operacion en curso). */
 const BLOCKED_VIEWS = new Set<ViewName>(["transferProcessing"]);
@@ -41,6 +41,9 @@ const BACK_TO: Partial<Record<ViewName, ViewName>> = {
   transferSuccess: "dashboard",
   transferFailed: "dashboard",
   beneficiaryAdded: "beneficiaries",
+  // Tras crear una tarjeta, atras va al inicio (no a la animacion ni al formulario).
+  virtualCards: "dashboard",
+  fundSuccess: "virtualCards",
 };
 
 /**

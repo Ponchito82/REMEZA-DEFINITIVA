@@ -1,3 +1,4 @@
+import { isBiometricsEnabled } from "../services/securitySettings";
 import KeyboardAwareScrollView from "../components/ui/KeyboardAwareScrollView";
 import React from "react";
 import {
@@ -10,7 +11,8 @@ import {
   TextInput,
   StyleSheet,
 } from "react-native";
-import { BanknoteArrowDown, ChevronLeft, ShieldOff, Eye, EyeOff, Lock, Menu } from "lucide-react-native";
+import AnimatedMenuIcon from "../components/ui/AnimatedMenuIcon";
+import { BanknoteArrowDown, ChevronLeft, ShieldOff, Eye, EyeOff, Lock } from "lucide-react-native";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { styles } from "../theme/styles";
 import { PURPLE, colors } from "../theme/colors";
@@ -93,6 +95,8 @@ type Props = {
 
   birthDate: string;
   setBirthDate: (value: string) => void;
+  /** La biometria fallo: se pide el codigo de 6 digitos como alternativa. */
+  cardCodeFallback: boolean;
 
   cardNumber: string;
   setCardNumber: (value: string) => void;
@@ -106,8 +110,8 @@ type Props = {
   showCardData: boolean;
   setShowCardData: (value: boolean) => void;
 
-  handleActivateCard: () => void;
-  handleActivateVirtualCard: () => void;
+  handleActivateCard: () => void | Promise<void>;
+  handleActivateVirtualCard: () => void | Promise<void>;
 
   /** Movimientos reales de la tarjeta; aqui se muestran los 2 ultimos. */
   activity: CardMovementsState;
@@ -148,6 +152,7 @@ export default function CardDetailScreen({
   setVirtualSecureCode,
   birthDate,
   setBirthDate,
+  cardCodeFallback,
   cardNumber,
   setCardNumber,
   expiryDate,
@@ -166,13 +171,16 @@ export default function CardDetailScreen({
     return true;
   });
 
+  // Con biometria activada la identidad se confirma con huella / Face ID, no con el codigo.
+  const needsCode = !isBiometricsEnabled() || cardCodeFallback;
+
   const isPhysicalFormValid =
-    secureCode.length === 6 &&
+    (!needsCode || secureCode.length === 6) &&
     cardNumber.replace(/\s/g, "").length === 16 &&
     expiryDate.length === 5 &&
     cvv.length >= 3;
 
-  const isVirtualFormValid = birthDate.length === 10 && virtualSecureCode.length === 6;
+  const isVirtualFormValid = birthDate.length === 10 && (!needsCode || virtualSecureCode.length === 6);
 
   // Tras activar, las dos tarjetas muestran los datos capturados en la activacion.
   // Ya activada, la fisica sigue visible aunque el flag de solicitud no este.
@@ -212,7 +220,7 @@ export default function CardDetailScreen({
           onPress={() => setIsMenuOpen(true)}
           style={({ pressed }) => [detailStyles.menuButton, pressed && detailStyles.pressed]}
         >
-          <Menu size={22} color={colors.text.primary} strokeWidth={2} />
+          {({ pressed }) => <AnimatedMenuIcon pressed={pressed} />}
         </Pressable>
       </View>
 
@@ -297,6 +305,8 @@ export default function CardDetailScreen({
               />
             </View>
 
+            {needsCode && (
+            <>
             <Text style={styles.modalSubtitle}>{t.sixDigitNumerCode}</Text>
 
             <TextInput
@@ -313,6 +323,8 @@ export default function CardDetailScreen({
                 placeholderTextColor={colors.text.placeholder}
               placeholder="••••••"
             />
+            </>
+            )}
 
             <Pressable
               testID="dashboard-activatePhysicalCardButton"
@@ -384,6 +396,8 @@ export default function CardDetailScreen({
               placeholder="DD/MM/YYYY"
             />
 
+            {needsCode && (
+            <>
             <Text style={styles.modalSubtitle}>{t.sixDigitNumerCode}</Text>
 
             <TextInput
@@ -400,6 +414,8 @@ export default function CardDetailScreen({
                 placeholderTextColor={colors.text.placeholder}
               placeholder="••••••"
             />
+            </>
+            )}
 
             <Pressable
               testID="dashboard-activateVirtualCardButton"

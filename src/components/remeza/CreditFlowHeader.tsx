@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { ArrowLeft, Menu } from "lucide-react-native";
+import AnimatedMenuIcon from "../ui/AnimatedMenuIcon";
+import { ArrowLeft } from "lucide-react-native";
 import { colors } from "../../theme/colors";
 import { fontFamily } from "../../theme/typography";
 import { spacing, screenPadding } from "../../theme/spacing";
@@ -44,7 +45,7 @@ export default function CreditFlowHeader({
           onPress={onMenu}
           style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}
         >
-          <Menu size={22} color={colors.text.primary} strokeWidth={2} />
+          {({ pressed }) => <AnimatedMenuIcon pressed={pressed} />}
         </Pressable>
       </View>
 

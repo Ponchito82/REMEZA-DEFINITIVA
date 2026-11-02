@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, ViewStyle } from "react-native";
-import { Menu, Eye, EyeOff } from "lucide-react-native";
+import AnimatedMenuIcon from "../ui/AnimatedMenuIcon";
+import { Eye, EyeOff } from "lucide-react-native";
 import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
 import { spacing } from "../../theme/spacing";
@@ -59,7 +60,7 @@ export default function BalanceHeader({
           onPress={onMenuPress}
           style={({ pressed }) => [styles.menu, pressed && styles.pressed]}
         >
-          <Menu size={22} color={colors.text.primary} strokeWidth={2} />
+          {({ pressed }) => <AnimatedMenuIcon pressed={pressed} />}
         </Pressable>
       </View>
 

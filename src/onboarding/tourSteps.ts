@@ -111,3 +111,37 @@ export const TOUR_STEPS: TourStep[] = [
   },
   { titleKey: "tourDoneTitle", descriptionKey: "tourDoneDesc" },
 ];
+
+/**
+ * Guia de "Mis tarjetas virtuales": solo se lanza al generar la PRIMERA
+ * tarjeta virtual (la segunda y la tercera ya no la muestran).
+ */
+export const CARDS_TOUR_STEPS: TourStep[] = [
+  { titleKey: "cardsTourIntroTitle", descriptionKey: "cardsTourIntroDesc", dimBackground: false },
+  { titleKey: "cardsTourCardTitle", descriptionKey: "cardsTourCardDesc", targetId: "vcCard" },
+  {
+    titleKey: "cardsTourActionsTitle",
+    descriptionKey: "cardsTourActionsDesc",
+    chipKey: "cardsTourActionsChip",
+    targetId: "vcActions",
+  },
+  { titleKey: "cardsTourGenerateTitle", descriptionKey: "cardsTourGenerateDesc", targetId: "vcGenerate" },
+  { titleKey: "cardsTourFundTitle", descriptionKey: "cardsTourFundDesc", targetId: "vcFund" },
+  { titleKey: "cardsTourDoneTitle", descriptionKey: "cardsTourDoneDesc" },
+];
+
+/** Paso que se muestra sobre el detalle de una tarjeta mientras corre la guia de tarjetas. */
+export const CARDS_TOUR_DETAIL_STEP: TourStep = {
+  titleKey: "cardsTourDetailTitle",
+  descriptionKey: "cardsTourDetailDesc",
+  dimBackground: false,
+  nextLabelKey: "cardsTourBack",
+};
+
+/** Paso que se muestra sobre "Fondear saldo": es opcional, se puede volver sin fondear. */
+export const CARDS_TOUR_FUND_SCREEN_STEP: TourStep = {
+  titleKey: "cardsTourFundScreenTitle",
+  descriptionKey: "cardsTourFundScreenDesc",
+  dimBackground: false,
+  nextLabelKey: "cardsTourBack",
+};

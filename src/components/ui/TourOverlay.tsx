@@ -12,7 +12,7 @@ import { X } from "lucide-react-native";
 import { tokens, PURPLE } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { metrics, radius } from "../../theme/radius";
-import { TOUR_STEPS, stepTargetIds } from "../../onboarding/tourSteps";
+import { TOUR_STEPS, stepTargetIds, TourStep } from "../../onboarding/tourSteps";
 import { measureTarget, TourRect } from "../../onboarding/tourTargets";
 import PrimaryButton from "./PrimaryButton";
 import StepProgress from "./StepProgress";
@@ -22,6 +22,12 @@ type Props = {
   stepIndex: number;
   onNext: () => void;
   onSkip: () => void;
+  /** Pasos a mostrar; por defecto la guia de bienvenida. */
+  steps?: TourStep[];
+  /** Progreso a mostrar cuando `steps` es un paso suelto de una guia mayor. */
+  progress?: { current: number; total: number };
+  /** Fuerza el lado de la tarjeta de mensaje cuando el paso no tiene objetivo. */
+  cardPosition?: "top" | "bottom";
 };
 
 /**
@@ -33,11 +39,11 @@ type Props = {
  * `measureInWindow` son casi las de esta capa, y aun asi se corrige con el origen medido de la capa. El
  * objetivo se vuelve a medir periodicamente para seguir el scroll.
  */
-export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
+export default function TourOverlay({ t, stepIndex, onNext, onSkip, steps = TOUR_STEPS, progress, cardPosition }: Props) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const step = TOUR_STEPS[stepIndex];
-  const isLast = stepIndex === TOUR_STEPS.length - 1;
+  const step = steps[stepIndex];
+  const isLast = progress ? false : stepIndex === steps.length - 1;
   // Pasos con `awaitAction` no tienen boton: avanzan solos cuando App.tsx
   // detecta la accion real (abrir el menu, navegar a cierta pantalla, etc.).
   const waitingForAction = !!step.awaitAction;
@@ -113,7 +119,7 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
   // La tarjeta va abajo salvo que los objetivos esten en la mitad inferior.
   const targetsTop = rects.length ? Math.min(...rects.map((r) => r.y)) : 0;
   const targetsBottom = rects.length ? Math.max(...rects.map((r) => r.y + r.height)) : 0;
-  const cardOnTop = rects.length ? (targetsTop + targetsBottom) / 2 > windowHeight / 2 : false;
+  const cardOnTop = cardPosition ? cardPosition === "top" : rects.length ? (targetsTop + targetsBottom) / 2 > windowHeight / 2 : false;
   const frames = rects.map((rect) => {
     const f = {
       left: rect.x - FRAME_PAD,
@@ -222,8 +228,8 @@ export default function TourOverlay({ t, stepIndex, onNext, onSkip }: Props) {
           <View style={styles.header}>
             <StepProgress
               testID="onboardingTour-progress"
-              total={TOUR_STEPS.length}
-              current={stepIndex + 1}
+              total={progress?.total ?? steps.length}
+              current={progress?.current ?? stepIndex + 1}
               style={styles.progress}
             />
             <Pressable

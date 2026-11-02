@@ -4,6 +4,7 @@
  */
 import { buildStatementLines } from "./creditStatements";
 import type { CreditStatement } from "./creditStatements";
+import { creditDueFromCutoff } from "./creditSimulation";
 import type { Language } from "../types/app";
 import { remezaGlyph } from "../components/ui/remezaGlyph";
 import { pdfFonts } from "./pdfFontData";
@@ -15,7 +16,6 @@ const BANK_ADDRESS = ["101 Eisenhower Parkway", "Roseland, NJ 07068", "New Jerse
 type PdfColor = number | [number, number, number];
 const PURPLE: PdfColor = [0.255, 0.078, 0.843];
 const fillOp = (c: PdfColor) => (typeof c === "number" ? `${c} g` : `${c.join(" ")} rg`);
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const MONTHS: Record<Language, string[]> = {
   en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -180,7 +180,7 @@ export function buildStatementPdfBase64({ t, language, holderName, holderAddress
 
   // Datos del periodo
   const available = Math.max(0, creditLimitUsd - statement.closingUsd);
-  const dueAt = statement.cutoffAt + 10 * DAY_MS;
+  const dueAt = creditDueFromCutoff(statement.cutoffAt);
   const info: [string, string][] = [
     [t.creditStmtPeriod, `${longDate(statement.periodStartAt, language)} - ${longDate(statement.cutoffAt, language)}`],
     [t.creditStmtCutoff, longDate(statement.cutoffAt, language)],
