@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Pressable, Text, StyleSheet } from "react-native";
+import { Alert, Animated, AppState, Pressable, Text, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 
-import { ScreenBackground, TourOverlay } from "./src/components/ui";
+import { ScreenBackground, ScreenTransition, TourOverlay } from "./src/components/ui";
 import ServiceUnavailableDialog from "./src/components/ui/ServiceUnavailableDialog";
-import { TOUR_STEPS, stepTargetIds } from "./src/onboarding/tourSteps";
+import { CARDS_TOUR_DETAIL_STEP, CARDS_TOUR_FUND_SCREEN_STEP, CARDS_TOUR_STEPS, TOUR_STEPS, stepTargetIds } from "./src/onboarding/tourSteps";
 
 import { translations } from "./src/i18n/translations";
 import { Beneficiary, Language, Transaction, TransactionsFilter, ViewName } from "./src/types/app";
@@ -15,6 +15,7 @@ import MultiCurrencyAccountsScreen from "./src/screens/MultiCurrencyAccountsScre
 import CreditHistoryScreen from "./src/screens/CreditHistoryScreen";
 import CreditAmountScreen from "./src/screens/CreditAmountScreen";
 import CreditSummaryScreen from "./src/screens/CreditSummaryScreen";
+import CreditExtensionScreen from "./src/screens/CreditExtensionScreen";
 import CreditPaymentScreen from "./src/screens/CreditPaymentScreen";
 import CreditPaymentSuccessScreen, { type CreditPaymentReceipt } from "./src/screens/CreditPaymentSuccessScreen";
 import CreditMovementsScreen from "./src/screens/CreditMovementsScreen";
@@ -61,6 +62,14 @@ import { formatMxPhone } from "./src/utils/beneficiary";
 import { formatDateTime } from "./src/utils/date";
 import TransactionsView from "./src/screens/TransactionsView";
 import PhysicalCardView from "./src/screens/PhysicalCardView";
+import NewCardView from "./src/screens/NewCardView";
+import MyCardsView from "./src/screens/MyCardsView";
+import MyVirtualCardsView from "./src/screens/MyVirtualCardsView";
+import { MAX_GENERATED_CARDS, generateCardData } from "./src/screens/MyCardsView";
+import type { GeneratedCard } from "./src/screens/MyCardsView";
+import FundSuccessView from "./src/screens/FundSuccessView";
+import MyCardDetailView from "./src/screens/MyCardDetailView";
+import NewCardSuccessView from "./src/screens/NewCardSuccessView";
 import BeneficiariesView from "./src/screens/BeneficiariesView";
 import SendMoneyView from "./src/screens/SendMoneyView";
 import TransactionDetailView from "./src/screens/TransactionDetailView";
@@ -73,8 +82,10 @@ import {
     UnauthorizedReason,
     clearSession,
     getToken,
+    checkInactivity,
     onUnauthorized,
     startSession,
+    touchSession,
 } from "./src/api/session";
 import { getBalance, getExchangeRate } from "./src/api/account";
 import { ApiError } from "./src/api/client";
@@ -101,6 +112,9 @@ import {
 } from "./src/api/beneficiaries";
 import { toE164 } from "./src/utils/phone";
 import { isBiometricsEnabled, syncBiometricsFromServer } from "./src/services/securitySettings";
+import { authenticateWithBiometrics, getBiometryKind } from "./src/services/biometrics";
+import { bioText } from "./src/screens/security/biometryKind";
+import { login as verifyAccessCode } from "./src/api/auth";
 
 /**
  * Unico cliente de la base de pruebas (E.164 completo). No paso por el
@@ -110,11 +124,18 @@ import { isBiometricsEnabled, syncBiometricsFromServer } from "./src/services/se
 const TEST_ACCOUNT_PHONE = "+525538068807";
 const TEST_ACCOUNT_NAME = { first: "Mario", paternal: "Alcántara" };
 
+/** Pantallas a las que se llega desde "Mis tarjetas virtuales" sin cerrar su guia. */
+const CARDS_TOUR_CHILD_VIEWS = new Set<ViewName>(["myCardDetail", "myCards", "fundSuccess"]);
+/** Indices en CARDS_TOUR_STEPS de "Tu tarjeta" y "Fondear saldo": visitar su pantalla los completa. */
+const CARDS_TOUR_CARD_STEP = 1;
+const CARDS_TOUR_FUND_STEP = 4;
+
 function AppContent() {
-    const [language, setLanguage] = useState<Language>("en");
+    const [language, setLanguage] = useState<Language>("es");
     const t = translations[language];
 
     const [view, setView] = useViewHistory("welcome");
+    const loginPhoneRef = useRef("");
     const [regStep, setRegStep] = useState(1);
     const [_authToken, setAuthToken] = useState<string | null>(null);
     const [_customerId, setCustomerId] = useState<string | null>(null);
@@ -130,6 +151,7 @@ function AppContent() {
         setAuthToken(token);
         setSessionEndedReason(null);
         startSession(loggedInCustomerId, token, expiresInMs);
+        loginPhoneRef.current = loginPhone;
 
         // Cuenta de pruebas (unico cliente de la base, sin registro propio en la
         // app): sin nombre no hay como armarlo, asi que se inyecta uno fijo para
@@ -240,6 +262,53 @@ function AppContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, tourPromptCheckedThisSession, biometricPromptShown, biometricsSynced]);
 
+    /*
+     * Guia de "Mis tarjetas virtuales": se arma solo al crear la PRIMERA
+     * tarjeta virtual y arranca al llegar a esa pantalla; la 2.a y la 3.a no.
+     */
+    const [cardsTourPending, setCardsTourPending] = useState(false);
+    const [cardsTourActive, setCardsTourActive] = useState(false);
+    const [cardsTourIndex, setCardsTourIndex] = useState(0);
+    const [fundResult, setFundResult] = useState({ amount: 0, cardName: "" });
+
+    const cardsTourPrevView = useRef(view);
+    useEffect(() => {
+        const prev = cardsTourPrevView.current;
+        cardsTourPrevView.current = view;
+
+        if (view === "virtualCards" && cardsTourPending) {
+            setCardsTourPending(false);
+            setCardsTourIndex(0);
+            setCardsTourActive(true);
+            return;
+        }
+        if (!cardsTourActive) return;
+
+        // Al volver de una pantalla hija, el paso que la abrio queda hecho.
+        if (view === "virtualCards") {
+            const done =
+                prev === "myCardDetail"
+                    ? CARDS_TOUR_CARD_STEP
+                    : prev === "myCards" || prev === "fundSuccess"
+                      ? CARDS_TOUR_FUND_STEP
+                      : -1;
+            setCardsTourIndex((i) => (i === done ? i + 1 : i));
+            return;
+        }
+        // En las pantallas hijas la guia sigue (con su propio mensaje); otra pantalla la cierra.
+        if (!CARDS_TOUR_CHILD_VIEWS.has(view)) setCardsTourActive(false);
+    }, [view, cardsTourPending, cardsTourActive]);
+
+    const handleCardsTourNext = useCallback(() => {
+        setCardsTourIndex((prev) => {
+            if (prev >= CARDS_TOUR_STEPS.length - 1) {
+                setCardsTourActive(false);
+                return prev;
+            }
+            return prev + 1;
+        });
+    }, []);
+
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const handleStartGuideFromHelp = () => {
@@ -256,6 +325,18 @@ function AppContent() {
         }
 
         startTour();
+    };
+
+    /** Guia de tarjetas desde Perfil > Centro de ayuda: sin tarjetas no hay nada que mostrar. */
+    const handleStartCardsGuideFromHelp = () => {
+        setIsMenuOpen(false);
+        if (generatedCards.length === 0) {
+            setView("dashboard");
+            Alert.alert(t.help_guides_cards, t.help_guides_cards_none);
+            return;
+        }
+        setCardsTourPending(true);
+        setView("virtualCards");
     };
 
     /**
@@ -290,6 +371,13 @@ function AppContent() {
      * esperan el dashboard tras "Sign In", fallarian en el setup.
      */
     const [isNewDevice] = useState(false);
+
+    useEffect(() => {
+        const sub = AppState.addEventListener("change", (state) => {
+            if (state === "active") checkInactivity();
+        });
+        return () => sub.remove();
+    }, []);
 
     useEffect(() => {
         return onUnauthorized((reason) => {
@@ -391,6 +479,9 @@ function AppContent() {
     const [physicalCardRequested, setPhysicalCardRequested] = useState(false);
     /** El usuario cerro la invitacion "Tarjeta fisica" del Home (vuelve a salir en la siguiente sesion). */
     const [physicalPromoDismissed, setPhysicalPromoDismissed] = useState(false);
+    const [generatedCards, setGeneratedCards] = useState<GeneratedCard[]>([]);
+    const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+    const [newCardResult, setNewCardResult] = useState<{ color: "white" | "black" | "purple"; amount: number }>({ color: "white", amount: 500 });
     /** Limite de credito (monto de la garantia). `null` hasta que el usuario inicia su historial; solo en memoria. */
     const [creditLimitUsd, setCreditLimitUsd] = useState<number | null>(null);
     /** Saldo utilizado y fecha limite de pago; sin backend de credito aun, quedan en $0 y +30 dias. */
@@ -964,14 +1055,59 @@ function AppContent() {
         return () => setShowCardData(false);
     }, [revealCardDataForTour]);
 
-    const handleActivateCard = () => {
-        if (secureCode.length !== 6) return;
+    /** Tras fallar la biometria, la activacion pide el codigo de 6 digitos. */
+    const [cardCodeFallback, setCardCodeFallback] = useState(false);
+
+    /**
+     * Activar una tarjeta exige identidad: huella / Face ID si la biometria esta
+     * activada; si no, el codigo de 6 digitos del login, validado contra el
+     * servidor (sin guardarlo ni reemplazar la sesion).
+     */
+    const confirmCardActivation = async (code: string): Promise<boolean> => {
+        if (isBiometricsEnabled() && !cardCodeFallback) {
+            const kind = await getBiometryKind();
+            const result = await authenticateWithBiometrics(bioText(t, "cardBioPrompt", kind), t.cancel);
+            if (result.ok) return true;
+            // Si la biometria falla o se cancela, el codigo de 6 digitos es la alternativa.
+            setCardCodeFallback(true);
+            Alert.alert(t.cardBioFailedUseCode);
+            return false;
+        }
+        if (code.length !== 6) return false;
+        try {
+            await verifyAccessCode(loginPhoneRef.current, code, language);
+            return true;
+        } catch (err) {
+            if (err instanceof ApiError && err.status === 401) Alert.alert(t.cardAccessCodeWrong);
+            else Alert.alert(t.connectionError);
+            return false;
+        }
+    };
+
+    /** Fecha de nacimiento capturada (DD/MM/AAAA) contra la del perfil (ISO o DD/MM/AAAA). */
+    const birthDateMatches = (typed: string): boolean => {
+        const real = remoteProfile?.dateOfBirth;
+        if (!real) return false;
+        const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(real);
+        const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(real);
+        const normalized = iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : dmy ? real : null;
+        return normalized === typed;
+    };
+
+    useEffect(() => {
+        if (!showSecureCodeModal && !showVirtualCardModal) setCardCodeFallback(false);
+    }, [showSecureCodeModal, showVirtualCardModal]);
+
+    const handleActivateCard = async () => {
+        if ((!isBiometricsEnabled() || cardCodeFallback) && secureCode.length !== 6) return;
+        if (!(await confirmCardActivation(secureCode))) return;
 
         setIsFactoryInactive(false);
         setIsCardActive(true);
         setShowSecureCodeModal(false);
         setShowSuccessMessage(true);
         setSecureCode("");
+        setCardCodeFallback(false);
 
         setTimeout(() => {
             setShowSuccessMessage(false);
@@ -982,14 +1118,21 @@ function AppContent() {
     const [isVirtualInactive, setIsVirtualInactive] = useState(true);
     const [isVirtualCardActive, setIsVirtualCardActive] = useState(true);
 
-    const handleActivateVirtualCard = () => {
-        if (birthDate.length !== 10 || virtualSecureCode.length !== 6) return;
+    const handleActivateVirtualCard = async () => {
+        if (birthDate.length !== 10) return;
+        if ((!isBiometricsEnabled() || cardCodeFallback) && virtualSecureCode.length !== 6) return;
+        if (!birthDateMatches(birthDate)) {
+            Alert.alert(t.birthDateWrong);
+            return;
+        }
+        if (!(await confirmCardActivation(virtualSecureCode))) return;
 
         setIsVirtualInactive(false);
         setIsVirtualCardActive(true);
         setShowVirtualCardModal(false);
         setShowSuccessMessage(true);
         setVirtualSecureCode("");
+        setCardCodeFallback(false);
 
         setTimeout(() => {
             setShowSuccessMessage(false);
@@ -1041,6 +1184,7 @@ function AppContent() {
 
     return (
         <ScreenBackground streaks={hasStreaks}>
+            <ScreenTransition viewKey={view} slide={!tourActive}>
             {view === "welcome" && (
                 <WelcomeScreen t={t} language={language} setLanguage={setLanguage} setView={setView} />
             )}
@@ -1151,6 +1295,9 @@ function AppContent() {
                     physicalCardActive={!isFactoryInactive}
                     physicalCardRequested={physicalCardRequested}
                     physicalPromoDismissed={physicalPromoDismissed}
+                    onGenerateVirtualCard={() => setView("newCard")}
+                    hasVirtualCards={generatedCards.length > 0}
+                    onViewVirtualCards={() => setView("virtualCards")}
                     onDismissPhysicalPromo={() => setPhysicalPromoDismissed(true)}
                     onRequestPhysicalCard={() => setView("physicalCard")}
                     onActivatePhysicalCard={() => {
@@ -1201,6 +1348,7 @@ function AppContent() {
                     setVirtualSecureCode={setVirtualSecureCode}
                     birthDate={birthDate}
                     setBirthDate={setBirthDate}
+                    cardCodeFallback={cardCodeFallback}
                     showCardData={showCardData}
                     setShowCardData={setShowCardData}
                     handleActivateCard={handleActivateCard}
@@ -1240,6 +1388,137 @@ function AppContent() {
                     state={cardMovements}
                     onBack={() => setView(cardMovementsReturnView)}
                     onRetry={loadCardMovements}
+                />
+            )}
+
+            {view === "newCard" && (
+                <NewCardView
+                    t={t}
+                    availableUsdBalance={availableUsdBalance ?? 0}
+                    onBack={() => setView(generatedCards.length > 0 ? "virtualCards" : "dashboard")}
+                    usedColors={generatedCards.map((c) => c.color)}
+                    onCreate={(color, amount) => {
+                        setNewCardResult({ color, amount });
+                        if (generatedCards.length === 0) setCardsTourPending(true);
+                        // El fondeo sale del saldo disponible.
+                        setAvailableUsdBalance((prev) => (prev === null ? prev : Number((prev - amount).toFixed(2))));
+                        setGeneratedCards((prev) => {
+                            if (prev.length >= MAX_GENERATED_CARDS || prev.some((c) => c.color === color)) return prev;
+                            const now = Date.now();
+                            return [
+                                {
+                                    id: String(now),
+                                    name: `${t.virtualCardName} ${prev.length + 1}`,
+                                    color,
+                                    ...generateCardData(now),
+                                    amount,
+                                    createdAt: now,
+                                    isOff: false,
+                                    spendLimit: 500,
+                                    movements: [{ id: `${now}-fund`, label: t.myCardsInitialFunding, amount, date: now }],
+                                },
+                                ...prev,
+                            ];
+                        });
+                        setView("newCardSuccess");
+                    }}
+                />
+            )}
+
+            {view === "newCardSuccess" && (
+                <NewCardSuccessView
+                    t={t}
+                    color={newCardResult.color}
+                    onViewCards={() => setView("virtualCards")}
+                />
+            )}
+
+            {view === "virtualCards" && (
+                <MyVirtualCardsView
+                    t={t}
+                    cards={generatedCards}
+                    onBack={() => setView("dashboard")}
+                    onOpen={(id) => {
+                        setSelectedCardId(id);
+                        setView("myCardDetail");
+                    }}
+                    onRename={(id, name) =>
+                        setGeneratedCards((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
+                    }
+                    onFund={() => setView("myCards")}
+                    onToggleOff={(id) => {
+                        const card = generatedCards.find((c) => c.id === id);
+                        if (!card) return;
+                        // Apagada por saldo insuficiente (o sin saldo): solo vuelve a encenderse fondeandola.
+                        if (card.isOff && (card.needsFunding || card.amount <= 0)) {
+                            Alert.alert(t.myCardsNeedsFunding);
+                            return;
+                        }
+                        setGeneratedCards((prev) => prev.map((c) => (c.id === id ? { ...c, isOff: !c.isOff } : c)));
+                    }}
+                    canGenerate={generatedCards.length < MAX_GENERATED_CARDS}
+                    onGenerate={() => setView("newCard")}
+                />
+            )}
+
+            {view === "myCards" && (
+                <MyCardsView
+                    t={t}
+                    cards={generatedCards}
+                    availableUsdBalance={availableUsdBalance ?? 0}
+                    onBack={() => setView("virtualCards")}
+                    onOpen={(id) => {
+                        setSelectedCardId(id);
+                        setView("myCardDetail");
+                    }}
+                    onRename={(id, name) =>
+                        setGeneratedCards((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
+                    }
+                    onMove={(id, amount) => {
+                        const now = Date.now();
+                        setFundResult({ amount, cardName: generatedCards.find((c) => c.id === id)?.name ?? "" });
+                        setAvailableUsdBalance((prev) => Number(((prev ?? 0) - amount).toFixed(2)));
+                        setGeneratedCards((prev) =>
+                            prev.map((c) =>
+                                c.id === id
+                                    ? {
+                                          ...c,
+                                          amount: Number((c.amount + amount).toFixed(2)),
+                                          isOff: c.needsFunding ? false : c.isOff,
+                                          needsFunding: false,
+                                          movements: [
+                                              { id: `${now}-move`, label: t.myCardsMovedFunds, amount, date: now },
+                                              ...c.movements,
+                                          ],
+                                      }
+                                    : c,
+                            ),
+                        );
+                        setView("fundSuccess");
+                    }}
+                />
+            )}
+
+            {view === "fundSuccess" && (
+                <FundSuccessView
+                    t={t}
+                    amount={fundResult.amount}
+                    cardName={fundResult.cardName}
+                    onDone={() => setView("virtualCards")}
+                />
+            )}
+
+            {view === "myCardDetail" && generatedCards.find((c) => c.id === selectedCardId) && (
+                <MyCardDetailView
+                    t={t}
+                    card={generatedCards.find((c) => c.id === selectedCardId)!}
+                    onBack={() => setView("virtualCards")}
+                    onFund={() => setView("myCards")}
+                    onUpdate={(patch) =>
+                        setGeneratedCards((prev) =>
+                            prev.map((c) => (c.id === selectedCardId ? { ...c, ...patch } : c)),
+                        )
+                    }
                 />
             )}
 
@@ -1368,6 +1647,7 @@ function AppContent() {
                     movements={creditMovements}
                     onOpenMovements={() => setView("creditMovements")}
                     onOpenStatements={() => setView("creditStatements")}
+                    onOpenExtension={() => setView("creditExtension")}
                     onWithdrawGuarantee={() => {
                         // Sin backend de credito: el abono a la tarjeta virtual se refleja solo en el saldo local.
                         setAvailableUsdBalance((prev) => Number(((prev ?? 0) + creditLimitUsd).toFixed(2)));
@@ -1379,6 +1659,24 @@ function AppContent() {
                         setView("dashboard");
                     }}
                     setIsMenuOpen={setIsMenuOpen}
+                />
+            )}
+
+            {view === "creditExtension" && creditLimitUsd !== null && (
+                <CreditExtensionScreen
+                    t={t}
+                    language={language}
+                    creditLimitUsd={creditLimitUsd}
+                    usedUsd={creditUsedUsd}
+                    depositedAt={creditDepositedAt}
+                    setIsMenuOpen={setIsMenuOpen}
+                    onBack={() => setView("creditSummary")}
+                    onPay={() => setView("creditPayment")}
+                    onExtend={() => {
+                        // Sin backend de credito: el nuevo periodo de 12 meses solo se refleja en el estado local.
+                        setCreditDepositedAt(Date.now());
+                        setView("creditSummary");
+                    }}
                 />
             )}
 
@@ -1596,6 +1894,7 @@ function AppContent() {
                     entry={supportEntry}
                     onExit={() => setView(supportReturnView)}
                     onStartGuide={handleStartGuideFromHelp}
+                    onStartCardsGuide={handleStartCardsGuideFromHelp}
                 />
             )}
 
@@ -1666,6 +1965,8 @@ function AppContent() {
                 />
             )}
 
+            </ScreenTransition>
+
             <DrawerMenu
                 t={t}
                 visible={isMenuOpen}
@@ -1674,6 +1975,7 @@ function AppContent() {
                 setIsMenuOpen={setIsMenuOpen}
                 setView={setView}
                 onLogout={requestLogout}
+                hasGeneratedCards={generatedCards.length > 0}
                 onStartCreditHistory={openCredit}
                 physicalCardActive={!isFactoryInactive}
                 tourOverlay={
@@ -1697,6 +1999,39 @@ function AppContent() {
                 />
             )}
 
+            {cardsTourActive && !tourActive && view === "myCardDetail" && (
+                <TourOverlay
+                    t={t}
+                    steps={[CARDS_TOUR_DETAIL_STEP]}
+                    stepIndex={0}
+                    progress={{ current: cardsTourIndex + 1, total: CARDS_TOUR_STEPS.length }}
+                    onNext={() => setView("virtualCards")}
+                    onSkip={() => setCardsTourActive(false)}
+                />
+            )}
+
+            {cardsTourActive && !tourActive && view === "myCards" && (
+                <TourOverlay
+                    t={t}
+                    steps={[CARDS_TOUR_FUND_SCREEN_STEP]}
+                    stepIndex={0}
+                    cardPosition="top"
+                    progress={{ current: cardsTourIndex + 1, total: CARDS_TOUR_STEPS.length }}
+                    onNext={() => setView("virtualCards")}
+                    onSkip={() => setCardsTourActive(false)}
+                />
+            )}
+
+            {cardsTourActive && !tourActive && view === "virtualCards" && (
+                <TourOverlay
+                    t={t}
+                    steps={CARDS_TOUR_STEPS}
+                    stepIndex={cardsTourIndex}
+                    onNext={handleCardsTourNext}
+                    onSkip={() => setCardsTourActive(false)}
+                />
+            )}
+
             {serviceUnavailable && (
                 <ServiceUnavailableDialog
                     t={t}
@@ -1716,7 +2051,14 @@ function AppContent() {
 export default function App() {
     return (
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-            <AppContent />
+            <View
+                style={{ flex: 1 }}
+                onStartShouldSetResponderCapture={() => {
+                    touchSession();
+                    return false;
+                }}>
+                <AppContent />
+            </View>
         </SafeAreaProvider>
     );
 }

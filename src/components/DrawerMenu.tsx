@@ -9,6 +9,7 @@ import {
   BanknoteArrowDown,
   ChartNoAxesColumn,
   Coins,
+  CreditCard,
   LogOut,
 } from "lucide-react-native";
 
@@ -30,6 +31,8 @@ type Props = {
   onLogout?: () => void;
   /** Con la tarjeta fisica ya activada, "Solicitar tarjeta" deja de tener sentido y se oculta. */
   physicalCardActive?: boolean;
+  /** "Mis tarjetas" solo aparece cuando ya se genero una tarjeta virtual nueva. */
+  hasGeneratedCards?: boolean;
   /**
    * `TourOverlay` de la guia, cuando esta activa y el menu esta abierto. El
    * Modal del drawer es su propia ventana nativa: un `TourOverlay` suelto en
@@ -52,6 +55,7 @@ export default function DrawerMenu({
   setView,
   onLogout,
   physicalCardActive = false,
+  hasGeneratedCards = false,
   tourOverlay,
   onStartCreditHistory,
 }: Props) {
@@ -68,6 +72,9 @@ export default function DrawerMenu({
     ...(physicalCardActive
       ? []
       : [{ id: "physicalCard", icon: Package, label: t.requestPhysicalCard, onPress: () => go("physicalCard") }]),
+    ...(hasGeneratedCards
+      ? [{ id: "virtualCards", icon: CreditCard, label: t.myVirtualCardsTitle, onPress: () => go("virtualCards") }]
+      : []),
     { id: "beneficiaries", icon: UserCheck, label: t.beneficiaries, onPress: () => go("beneficiaries") },
     { id: "sendMoney", icon: BanknoteArrowDown, label: t.sendMoney, onPress: () => go("sendMoney") },
     // Pagos de servicio: oculto por ahora. La ruta `servicePayments` sigue en App.

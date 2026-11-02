@@ -4,6 +4,7 @@ import { colors } from "../../theme/colors";
 import { fontFamily } from "../../theme/typography";
 import { buildStatementLines } from "../../utils/creditStatements";
 import type { CreditStatement } from "../../utils/creditStatements";
+import { creditDueFromCutoff } from "../../utils/creditSimulation";
 import type { Language } from "../../types/app";
 
 /** Ancho en dp del documento; la imagen descargada sale a este ancho. */
@@ -14,7 +15,6 @@ const MONTHS: Record<Language, string[]> = {
   es: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const money = (value: number) =>
   `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -47,7 +47,7 @@ const CreditStatementDocument = forwardRef<View, Props>(function CreditStatement
   ref,
 ) {
   const lines = buildStatementLines(statement);
-  const dueAt = statement.cutoffAt + 10 * DAY_MS;
+  const dueAt = creditDueFromCutoff(statement.cutoffAt);
   const available = Math.max(0, creditLimitUsd - statement.closingUsd);
 
   const summary: [string, string][] = [

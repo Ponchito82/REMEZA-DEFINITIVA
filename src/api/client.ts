@@ -1,4 +1,4 @@
-import { getToken, isSessionExpired, remainingSessionMs, reportUnauthorized } from "./session";
+import { getToken, isSessionExpired, reportUnauthorized, touchSession } from "./session";
 
 // "localhost" + "adb reverse" funciona igual en el emulador que en un
 // telefono fisico por USB; "10.0.2.2" solo existe dentro del emulador.
@@ -79,12 +79,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (authenticated) {
     if (isSessionExpired()) {
-      trace(`${route} BLOQUEADO: token vencido, no se envia la peticion -> cierre de sesion`);
+      trace(`${route} BLOQUEADO: sesion inactiva 30 min, no se envia la peticion -> cierre de sesion`);
       reportUnauthorized("expired");
       throw new ApiError("La sesión expiró.", 401);
     }
+    touchSession();
     headers.Authorization = `Bearer ${getToken()}`;
-    trace(`${route} enviado CON token (quedan ${Math.round(remainingSessionMs() / 1000)}s de sesion)`);
+    trace(`${route} enviado CON token`);
   } else {
     trace(`${route} enviado SIN token (endpoint publico)`);
   }

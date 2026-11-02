@@ -61,7 +61,7 @@ export default function AmountInput({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           selectionColor={tokens.violet}
-          style={styles.input}
+          style={[styles.input, !value && placeholder.length > 6 && styles.inputPlaceholderLong]}
         />
       </View>
 
@@ -100,6 +100,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     includeFontPadding: false,
     color: tokens.textSecondary,
+  },
+  /** Placeholder largo ("Ingresa un monto..."): letra chica para que no se corte. */
+  inputPlaceholderLong: {
+    fontFamily: fontFamily.regular,
+    fontSize: 16,
   },
   input: {
     flex: 1,

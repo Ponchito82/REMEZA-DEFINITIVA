@@ -6,18 +6,18 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
+  Image,
+  Linking,
 } from 'react-native';
+import AnimatedMenuIcon from "../components/ui/AnimatedMenuIcon";
 import LinearGradient from 'react-native-linear-gradient';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {
   BanknoteArrowDown,
-  ChartNoAxesColumn,
   ArrowRight,
-  ChevronRight,
   Eye,
   EyeOff,
   Lock,
-  Menu,
   ShieldOff,
   X,
 } from 'lucide-react-native';
@@ -74,6 +74,10 @@ type Props = {
   physicalCardActive: boolean;
   physicalCardRequested: boolean;
   physicalPromoDismissed: boolean;
+  onGenerateVirtualCard: () => void;
+  hasVirtualCards: boolean;
+  /** Con el tope de 3, el bloque pasa a "Mis tarjetas virtuales" y abre esa pantalla. */
+  onViewVirtualCards: () => void;
   onDismissPhysicalPromo: () => void;
   /** "Solicitar tarjeta": abre la pantalla de solicitud de la tarjeta fisica. */
   onRequestPhysicalCard: () => void;
@@ -93,6 +97,13 @@ type Props = {
    */
   tourFocusId?: string;
 };
+
+/** Solicitud de credito en el sitio de Credifai. */
+const CREDIFAI_URL = 'https://loan-application.credifai.com';
+
+function openCredifai() {
+  Linking.openURL(CREDIFAI_URL).catch(() => {});
+}
 
 /** Ancho del arte de la tarjeta fisica en la invitacion a solicitarla. */
 /** Oculto temporalmente: poner en true para volver a mostrar el banner "Inicia tu historial crediticio". */
@@ -137,6 +148,9 @@ export default function DashboardView({
   physicalCardActive,
   physicalCardRequested,
   physicalPromoDismissed,
+  onGenerateVirtualCard,
+  hasVirtualCards,
+  onViewVirtualCards,
   onDismissPhysicalPromo,
   onRequestPhysicalCard,
   onActivatePhysicalCard,
@@ -206,7 +220,7 @@ export default function DashboardView({
             pressed && dashboardStyles.pressed,
           ]}
         >
-          <Menu size={22} color={colors.text.primary} strokeWidth={2} />
+          {({ pressed }) => <AnimatedMenuIcon pressed={pressed} />}
         </Pressable>
       </View>
 
@@ -476,7 +490,8 @@ export default function DashboardView({
             </View>
           </View>
 
-          {/* Generar tarjeta virtual: solo diseno, sin funcionalidad todavia. */}
+          {/* Generar tarjeta virtual: abre Nueva tarjeta. Con el tope de 3 pasa a "Mis tarjetas virtuales". */}
+          {(
           <View
             testID="dashboard-virtualCardPromo"
             style={[dashboardStyles.promoCard, dashboardStyles.virtualPromo]}
@@ -490,22 +505,24 @@ export default function DashboardView({
             />
 
             <VirtualCardArt
+              color="glass"
               width={PROMO_CARD_WIDTH}
               style={dashboardStyles.virtualPromoArt}
             />
 
-            <View style={dashboardStyles.promoText}>
-              <Text style={dashboardStyles.promoTitle}>
-                {t.virtualPromoTitle}
+            <View style={[dashboardStyles.promoText, dashboardStyles.promoTextCentered]}>
+              <Text style={dashboardStyles.promoTitleFill}>
+                {hasVirtualCards ? t.myVirtualCardsTitle : t.virtualPromoTitle}
               </Text>
-              <Text style={[dashboardStyles.promoDesc, { color: '#FFFFFF' }]}>
-                {t.virtualPromoDesc}
+              <Text style={dashboardStyles.promoDescFill}>
+                {hasVirtualCards ? t.myVirtualCardsPromoDesc : t.virtualPromoDesc}
               </Text>
             </View>
 
             <Pressable
               testID="dashboard-generateVirtualCardButton"
               accessibilityRole="button"
+              onPress={hasVirtualCards ? onViewVirtualCards : onGenerateVirtualCard}
               style={({ pressed }) => [
                 dashboardStyles.promoButton,
                 dashboardStyles.virtualPromoButton,
@@ -520,11 +537,12 @@ export default function DashboardView({
                 style={StyleSheet.absoluteFill}
               />
               <Text style={dashboardStyles.promoButtonText}>
-                {t.virtualPromoCta}
+                {hasVirtualCards ? t.myVirtualCardsPromoCta : t.virtualPromoCta}
               </Text>
               <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.2} />
             </Pressable>
           </View>
+          )}
 
           {/* Ya solicitada, la seccion pasa a "Activa tu tarjeta fisica" y no se puede cerrar. */}
           {!physicalCardActive &&
@@ -547,7 +565,7 @@ export default function DashboardView({
 
               <View
                 testID="dashboard-physicalCardPromo"
-                style={dashboardStyles.promoCard}
+                style={[dashboardStyles.promoCard, dashboardStyles.virtualPromo]}
               >
                 <LinearGradient
                   colors={['rgba(75,35,250,0.30)', 'rgba(20,16,70,0.55)']}
@@ -558,17 +576,22 @@ export default function DashboardView({
                 />
 
                 <PhysicalCardArt
-                  width={PROMO_CARD_WIDTH}
+                  width={130}
                   style={dashboardStyles.promoArt}
                 />
 
-                <View style={dashboardStyles.promoText}>
-                  <Text style={dashboardStyles.promoTitle}>
+                <View
+                  style={[
+                    dashboardStyles.promoText,
+                    dashboardStyles.promoTextCentered,
+                  ]}
+                >
+                  <Text style={dashboardStyles.promoTitleFill}>
                     {physicalCardRequested
                       ? t.physicalActivateTitle
                       : t.physicalPromoTitle}
                   </Text>
-                  <Text style={dashboardStyles.promoDesc}>
+                  <Text style={dashboardStyles.promoDescFill}>
                     {physicalCardRequested
                       ? t.physicalActivateDesc
                       : t.physicalPromoDesc}
@@ -589,6 +612,8 @@ export default function DashboardView({
                   }
                   style={({ pressed }) => [
                     dashboardStyles.promoButton,
+                    dashboardStyles.virtualPromoButton,
+                    dashboardStyles.physicalButton,
                     pressed && dashboardStyles.pressed,
                   ]}
                 >
@@ -604,6 +629,7 @@ export default function DashboardView({
                       ? t.activateCardShort
                       : t.physicalPromoCta}
                   </Text>
+                  <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.2} />
                 </Pressable>
 
                 {physicalCardRequested ? null : (
@@ -630,14 +656,9 @@ export default function DashboardView({
           ) : null}
 
           {SHOW_CREDIT_HISTORY_BANNER ? (
-          <Pressable
+          <View
             testID="dashboard-creditHistoryBanner"
-            accessibilityRole="button"
-            onPress={onStartCreditHistory}
-            style={({ pressed }) => [
-              dashboardStyles.creditBanner,
-              pressed && dashboardStyles.pressed,
-            ]}
+            style={[dashboardStyles.promoCard, dashboardStyles.creditPromo]}
           >
             <LinearGradient
               colors={['rgba(75,35,250,0.30)', 'rgba(20,16,70,0.55)']}
@@ -646,28 +667,119 @@ export default function DashboardView({
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
             />
-            <View style={dashboardStyles.creditIcon}>
-              <ChartNoAxesColumn
-                size={22}
-                color={colors.text.primary}
-                strokeWidth={2.2}
+            <View style={dashboardStyles.creditImageWrap} pointerEvents="none">
+              <Image
+                source={require('../assets/credit-history-couple.webp')}
+                style={dashboardStyles.creditImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['rgba(20,16,70,0)', 'rgba(20,16,70,0.92)']}
+                locations={[0.75, 1]}
+                style={StyleSheet.absoluteFill}
               />
             </View>
-            <View style={dashboardStyles.creditText}>
-              <Text style={dashboardStyles.creditTitle}>
-                {t.creditHistoryTitle}
-              </Text>
-              <Text style={dashboardStyles.creditDesc}>
-                {t.creditHistoryDesc}
-              </Text>
+            <View style={dashboardStyles.creditBody}>
+              <View style={dashboardStyles.creditText}>
+                <Text style={dashboardStyles.promoTitleFill}>
+                  {t.creditHistoryTitle}
+                </Text>
+                <Text style={dashboardStyles.promoDescFill}>
+                  {t.creditHistoryDesc}
+                </Text>
+              </View>
+              <Pressable
+                testID="dashboard-creditHistoryButton"
+                accessibilityRole="button"
+                onPress={onStartCreditHistory}
+                style={({ pressed }) => [
+                  dashboardStyles.promoButton,
+                  dashboardStyles.creditButton,
+                  pressed && dashboardStyles.pressed,
+                ]}
+              >
+                <LinearGradient
+                  colors={primaryGradient.colors}
+                  locations={primaryGradient.locations}
+                  start={primaryGradient.start}
+                  end={primaryGradient.end}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Text style={dashboardStyles.promoButtonText}>
+                  {t.creditHistoryCta}
+                </Text>
+              </Pressable>
             </View>
-            <ChevronRight
-              size={20}
-              color={colors.text.secondary}
-              strokeWidth={2.2}
-            />
-          </Pressable>
+          </View>
           ) : null}
+
+          <View
+            testID="dashboard-credifaiBanner"
+            style={[dashboardStyles.promoCard, dashboardStyles.creditPromo]}
+          >
+            <LinearGradient
+              colors={['rgba(75,35,250,0.30)', 'rgba(20,16,70,0.55)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            <View style={dashboardStyles.creditImageWrap}>
+              <Image
+                source={require('../assets/credit-score-couple.jpg')}
+                style={dashboardStyles.creditImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['rgba(20,16,70,0.70)', 'rgba(20,16,70,0)']}
+                locations={[0, 0.55]}
+                style={StyleSheet.absoluteFill}
+              />
+              <LinearGradient
+                colors={['rgba(20,16,70,0)', 'rgba(20,16,70,0.92)']}
+                locations={[0.75, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+              <Image
+                source={require('../assets/credifai-logo-white.png')}
+                style={dashboardStyles.credifaiLogo}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={dashboardStyles.credifaiBody}>
+              <Text style={dashboardStyles.promoTitleFill}>
+                {t.credifaiTitle}
+              </Text>
+              <View style={dashboardStyles.credifaiRow}>
+                <Text
+                  style={[dashboardStyles.promoDescFill, dashboardStyles.credifaiDesc]}
+                >
+                  {t.credifaiDesc}
+                </Text>
+                <Pressable
+                  testID="dashboard-credifaiButton"
+                  accessibilityRole="button"
+                  onPress={openCredifai}
+                  style={({ pressed }) => [
+                    dashboardStyles.promoButton,
+                    dashboardStyles.creditButton,
+                    pressed && dashboardStyles.pressed,
+                  ]}
+                >
+                  <LinearGradient
+                    colors={primaryGradient.colors}
+                    locations={primaryGradient.locations}
+                    start={primaryGradient.start}
+                    end={primaryGradient.end}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <Text style={dashboardStyles.promoButtonText}>
+                    {t.credifaiCta}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
 
           <View
             ref={tourRef('activity')}
@@ -884,12 +996,13 @@ const dashboardStyles = StyleSheet.create({
   },
   promoArt: {
     position: 'absolute',
-    right: 4,
-    top: 64,
+    // Libra la X de cerrar (arriba a la derecha).
+    right: 26,
+    top: 28,
     transform: [{ rotate: '-16deg' }],
   },
   promoText: {
-    width: '58%',
+    width: '54%',
     gap: spacing.sm,
   },
   promoTitle: {
@@ -903,7 +1016,7 @@ const dashboardStyles = StyleSheet.create({
     lineHeight: 20,
   },
   promoButton: {
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
     marginTop: spacing.lg,
     height: 44,
     paddingHorizontal: 20,
@@ -916,6 +1029,27 @@ const dashboardStyles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  physicalButton: {
+    marginTop: spacing.xl,
+  },
+  // Centra titulo y subtitulo a lo alto, a la altura del dibujo.
+  promoTextCentered: {
+    minHeight: 124,
+    justifyContent: 'center',
+    // Baja solo el texto; no empuja el boton ni cambia el alto de la tarjeta.
+    transform: [{ translateY: 24 }],
+  },
+  // Titulo y subtitulo de las promos con dibujo: llenan el espacio libre de la columna de texto.
+  promoTitleFill: {
+    ...typography.h2,
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  promoDescFill: {
+    ...typography.body,
+    fontSize: 15,
+    lineHeight: 22,
   },
   virtualPromo: {
     marginBottom: spacing.md,
@@ -942,43 +1076,53 @@ const dashboardStyles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  creditBanner: {
+  creditPromo: {
+    marginBottom: spacing.xl,
+    padding: 0,
+    paddingTop: 0,
+  },
+  creditImageWrap: {
+    height: 150,
+  },
+  creditImage: {
+    width: '100%',
+    height: '100%',
+  },
+  creditBody: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginBottom: spacing.xl,
-    padding: spacing.md,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(130,110,255,0.35)',
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-  },
-  creditIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(130,110,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(130,110,255,0.45)',
+    padding: spacing.lg,
+    paddingTop: spacing.sm,
   },
   creditText: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
-  creditTitle: {
-    fontFamily: fontFamily.bold,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.text.primary,
-    includeFontPadding: false,
+  // Titulo a todo el ancho (no comparte fila con el boton) para que se lea completo.
+  credifaiBody: {
+    padding: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: spacing.xs,
   },
-  creditDesc: {
-    ...typography.body,
-    fontSize: 12,
-    lineHeight: 17,
+  credifaiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  credifaiDesc: {
+    flex: 1,
+  },
+  credifaiLogo: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.lg,
+    width: 110,
+    height: 58,
+  },
+  creditButton: {
+    marginTop: 0,
+    alignSelf: 'center',
   },
   bioReminderNotice: {
     marginBottom: spacing.lg,
